@@ -5,6 +5,7 @@ import { Save, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const settingsKeys = [
@@ -73,7 +74,10 @@ const AdminHeader = () => {
   };
 
   const handleSave = () => {
-    const entries = settingsKeys.map((s) => ({ key: s.key, value: form[s.key] || "" }));
+    const entries = [
+      ...settingsKeys.map((s) => ({ key: s.key, value: form[s.key] || "" })),
+      { key: "header_fixed", value: form.header_fixed || "false" },
+    ];
     saveMutation.mutate(entries);
   };
 
@@ -113,6 +117,17 @@ const AdminHeader = () => {
             {form.facebook && <span>👍</span>}
             {form.whatsapp && <span>💬</span>}
           </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 p-4 rounded-lg border bg-card">
+        <Switch
+          checked={form.header_fixed === "true"}
+          onCheckedChange={(checked) => setForm({ ...form, header_fixed: checked ? "true" : "false" })}
+        />
+        <div>
+          <Label>Header Fixo (sticky)</Label>
+          <p className="text-xs text-muted-foreground">O header acompanha o scroll da página</p>
         </div>
       </div>
 

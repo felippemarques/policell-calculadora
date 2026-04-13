@@ -186,6 +186,8 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          layout: string
+          section_type: string
           text_color: string | null
           title: string
           updated_at: string
@@ -198,6 +200,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          layout?: string
+          section_type?: string
           text_color?: string | null
           title: string
           updated_at?: string
@@ -210,6 +214,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          layout?: string
+          section_type?: string
           text_color?: string | null
           title?: string
           updated_at?: string

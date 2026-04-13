@@ -14,7 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      condition_discounts: {
+        Row: {
+          condition_name: string
+          discount_percentage: number
+          display_order: number
+          id: string
+          is_rejected: boolean
+        }
+        Insert: {
+          condition_name: string
+          discount_percentage: number
+          display_order?: number
+          id?: string
+          is_rejected?: boolean
+        }
+        Update: {
+          condition_name?: string
+          discount_percentage?: number
+          display_order?: number
+          id?: string
+          is_rejected?: boolean
+        }
+        Relationships: []
+      }
+      damage_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      damage_deductions: {
+        Row: {
+          created_at: string
+          damage_category_id: string
+          deduction_value: number
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          damage_category_id: string
+          deduction_value: number
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          damage_category_id?: string
+          deduction_value?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damage_deductions_damage_category_id_fkey"
+            columns: ["damage_category_id"]
+            isOneToOne: false
+            referencedRelation: "damage_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          base_price: number
+          brand: string
+          colors: string | null
+          created_at: string
+          id: string
+          model: string
+          storage: string
+        }
+        Insert: {
+          base_price: number
+          brand?: string
+          colors?: string | null
+          created_at?: string
+          id?: string
+          model: string
+          storage: string
+        }
+        Update: {
+          base_price?: number
+          brand?: string
+          colors?: string | null
+          created_at?: string
+          id?: string
+          model?: string
+          storage?: string
+        }
+        Relationships: []
+      }
+      evaluations: {
+        Row: {
+          base_price: number
+          condition_discount: number
+          coupon_code: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          damages: Json
+          device_condition: string
+          device_id: string
+          final_value: number
+          id: string
+          status: string
+          total_deductions: number
+        }
+        Insert: {
+          base_price: number
+          condition_discount?: number
+          coupon_code?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          damages?: Json
+          device_condition: string
+          device_id: string
+          final_value: number
+          id?: string
+          status?: string
+          total_deductions?: number
+        }
+        Update: {
+          base_price?: number
+          condition_discount?: number
+          coupon_code?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          damages?: Json
+          device_condition?: string
+          device_id?: string
+          final_value?: number
+          id?: string
+          status?: string
+          total_deductions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

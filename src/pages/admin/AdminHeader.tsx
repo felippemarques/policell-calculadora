@@ -74,7 +74,10 @@ const AdminHeader = () => {
   };
 
   const handleSave = () => {
-    const entries = settingsKeys.map((s) => ({ key: s.key, value: form[s.key] || "" }));
+    const entries = [
+      ...settingsKeys.map((s) => ({ key: s.key, value: form[s.key] || "" })),
+      { key: "header_fixed", value: form.header_fixed || "false" },
+    ];
     saveMutation.mutate(entries);
   };
 

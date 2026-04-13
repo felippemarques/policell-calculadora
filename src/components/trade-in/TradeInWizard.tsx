@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useDevices, useDamageCategories, useConditionDiscounts } from "@/hooks/use-trade-in-data";
+import { useDevices } from "@/hooks/use-trade-in-data";
 import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
+import { checklistItems } from "@/data/checklist";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
-import { StepDamageCheck } from "./StepDamageCheck";
+import { StepEvaluationChecklist } from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
 import { Smartphone } from "lucide-react";
 
@@ -12,8 +13,13 @@ export interface WizardData {
   email: string;
   phone: string;
   deviceId: string;
-  condition: string;
-  selectedDamages: string[];
+  checklistAnswers: Record<string, number | null>;
+}
+
+function initAnswers(): Record<string, number | null> {
+  const init: Record<string, number | null> = {};
+  checklistItems.forEach((item) => (init[item.id] = null));
+  return init;
 }
 
 export function TradeInWizard() {
@@ -23,51 +29,54 @@ export function TradeInWizard() {
     email: "",
     phone: "",
     deviceId: "",
-    condition: "",
-    selectedDamages: [],
+    checklistAnswers: initAnswers(),
   });
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
-  const { data: damageCategories, isLoading: loadingDamages } = useDamageCategories();
-  const { data: conditions, isLoading: loadingConditions } = useConditionDiscounts();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
 
-  const isLoading = loadingDevices || loadingDamages || loadingConditions;
+  const isLoading = loadingDevices;
 
-  const steps = ["Seus Dados", "Seu Aparelho", "Condições", "Resultado"];
+  const steps = ["Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
 
   const handleSubmit = async () => {
-    if (!devices || !damageCategories || !conditions) return;
+    if (!devices) return;
 
     const device = devices.find((d) => d.id === data.deviceId);
     if (!device) return;
 
-    const condition = conditions.find((c) => c.condition_name === data.condition);
-    if (!condition) return;
-
     const basePrice = device.base_price;
-    const conditionDiscount = basePrice * (condition.discount_percentage / 100);
 
-    let totalDeductions = 0;
-    for (const catId of data.selectedDamages) {
-      const cat = damageCategories.find((c) => c.id === catId);
-      if (cat?.damage_deductions?.[0]) {
-        totalDeductions += cat.damage_deductions[0].deduction_value;
+    let totalFixedDiscount = 0;
+    let totalPercentDiscount = 0;
+    let hasCriticalWarning = false;
+
+    checklistItems.forEach((item) => {
+      const idx = data.checklistAnswers[item.id];
+      if (idx !== null && idx !== undefined) {
+        const opt = item.options[idx];
+        totalFixedDiscount += opt.discountFixed;
+        totalPercentDiscount += opt.discountPercent;
+        if (opt.isCritical) hasCriticalWarning = true;
       }
-    }
+    });
 
-    const finalValue = Math.max(0, basePrice - conditionDiscount - totalDeductions);
+    // Formula: (Base - Fixed) * (1 - Percent/100), min 0
+    const afterFixed = Math.max(0, basePrice - totalFixedDiscount);
+    const finalValue = Math.max(0, Math.round(afterFixed * (1 - totalPercentDiscount / 100) * 100) / 100);
 
     await submit({
       customerName: data.name,
       customerEmail: data.email,
       customerPhone: data.phone,
       deviceId: data.deviceId,
-      deviceCondition: data.condition,
-      damages: data.selectedDamages,
+      deviceCondition: hasCriticalWarning ? "critical" : "normal",
+      damages: Object.entries(data.checklistAnswers)
+        .filter(([, v]) => v !== null)
+        .map(([k, v]) => `${k}:${v}`),
       basePrice,
-      conditionDiscount,
-      totalDeductions,
+      conditionDiscount: totalPercentDiscount,
+      totalDeductions: totalFixedDiscount,
       finalValue,
     });
 
@@ -75,7 +84,7 @@ export function TradeInWizard() {
   };
 
   const handleReset = () => {
-    setData({ name: "", email: "", phone: "", deviceId: "", condition: "", selectedDamages: [] });
+    setData({ name: "", email: "", phone: "", deviceId: "", checklistAnswers: initAnswers() });
     setResult(null);
     setStep(0);
   };
@@ -127,16 +136,14 @@ export function TradeInWizard() {
         <StepSelectDevice
           data={data}
           devices={devices || []}
-          conditions={conditions || []}
           onChange={(d) => setData({ ...data, ...d })}
           onNext={() => setStep(2)}
           onBack={() => setStep(0)}
         />
       )}
       {step === 2 && (
-        <StepDamageCheck
+        <StepEvaluationChecklist
           data={data}
-          damageCategories={damageCategories || []}
           onChange={(d) => setData({ ...data, ...d })}
           onSubmit={handleSubmit}
           onBack={() => setStep(1)}

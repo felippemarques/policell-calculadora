@@ -1,6 +1,6 @@
-import { TradeInWizard } from "@/components/trade-in/TradeInWizard";
 import { Smartphone, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
@@ -20,12 +20,10 @@ const Index = () => {
           <p className="text-lg text-muted-foreground mt-4 max-w-xl mx-auto">
             Descubra o valor do seu aparelho em segundos e ganhe um cupom de desconto exclusivo para usar na nossa loja.
           </p>
-          <Button
-            size="lg"
-            className="mt-8"
-            onClick={() => document.getElementById("calculadora")?.scrollIntoView({ behavior: "smooth" })}
-          >
-            Avaliar meu aparelho <ArrowDown className="ml-2 h-4 w-4" />
+          <Button size="lg" className="mt-8" asChild>
+            <Link to="/calculadora">
+              Avaliar meu aparelho <ArrowDown className="ml-2 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </section>
@@ -46,11 +44,6 @@ const Index = () => {
             <p className="text-muted-foreground text-sm">📹 Vídeo: Trade-in vs Compra Nova</p>
           </div>
         </div>
-      </section>
-
-      {/* Calculator Section */}
-      <section className="max-w-5xl mx-auto px-4 py-16">
-        <TradeInWizard />
       </section>
 
       {/* Footer */}

@@ -53,7 +53,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Configurable Header */}
       <header
-        className="border-b"
+        className={`border-b ${settings.header_fixed === "true" ? "sticky top-0 z-50" : ""}`}
         style={{ backgroundColor: settings.header_bg_color || undefined, color: settings.header_text_color || undefined }}
       >
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">

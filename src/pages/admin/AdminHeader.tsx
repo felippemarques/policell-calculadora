@@ -117,6 +117,17 @@ const AdminHeader = () => {
         </div>
       </div>
 
+      <div className="flex items-center gap-3 p-4 rounded-lg border bg-card">
+        <Switch
+          checked={form.header_fixed === "true"}
+          onCheckedChange={(checked) => setForm({ ...form, header_fixed: checked ? "true" : "false" })}
+        />
+        <div>
+          <Label>Header Fixo (sticky)</Label>
+          <p className="text-xs text-muted-foreground">O header acompanha o scroll da página</p>
+        </div>
+      </div>
+
       <div className="space-y-4">
         {settingsKeys.map((setting) => {
           if (setting.type === "image") {

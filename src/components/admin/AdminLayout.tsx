@@ -10,10 +10,12 @@ import {
   Users,
   LogOut,
   ChevronLeft,
+  PanelTop,
 } from "lucide-react";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/admin/header", icon: PanelTop, label: "Header" },
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
   { to: "/admin/videos", icon: Video, label: "Vídeos" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Catálogo" },

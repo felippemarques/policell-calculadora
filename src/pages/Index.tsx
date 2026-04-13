@@ -1,8 +1,36 @@
 import { Smartphone, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const { data: sections } = useQuery({
+    queryKey: ["lp-sections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lp_sections")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: videos } = useQuery({
+    queryKey: ["lp-videos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lp_videos")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -28,6 +56,35 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Dynamic Sections from DB */}
+      {sections?.map((section) => (
+        <section
+          key={section.id}
+          style={{ backgroundColor: section.bg_color, color: section.text_color }}
+        >
+          <div className="max-w-5xl mx-auto px-4 py-16">
+            <div className={`flex flex-col ${section.image_url ? "md:flex-row md:items-center md:gap-12" : ""}`}>
+              <div className={section.image_url ? "md:flex-1" : "text-center"}>
+                <h2 className="text-2xl md:text-3xl font-bold">{section.title}</h2>
+                {section.content && (
+                  <p className="mt-4 text-lg opacity-80 whitespace-pre-line">{section.content}</p>
+                )}
+              </div>
+              {section.image_url && (
+                <div className="mt-6 md:mt-0 md:flex-1">
+                  <img
+                    src={section.image_url}
+                    alt={section.title}
+                    className="rounded-xl w-full max-h-80 object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      ))}
+
       {/* Video Section */}
       <section className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
@@ -37,12 +94,34 @@ const Index = () => {
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
-            <p className="text-muted-foreground text-sm">📹 Vídeo: O que é Trade-in?</p>
-          </div>
-          <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
-            <p className="text-muted-foreground text-sm">📹 Vídeo: Trade-in vs Compra Nova</p>
-          </div>
+          {videos && videos.length > 0 ? (
+            videos.map((video) => (
+              <div key={video.id} className="space-y-2">
+                <div className="aspect-video rounded-xl overflow-hidden border">
+                  <iframe
+                    src={video.embed_url}
+                    title={video.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <h3 className="text-sm font-medium text-foreground">{video.title}</h3>
+                {video.description && (
+                  <p className="text-xs text-muted-foreground">{video.description}</p>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
+                <p className="text-muted-foreground text-sm">📹 Vídeo: O que é Trade-in?</p>
+              </div>
+              <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
+                <p className="text-muted-foreground text-sm">📹 Vídeo: Trade-in vs Compra Nova</p>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

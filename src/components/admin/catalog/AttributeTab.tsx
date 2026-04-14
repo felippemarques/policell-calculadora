@@ -69,7 +69,6 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
           if (error) throw error;
         }
       }
-      }
     },
     onSuccess: () => { invalidate(); setEditingValue(null); setNewValue(""); toast.success("Renomeado!"); },
     onError: (e: any) => toast.error(e.message),

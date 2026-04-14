@@ -32,7 +32,7 @@ export function DevicesTab() {
   const [bulkValue, setBulkValue] = useState("");
   const [bulkPriceMode, setBulkPriceMode] = useState<"absolute" | "percent">("absolute");
   const [bulkPriceValue, setBulkPriceValue] = useState("");
-  const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; from: string; to: string }> | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> | null>(null);
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],

@@ -18,6 +18,10 @@ interface SectionForm {
   is_active: boolean;
   layout: string;
   section_type: string;
+  cta_text: string;
+  cta_bg_color: string;
+  cta_text_color: string;
+  cta_border_radius: number;
 }
 
 const emptySectionForm: SectionForm = {
@@ -29,6 +33,10 @@ const emptySectionForm: SectionForm = {
   is_active: true,
   layout: "text-image",
   section_type: "section",
+  cta_text: "Avaliar meu aparelho",
+  cta_bg_color: "#7c3aed",
+  cta_text_color: "#ffffff",
+  cta_border_radius: 8,
 };
 
 const layoutOptions = [

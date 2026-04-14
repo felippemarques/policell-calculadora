@@ -109,17 +109,18 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section
-        className="relative overflow-hidden"
-        style={hero ? { backgroundColor: hero.bg_color, color: hero.text_color } : undefined}
-      >
-        {!hero && <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />}
-        {hero?.image_url && (
-          <img src={hero.image_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15" />
+      <section className="relative overflow-hidden">
+        {hero?.image_url ? (
+          <img src={hero.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={hero ? { backgroundColor: hero.bg_color } : undefined} />
         )}
-        <div className="relative max-w-5xl mx-auto px-4 py-20 md:py-28 text-center">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+        {!hero && !hero?.image_url && <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />}
+        <div
+          className="relative max-w-5xl mx-auto px-4 py-20 md:py-28 text-center"
+          style={{ color: hero?.text_color || undefined }}
+        >
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-sm font-medium px-4 py-1.5 rounded-full mb-6">
             <Smartphone className="h-4 w-4" />
             Trade-in Inteligente
           </div>
@@ -129,9 +130,18 @@ const Index = () => {
           <p className="text-lg mt-4 max-w-xl mx-auto opacity-80">
             {hero?.content || "Descubra o valor do seu aparelho em segundos e ganhe um cupom de desconto exclusivo para usar na nossa loja."}
           </p>
-          <Button size="lg" className="mt-8" asChild>
+          <Button
+            size="lg"
+            className="mt-8"
+            style={{
+              backgroundColor: hero?.cta_bg_color || undefined,
+              color: hero?.cta_text_color || undefined,
+              borderRadius: hero?.cta_border_radius ? `${hero.cta_border_radius}px` : undefined,
+            }}
+            asChild
+          >
             <Link to="/calculadora">
-              Avaliar meu aparelho <ArrowDown className="ml-2 h-4 w-4" />
+              {hero?.cta_text || "Avaliar meu aparelho"} <ArrowDown className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>

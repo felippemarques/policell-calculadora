@@ -32,7 +32,7 @@ export function DevicesTab() {
   const [bulkValue, setBulkValue] = useState("");
   const [bulkPriceMode, setBulkPriceMode] = useState<"absolute" | "percent">("absolute");
   const [bulkPriceValue, setBulkPriceValue] = useState("");
-  const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; from: string; to: string }> | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> | null>(null);
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],
@@ -106,7 +106,7 @@ export function DevicesTab() {
   const computePendingChanges = () => {
     const ids = Array.from(selected);
     const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
-    const changes: Array<{ id: string; label: string; field: string; from: string; to: string }> = [];
+    const changes: Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> = [];
 
     for (const dev of selectedDevices) {
       const label = `${dev.brand} ${dev.model} ${dev.storage}`;
@@ -115,37 +115,34 @@ export function DevicesTab() {
         if (isNaN(val)) continue;
         const oldPrice = Number(dev.base_price);
         const newPrice = bulkPriceMode === "absolute" ? val : Math.round(oldPrice * (1 + val / 100) * 100) / 100;
-        changes.push({ id: dev.id, label, field: "Preço", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${Math.max(0, newPrice).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` });
+        const finalPrice = Math.max(0, newPrice);
+        changes.push({ id: dev.id, label, field: "Preço", fieldKey: "base_price", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${finalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, rawTo: finalPrice });
       } else {
         const fieldLabels: Record<string, string> = { brand: "Marca", model: "Modelo", storage: "Armazenamento", colors: "Cores" };
         const oldVal = (dev as any)[bulkField] || "—";
-        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, from: oldVal, to: bulkValue });
+        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, fieldKey: bulkField, from: oldVal, to: bulkValue, rawTo: bulkValue });
       }
     }
     setPendingChanges(changes);
   };
 
+  const updatePendingChange = (index: number, newRawTo: number | string) => {
+    if (!pendingChanges) return;
+    const updated = [...pendingChanges];
+    const c = { ...updated[index] };
+    c.rawTo = newRawTo;
+    c.to = c.fieldKey === "base_price" ? `R$ ${Number(newRawTo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : String(newRawTo);
+    updated[index] = c;
+    setPendingChanges(updated);
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async () => {
-      const ids = Array.from(selected);
-      if (bulkField === "base_price") {
-        const val = Number(bulkPriceValue);
-        if (isNaN(val)) throw new Error("Valor inválido");
-        if (bulkPriceMode === "absolute") {
-          const { error } = await supabase.from("devices").update({ base_price: val }).in("id", ids);
-          if (error) throw error;
-        } else {
-          const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
-          for (const dev of selectedDevices) {
-            const newPrice = Math.round(Number(dev.base_price) * (1 + val / 100) * 100) / 100;
-            const { error } = await supabase.from("devices").update({ base_price: Math.max(0, newPrice) }).eq("id", dev.id);
-            if (error) throw error;
-          }
-        }
-      } else {
+      if (!pendingChanges) throw new Error("Sem alterações");
+      for (const c of pendingChanges) {
         const updateObj: any = {};
-        updateObj[bulkField] = bulkValue;
-        const { error } = await supabase.from("devices").update(updateObj).in("id", ids);
+        updateObj[c.fieldKey] = c.fieldKey === "base_price" ? Number(c.rawTo) : c.rawTo;
+        const { error } = await supabase.from("devices").update(updateObj).eq("id", c.id);
         if (error) throw error;
       }
     },
@@ -366,7 +363,24 @@ export function DevicesTab() {
                     <td className="px-3 py-1.5 font-medium">{c.label}</td>
                     <td className="px-3 py-1.5 text-muted-foreground">{c.field}</td>
                     <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
-                    <td className="px-3 py-1.5 text-primary font-medium">{c.to}</td>
+                    <td className="px-3 py-1.5">
+                      {c.fieldKey === "base_price" ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={Number(c.rawTo)}
+                          onChange={(e) => updatePendingChange(i, Math.max(0, Number(e.target.value)))}
+                          className="h-7 w-28 text-xs font-medium text-primary"
+                        />
+                      ) : (
+                        <Input
+                          value={String(c.rawTo)}
+                          onChange={(e) => updatePendingChange(i, e.target.value)}
+                          className="h-7 w-36 text-xs font-medium text-primary"
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

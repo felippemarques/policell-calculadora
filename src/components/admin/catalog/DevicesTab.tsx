@@ -126,27 +126,23 @@ export function DevicesTab() {
     setPendingChanges(changes);
   };
 
+  const updatePendingChange = (index: number, newRawTo: number | string) => {
+    if (!pendingChanges) return;
+    const updated = [...pendingChanges];
+    const c = { ...updated[index] };
+    c.rawTo = newRawTo;
+    c.to = c.fieldKey === "base_price" ? `R$ ${Number(newRawTo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : String(newRawTo);
+    updated[index] = c;
+    setPendingChanges(updated);
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async () => {
-      const ids = Array.from(selected);
-      if (bulkField === "base_price") {
-        const val = Number(bulkPriceValue);
-        if (isNaN(val)) throw new Error("Valor inválido");
-        if (bulkPriceMode === "absolute") {
-          const { error } = await supabase.from("devices").update({ base_price: val }).in("id", ids);
-          if (error) throw error;
-        } else {
-          const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
-          for (const dev of selectedDevices) {
-            const newPrice = Math.round(Number(dev.base_price) * (1 + val / 100) * 100) / 100;
-            const { error } = await supabase.from("devices").update({ base_price: Math.max(0, newPrice) }).eq("id", dev.id);
-            if (error) throw error;
-          }
-        }
-      } else {
+      if (!pendingChanges) throw new Error("Sem alterações");
+      for (const c of pendingChanges) {
         const updateObj: any = {};
-        updateObj[bulkField] = bulkValue;
-        const { error } = await supabase.from("devices").update(updateObj).in("id", ids);
+        updateObj[c.fieldKey] = c.fieldKey === "base_price" ? Number(c.rawTo) : c.rawTo;
+        const { error } = await supabase.from("devices").update(updateObj).eq("id", c.id);
         if (error) throw error;
       }
     },

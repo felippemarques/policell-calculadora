@@ -1,47 +1,81 @@
 
 
-# Calculadora Trade-in Pollicell
+## Plano: Seções fixas da Landing Page (atualizado)
 
-## Visão Geral
-Aplicação web com calculadora de trade-in para dispositivos móveis, onde o cliente informa seus dados, seleciona o aparelho, indica avarias e recebe uma cotação com cupom de desconto para usar na loja.
+### Estrutura das 8 seções fixas
 
-## Fase 1 — Banco de Dados e Motor de Cálculo
-- Criar tabelas no Lovable Cloud (Supabase):
-  - **devices**: marca, modelo, preço base
-  - **damage_categories**: tipo de dano (tela, botões, câmera, etc.)
-  - **damage_deductions**: valor de desconto por dano, vinculado ao modelo
-  - **evaluations**: dados do cliente, aparelho, danos, valor final, status, cupom gerado
-- Importar dados da planilha do usuário para popular `devices` e `damage_deductions`
-- Implementar lógica de cálculo: **Preço Base − Σ Danos = Valor Final**
+```text
+1. HERO BANNER
+   - Imagem de fundo, título, subtítulo
+   - CTA customizável (texto, cor bg, cor texto, radius)
+   - Toggle ativo/inativo
 
-## Fase 2 — Landing Page + Wizard (Calculadora)
-- Landing page minimalista e moderna com cores customizáveis via design tokens
-- Seção de vídeos educativos (Trade-in vs Compra) com embed de YouTube/Vimeo
-- Wizard step-by-step:
-  - **Step 1**: Dados pessoais (nome, email, telefone)
-  - **Step 2**: Seleção de marca → modelo (dados do banco)
-  - **Step 3**: Checklist de condições/avarias (checkboxes dinâmicos do banco)
-- Tela de resultado:
-  - Valor final da avaliação
-  - Código do cupom gerado
-  - Link da loja + botão para copiar cupom
-  - 3 botões de ação: Comprar Agora (link + cupom), Aguardar Contato (webhook N8N), Falar com Especialista (webhook N8N)
+2. PASSO A PASSO
+   - Título, subtítulo
+   - 3-4 passos (ícone/título/descrição) em JSON
+   - Cores bg/texto, toggle ativo
 
-## Fase 3 — Integrações
-- **Edge Function para Tray/Bagy**: criação automática de cupom de desconto via API (com base na doc fornecida pelo usuário)
-- **Webhooks N8N**: disparos para os cenários "Aguardar Contato" e "Atendimento Imediato" com dados do lead e cotação
-- **Endpoint público para ERP (WM10)**: `GET /api/evaluation/{coupon_code}` retornando dados do cliente e aparelho avaliado
+3. COMO VENDER (info cards)
+   - Título, subtítulo, imagem lateral opcional
+   - Lista de bullets/cards em JSON
+   - Cores, toggle ativo
 
-## Fase 4 — Backoffice Admin
-- Painel com autenticação para gerenciar:
-  - CRUD de aparelhos e preços base
-  - CRUD de regras de desconto por avaria
-  - Listagem de avaliações realizadas
-- Acesso restrito via RLS e tabela de roles
+4. BENEFÍCIOS / FACILIDADES (ATUALIZADO)
+   - Título, subtítulo
+   - Linha 1: vídeo do YouTube (URL embed, largura completa)
+   - Linha 2: até 4 cards (ícone/título/descrição) em JSON
+   - Cores bg/texto, toggle ativo
 
-## Fase 5 — Testes e Ajustes
-- Validar precisão do cálculo de deduções
-- Testar criação de cupons na API Tray
-- Validar webhooks N8N
-- Garantir responsividade mobile-first
+5. DEPOIMENTOS
+   - Título, lista de depoimentos (nome, cidade, texto, foto) em JSON
+   - Cores, toggle ativo
+
+6. DÚVIDAS FREQUENTES (FAQ)
+   - Título, itens pergunta/resposta em JSON (accordion)
+   - Cores, toggle ativo
+
+7. MEGA FOOTER
+   - Colunas de links em JSON, texto institucional
+   - Cores bg/texto, toggle ativo
+
+8. FOOTER
+   - Texto de copyright
+   - Cores bg/texto, toggle ativo
+```
+
+### Mudanças técnicas
+
+**1. Migração de banco**
+- `ALTER COLUMN title DROP NOT NULL` em `lp_sections`
+- Adicionar coluna `video_url text` para seções que usam vídeo (seção 4)
+- Deletar seções existentes e inserir 8 seções fixas com `section_type`: `hero`, `steps`, `how-to-sell`, `benefits`, `testimonials`, `faq`, `mega-footer`, `footer`
+- Campo `content` (text/JSON) armazenará dados estruturados (passos, cards, FAQ items, depoimentos, links)
+
+**2. AdminSections.tsx — reescrita**
+- Sem botão "Adicionar" ou "Deletar" — apenas editar e toggle ativo/inativo
+- Formulário contextual por `section_type`:
+  - **Hero**: imagem de fundo + CTA (texto, cores, radius)
+  - **Passo a passo**: editor de lista de passos
+  - **Como vender**: título + bullets/cards + imagem
+  - **Benefícios**: campo de URL YouTube + editor de até 4 cards
+  - **Depoimentos**: editor de lista (nome, cidade, texto, foto)
+  - **FAQ**: editor de lista pergunta/resposta
+  - **Mega Footer**: editor de colunas de links
+  - **Footer**: campo de copyright + cores
+
+**3. Index.tsx — reescrita com componentes por seção**
+- Hero: banner fullwidth + CTA
+- Passo a passo: grid numerado
+- Como vender: layout lado a lado
+- **Benefícios**: linha 1 com iframe YouTube 100% largura + linha 2 com grid de até 4 cards
+- Depoimentos: grid de cards com foto/nome/cidade
+- FAQ: accordion (componente existente)
+- Mega Footer: grid de colunas
+- Footer: barra simples
+- Cada seção renderiza apenas se `is_active = true`
+
+**4. Arquivos afetados**
+- `supabase/migrations/` — nova migração (schema + seed)
+- `src/pages/admin/AdminSections.tsx` — reescrita completa
+- `src/pages/Index.tsx` — reescrita com renderizadores dedicados
 

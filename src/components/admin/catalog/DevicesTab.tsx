@@ -363,7 +363,24 @@ export function DevicesTab() {
                     <td className="px-3 py-1.5 font-medium">{c.label}</td>
                     <td className="px-3 py-1.5 text-muted-foreground">{c.field}</td>
                     <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
-                    <td className="px-3 py-1.5 text-primary font-medium">{c.to}</td>
+                    <td className="px-3 py-1.5">
+                      {c.fieldKey === "base_price" ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={Number(c.rawTo)}
+                          onChange={(e) => updatePendingChange(i, Math.max(0, Number(e.target.value)))}
+                          className="h-7 w-28 text-xs font-medium text-primary"
+                        />
+                      ) : (
+                        <Input
+                          value={String(c.rawTo)}
+                          onChange={(e) => updatePendingChange(i, e.target.value)}
+                          className="h-7 w-36 text-xs font-medium text-primary"
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

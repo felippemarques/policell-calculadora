@@ -132,6 +132,10 @@ const AdminSections = () => {
       is_active: section.is_active,
       layout: section.layout || "text-image",
       section_type: section.section_type || "section",
+      cta_text: section.cta_text || "Avaliar meu aparelho",
+      cta_bg_color: section.cta_bg_color || "#7c3aed",
+      cta_text_color: section.cta_text_color || "#ffffff",
+      cta_border_radius: section.cta_border_radius ?? 8,
     });
     setEditingId(section.id);
     setShowAdd(false);

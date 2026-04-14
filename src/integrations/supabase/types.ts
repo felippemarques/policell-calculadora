@@ -193,8 +193,9 @@ export type Database = {
           layout: string
           section_type: string
           text_color: string | null
-          title: string
+          title: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           bg_color?: string | null
@@ -211,8 +212,9 @@ export type Database = {
           layout?: string
           section_type?: string
           text_color?: string | null
-          title: string
+          title?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           bg_color?: string | null
@@ -229,8 +231,9 @@ export type Database = {
           layout?: string
           section_type?: string
           text_color?: string | null
-          title?: string
+          title?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }

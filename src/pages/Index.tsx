@@ -1,11 +1,28 @@
-import { Smartphone, ArrowDown, Phone, Mail, Instagram, Facebook } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Phone, Mail, Instagram, Facebook } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import HeroSection from "@/components/landing/HeroSection";
+import StepsSection from "@/components/landing/StepsSection";
+import HowToSellSection from "@/components/landing/HowToSellSection";
+import BenefitsSection from "@/components/landing/BenefitsSection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import FaqSection from "@/components/landing/FaqSection";
+import MegaFooterSection from "@/components/landing/MegaFooterSection";
+import FooterSection from "@/components/landing/FooterSection";
+
+const sectionComponents: Record<string, React.ComponentType<any>> = {
+  hero: HeroSection,
+  steps: StepsSection,
+  "how-to-sell": HowToSellSection,
+  benefits: BenefitsSection,
+  testimonials: TestimonialsSection,
+  faq: FaqSection,
+  "mega-footer": MegaFooterSection,
+  footer: FooterSection,
+};
 
 const Index = () => {
-  const { data: allSections } = useQuery({
+  const { data: sections } = useQuery({
     queryKey: ["lp-sections"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,22 +47,6 @@ const Index = () => {
   const settings: Record<string, string> = {};
   settingsRaw?.forEach((s: any) => { settings[s.key] = s.value; });
 
-  const hero = allSections?.find((s: any) => s.section_type === "hero");
-  const sections = allSections?.filter((s: any) => s.section_type !== "hero") ?? [];
-
-  const { data: videos } = useQuery({
-    queryKey: ["lp-videos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lp_videos")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const hasSocials = settings.instagram || settings.facebook || settings.tiktok || settings.whatsapp;
   const hasContact = settings.phone || settings.email;
 
@@ -64,7 +65,6 @@ const Index = () => {
               <span className="text-lg font-bold">Pollicell</span>
             )}
           </div>
-
           <div className="flex items-center gap-4 text-sm">
             {hasContact && (
               <div className="hidden md:flex items-center gap-4">
@@ -80,7 +80,6 @@ const Index = () => {
                 )}
               </div>
             )}
-
             {hasSocials && (
               <div className="flex items-center gap-2">
                 {settings.instagram && (
@@ -109,106 +108,13 @@ const Index = () => {
         </div>
       </header>
 
-      <section className="relative overflow-hidden">
-        {hero?.image_url ? (
-          <img src={hero.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0" style={hero ? { backgroundColor: hero.bg_color } : undefined} />
-        )}
-        {!hero && !hero?.image_url && <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />}
-        <div
-          className="relative max-w-5xl mx-auto px-4 py-20 md:py-28 text-center"
-          style={{ color: hero?.text_color || undefined }}
-        >
-          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-sm font-medium px-4 py-1.5 rounded-full mb-6">
-            <Smartphone className="h-4 w-4" />
-            Trade-in Inteligente
-          </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-            {hero ? hero.title : <>Quanto vale seu <span className="text-primary">iPhone</span>?</>}
-          </h1>
-          <p className="text-lg mt-4 max-w-xl mx-auto opacity-80">
-            {hero?.content || "Descubra o valor do seu aparelho em segundos e ganhe um cupom de desconto exclusivo para usar na nossa loja."}
-          </p>
-          <Button
-            size="lg"
-            className="mt-8"
-            style={{
-              backgroundColor: hero?.cta_bg_color || undefined,
-              color: hero?.cta_text_color || undefined,
-              borderRadius: hero?.cta_border_radius ? `${hero.cta_border_radius}px` : undefined,
-            }}
-            asChild
-          >
-            <Link to="/calculadora">
-              {hero?.cta_text || "Avaliar meu aparelho"} <ArrowDown className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Dynamic Sections */}
-      {sections.map((section: any) => (
-        <section key={section.id} style={{ backgroundColor: section.bg_color, color: section.text_color }}>
-          <div className="max-w-5xl mx-auto px-4 py-16">
-            {section.layout === "text-only" ? (
-              <div className="text-center max-w-3xl mx-auto">
-                <h2 className="text-2xl md:text-3xl font-bold">{section.title}</h2>
-                {section.content && <p className="mt-4 text-lg opacity-80 whitespace-pre-line">{section.content}</p>}
-              </div>
-            ) : (
-              <div className={`flex flex-col md:flex-row md:items-center md:gap-12 ${section.layout === "image-text" ? "md:flex-row-reverse" : ""}`}>
-                <div className="md:flex-1">
-                  <h2 className="text-2xl md:text-3xl font-bold">{section.title}</h2>
-                  {section.content && <p className="mt-4 text-lg opacity-80 whitespace-pre-line">{section.content}</p>}
-                </div>
-                {section.image_url && (
-                  <div className="mt-6 md:mt-0 md:flex-1">
-                    <img src={section.image_url} alt={section.title} className="rounded-xl w-full max-h-80 object-cover" loading="lazy" />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      ))}
-
-      {/* Video Section */}
-      <section className="max-w-5xl mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-foreground">Como funciona o Trade-in?</h2>
-          <p className="text-muted-foreground mt-2">Entenda as vantagens de trocar seu aparelho antigo</p>
-        </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          {videos && videos.length > 0 ? (
-            videos.map((video: any) => (
-              <div key={video.id} className="space-y-2">
-                <div className="aspect-video rounded-xl overflow-hidden border">
-                  <iframe src={video.embed_url} title={video.title} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                </div>
-                <h3 className="text-sm font-medium text-foreground">{video.title}</h3>
-                {video.description && <p className="text-xs text-muted-foreground">{video.description}</p>}
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
-                <p className="text-muted-foreground text-sm">📹 Vídeo: O que é Trade-in?</p>
-              </div>
-              <div className="aspect-video rounded-xl overflow-hidden bg-muted flex items-center justify-center border">
-                <p className="text-muted-foreground text-sm">📹 Vídeo: Trade-in vs Compra Nova</p>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="max-w-5xl mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Pollicell. Todos os direitos reservados.
-        </div>
-      </footer>
+      {/* Render fixed sections */}
+      {sections?.map((section: any) => {
+        const Component = sectionComponents[section.section_type];
+        if (!Component) return null;
+        const extraProps = section.section_type === "mega-footer" ? { settings } : {};
+        return <Component key={section.id} section={section} {...extraProps} />;
+      })}
     </div>
   );
 };

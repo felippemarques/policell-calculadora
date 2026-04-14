@@ -1,0 +1,49 @@
+import { Smartphone, ClipboardCheck, CreditCard, Gift } from "lucide-react";
+
+interface StepsSectionProps {
+  section: any;
+}
+
+const defaultSteps = [
+  { icon: "smartphone", title: "Escolha seu aparelho", description: "Selecione o modelo e armazenamento do seu dispositivo." },
+  { icon: "clipboard", title: "Avalie o estado", description: "Responda algumas perguntas sobre a condição do aparelho." },
+  { icon: "credit-card", title: "Receba a oferta", description: "Veja o valor estimado e ganhe um cupom exclusivo." },
+  { icon: "gift", title: "Finalize na loja", description: "Use o cupom na nossa loja e aproveite o desconto." },
+];
+
+const iconMap: Record<string, React.ReactNode> = {
+  "smartphone": <Smartphone className="h-8 w-8" />,
+  "clipboard": <ClipboardCheck className="h-8 w-8" />,
+  "credit-card": <CreditCard className="h-8 w-8" />,
+  "gift": <Gift className="h-8 w-8" />,
+};
+
+const StepsSection = ({ section }: StepsSectionProps) => {
+  let steps = defaultSteps;
+  try {
+    if (section.content) steps = JSON.parse(section.content);
+  } catch {}
+
+  return (
+    <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
+      <div className="max-w-5xl mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold">{section.title || "Como funciona"}</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {steps.map((step: any, i: number) => (
+            <div key={i} className="text-center space-y-3">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                {iconMap[step.icon] || <span className="text-2xl font-bold">{i + 1}</span>}
+              </div>
+              <h3 className="font-semibold text-lg">{step.title}</h3>
+              <p className="text-sm opacity-70">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default StepsSection;

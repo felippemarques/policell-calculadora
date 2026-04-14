@@ -1,0 +1,74 @@
+import { Shield, Zap, ThumbsUp, Banknote } from "lucide-react";
+
+interface BenefitsSectionProps {
+  section: any;
+}
+
+const defaultCards = [
+  { icon: "shield", title: "Segurança", description: "Processo 100% seguro e transparente." },
+  { icon: "zap", title: "Rapidez", description: "Avaliação em menos de 2 minutos." },
+  { icon: "thumbs-up", title: "Facilidade", description: "Sem burocracia, tudo online." },
+  { icon: "banknote", title: "Melhor valor", description: "Ofertas justas baseadas no mercado." },
+];
+
+const iconMap: Record<string, React.ReactNode> = {
+  "shield": <Shield className="h-6 w-6" />,
+  "zap": <Zap className="h-6 w-6" />,
+  "thumbs-up": <ThumbsUp className="h-6 w-6" />,
+  "banknote": <Banknote className="h-6 w-6" />,
+};
+
+const BenefitsSection = ({ section }: BenefitsSectionProps) => {
+  let cards = defaultCards;
+  try {
+    if (section.content) cards = JSON.parse(section.content);
+  } catch {}
+
+  const videoUrl = section.video_url;
+
+  // Convert YouTube URL to embed format
+  const getEmbedUrl = (url: string) => {
+    if (!url) return "";
+    if (url.includes("embed")) return url;
+    const match = url.match(/(?:youtu\.be\/|v=)([^&\s]+)/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+  };
+
+  return (
+    <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
+      <div className="max-w-5xl mx-auto px-4 py-16">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-bold">{section.title || "Nunca foi tão fácil"}</h2>
+        </div>
+
+        {videoUrl && (
+          <div className="mb-10">
+            <div className="aspect-video rounded-xl overflow-hidden border">
+              <iframe
+                src={getEmbedUrl(videoUrl)}
+                title="Vídeo"
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {cards.map((card: any, i: number) => (
+            <div key={i} className="bg-background/50 backdrop-blur-sm rounded-xl p-6 border text-center space-y-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                {iconMap[card.icon] || <span className="font-bold">{i + 1}</span>}
+              </div>
+              <h3 className="font-semibold">{card.title}</h3>
+              <p className="text-sm opacity-70">{card.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default BenefitsSection;

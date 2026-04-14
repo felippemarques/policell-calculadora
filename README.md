@@ -1,3 +1,3 @@
 # Welcome to your Lovable project
 
-TODO: Document your project here
+Aplicação para cálculo de depreciação de aparelhos usados

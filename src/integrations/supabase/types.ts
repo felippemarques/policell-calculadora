@@ -182,6 +182,10 @@ export type Database = {
           bg_color: string | null
           content: string | null
           created_at: string
+          cta_bg_color: string | null
+          cta_border_radius: number | null
+          cta_text: string | null
+          cta_text_color: string | null
           display_order: number
           id: string
           image_url: string | null
@@ -196,6 +200,10 @@ export type Database = {
           bg_color?: string | null
           content?: string | null
           created_at?: string
+          cta_bg_color?: string | null
+          cta_border_radius?: number | null
+          cta_text?: string | null
+          cta_text_color?: string | null
           display_order?: number
           id?: string
           image_url?: string | null
@@ -210,6 +218,10 @@ export type Database = {
           bg_color?: string | null
           content?: string | null
           created_at?: string
+          cta_bg_color?: string | null
+          cta_border_radius?: number | null
+          cta_text?: string | null
+          cta_text_color?: string | null
           display_order?: number
           id?: string
           image_url?: string | null

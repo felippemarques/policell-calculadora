@@ -338,10 +338,47 @@ export function DevicesTab() {
               </div>
             )}
 
-            <Button size="sm" onClick={() => bulkUpdateMutation.mutate()} disabled={bulkUpdateMutation.isPending || (bulkField === "base_price" ? !bulkPriceValue : !bulkValue)}>
-              <Check className="mr-1 h-3.5 w-3.5" /> Aplicar
+            <Button size="sm" onClick={computePendingChanges} disabled={bulkField === "base_price" ? !bulkPriceValue : !bulkValue}>
+              <Check className="mr-1 h-3.5 w-3.5" /> Pré-visualizar
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowBulk(false)}>Cancelar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowBulk(false); setPendingChanges(null); }}>Cancelar</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Preview */}
+      {pendingChanges && pendingChanges.length > 0 && (
+        <div className="bg-accent/30 border-2 border-primary/30 rounded-lg p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-foreground">Aprovar alterações? — {pendingChanges.length} aparelho(s)</h4>
+          <div className="max-h-60 overflow-auto border rounded-md">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50 sticky top-0">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Aparelho</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Campo</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">De</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Para</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {pendingChanges.map((c, i) => (
+                  <tr key={i} className="hover:bg-muted/20">
+                    <td className="px-3 py-1.5 font-medium">{c.label}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{c.field}</td>
+                    <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
+                    <td className="px-3 py-1.5 text-primary font-medium">{c.to}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => bulkUpdateMutation.mutate()} disabled={bulkUpdateMutation.isPending}>
+              <Check className="mr-1 h-3.5 w-3.5" /> Sim, aplicar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPendingChanges(null)}>
+              <X className="mr-1 h-3.5 w-3.5" /> Não, cancelar
+            </Button>
           </div>
         </div>
       )}

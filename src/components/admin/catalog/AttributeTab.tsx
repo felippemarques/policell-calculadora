@@ -62,9 +62,13 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
           if (error) throw error;
         }
       } else {
-        const updateObj = { [field]: newVal } as any;
-        const { error } = await supabase.from("devices").update(updateObj).eq(field as any, oldValue);
-        if (error) throw error;
+        // Rename attribute across all devices
+        const affected = devices.filter((d) => (d as any)[field] === oldValue);
+        for (const dev of affected) {
+          const { error } = await supabase.from("devices").update({ [field]: newVal } as any).eq("id", dev.id);
+          if (error) throw error;
+        }
+      }
       }
     },
     onSuccess: () => { invalidate(); setEditingValue(null); setNewValue(""); toast.success("Renomeado!"); },

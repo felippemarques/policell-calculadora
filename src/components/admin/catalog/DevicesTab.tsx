@@ -103,19 +103,38 @@ export function DevicesTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const computePendingChanges = () => {
+    const ids = Array.from(selected);
+    const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
+    const changes: Array<{ id: string; label: string; field: string; from: string; to: string }> = [];
+
+    for (const dev of selectedDevices) {
+      const label = `${dev.brand} ${dev.model} ${dev.storage}`;
+      if (bulkField === "base_price") {
+        const val = Number(bulkPriceValue);
+        if (isNaN(val)) continue;
+        const oldPrice = Number(dev.base_price);
+        const newPrice = bulkPriceMode === "absolute" ? val : Math.round(oldPrice * (1 + val / 100) * 100) / 100;
+        changes.push({ id: dev.id, label, field: "Preço", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${Math.max(0, newPrice).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` });
+      } else {
+        const fieldLabels: Record<string, string> = { brand: "Marca", model: "Modelo", storage: "Armazenamento", colors: "Cores" };
+        const oldVal = (dev as any)[bulkField] || "—";
+        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, from: oldVal, to: bulkValue });
+      }
+    }
+    setPendingChanges(changes);
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selected);
       if (bulkField === "base_price") {
-        // Price update: by absolute value or percentage
         const val = Number(bulkPriceValue);
         if (isNaN(val)) throw new Error("Valor inválido");
-        
         if (bulkPriceMode === "absolute") {
           const { error } = await supabase.from("devices").update({ base_price: val }).in("id", ids);
           if (error) throw error;
         } else {
-          // Percentage: fetch current prices, calculate new ones
           const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
           for (const dev of selectedDevices) {
             const newPrice = Math.round(Number(dev.base_price) * (1 + val / 100) * 100) / 100;
@@ -130,7 +149,7 @@ export function DevicesTab() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { invalidate(); setSelected(new Set()); setShowBulk(false); setBulkValue(""); setBulkPriceValue(""); toast.success("Atualizado em massa!"); },
+    onSuccess: () => { invalidate(); setSelected(new Set()); setShowBulk(false); setBulkValue(""); setBulkPriceValue(""); setPendingChanges(null); toast.success("Atualizado em massa!"); },
     onError: (e: any) => toast.error(e.message),
   });
 

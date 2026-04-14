@@ -62,7 +62,8 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
           if (error) throw error;
         }
       } else {
-        const { error } = await supabase.from("devices").update({ [field]: newVal }).eq(field, oldValue);
+        const updateObj = { [field]: newVal } as any;
+        const { error } = await supabase.from("devices").update(updateObj).eq(field as any, oldValue);
         if (error) throw error;
       }
     },

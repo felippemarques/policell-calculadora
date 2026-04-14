@@ -18,6 +18,10 @@ interface SectionForm {
   is_active: boolean;
   layout: string;
   section_type: string;
+  cta_text: string;
+  cta_bg_color: string;
+  cta_text_color: string;
+  cta_border_radius: number;
 }
 
 const emptySectionForm: SectionForm = {
@@ -29,6 +33,10 @@ const emptySectionForm: SectionForm = {
   is_active: true,
   layout: "text-image",
   section_type: "section",
+  cta_text: "Avaliar meu aparelho",
+  cta_bg_color: "#7c3aed",
+  cta_text_color: "#ffffff",
+  cta_border_radius: 8,
 };
 
 const layoutOptions = [
@@ -124,6 +132,10 @@ const AdminSections = () => {
       is_active: section.is_active,
       layout: section.layout || "text-image",
       section_type: section.section_type || "section",
+      cta_text: section.cta_text || "Avaliar meu aparelho",
+      cta_bg_color: section.cta_bg_color || "#7c3aed",
+      cta_text_color: section.cta_text_color || "#ffffff",
+      cta_border_radius: section.cta_border_radius ?? 8,
     });
     setEditingId(section.id);
     setShowAdd(false);
@@ -255,7 +267,7 @@ const AdminSections = () => {
           {/* Image upload — show for non text-only and hero */}
           {(form.layout !== "text-only" || isEditingHero) && (
             <div>
-              <Label>Imagem {isEditingHero && "(opcional — aparece no fundo)"}</Label>
+              <Label>Imagem {isEditingHero && "(fundo do hero)"}</Label>
               <div className="flex items-center gap-3 mt-1">
                 <label className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input bg-card text-sm cursor-pointer hover:bg-accent/50 transition-colors">
                   <Upload className="h-4 w-4" />
@@ -272,6 +284,37 @@ const AdminSections = () => {
             </div>
           )}
 
+          {/* CTA Button settings — hero only */}
+          {isEditingHero && (
+            <div className="space-y-4">
+              <Label className="text-sm font-semibold">Botão CTA</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Texto do botão</Label>
+                  <Input value={form.cta_text} onChange={(e) => setForm({ ...form, cta_text: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Border Radius (px)</Label>
+                  <Input type="number" min={0} max={50} value={form.cta_border_radius} onChange={(e) => setForm({ ...form, cta_border_radius: Number(e.target.value) })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Cor de fundo do botão</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input type="color" value={form.cta_bg_color} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} className="w-10 h-10 rounded border border-input cursor-pointer" />
+                    <Input value={form.cta_bg_color} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} className="flex-1" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Cor do texto do botão</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input type="color" value={form.cta_text_color} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} className="w-10 h-10 rounded border border-input cursor-pointer" />
+                    <Input value={form.cta_text_color} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} className="flex-1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {!isEditingHero && (
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />
@@ -283,12 +326,25 @@ const AdminSections = () => {
           <div>
             <Label className="text-xs text-muted-foreground">Preview</Label>
             {isEditingHero ? (
-              <div className="mt-1 rounded-lg p-8 border text-center relative overflow-hidden" style={{ backgroundColor: form.bg_color, color: form.text_color }}>
-                {form.image_url && <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
-                <div className="relative">
+              <div className="mt-1 rounded-lg border text-center relative overflow-hidden" style={{ color: form.text_color }}>
+                {form.image_url ? (
+                  <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0" style={{ backgroundColor: form.bg_color }} />
+                )}
+                <div className="relative p-8">
                   <h3 className="text-2xl font-bold">{form.title || "Título do Hero"}</h3>
                   <p className="mt-2 opacity-80">{form.content || "Subtítulo..."}</p>
-                  <div className="mt-4 inline-block px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">Avaliar meu aparelho</div>
+                  <div
+                    className="mt-4 inline-block px-6 py-2.5 text-sm font-medium"
+                    style={{
+                      backgroundColor: form.cta_bg_color,
+                      color: form.cta_text_color,
+                      borderRadius: `${form.cta_border_radius}px`,
+                    }}
+                  >
+                    {form.cta_text || "Avaliar meu aparelho"}
+                  </div>
                 </div>
               </div>
             ) : (

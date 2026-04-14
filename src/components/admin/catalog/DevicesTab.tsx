@@ -106,7 +106,7 @@ export function DevicesTab() {
   const computePendingChanges = () => {
     const ids = Array.from(selected);
     const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
-    const changes: Array<{ id: string; label: string; field: string; from: string; to: string }> = [];
+    const changes: Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> = [];
 
     for (const dev of selectedDevices) {
       const label = `${dev.brand} ${dev.model} ${dev.storage}`;
@@ -115,11 +115,12 @@ export function DevicesTab() {
         if (isNaN(val)) continue;
         const oldPrice = Number(dev.base_price);
         const newPrice = bulkPriceMode === "absolute" ? val : Math.round(oldPrice * (1 + val / 100) * 100) / 100;
-        changes.push({ id: dev.id, label, field: "Preço", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${Math.max(0, newPrice).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` });
+        const finalPrice = Math.max(0, newPrice);
+        changes.push({ id: dev.id, label, field: "Preço", fieldKey: "base_price", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${finalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, rawTo: finalPrice });
       } else {
         const fieldLabels: Record<string, string> = { brand: "Marca", model: "Modelo", storage: "Armazenamento", colors: "Cores" };
         const oldVal = (dev as any)[bulkField] || "—";
-        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, from: oldVal, to: bulkValue });
+        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, fieldKey: bulkField, from: oldVal, to: bulkValue, rawTo: bulkValue });
       }
     }
     setPendingChanges(changes);

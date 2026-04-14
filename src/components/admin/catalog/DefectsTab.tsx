@@ -48,7 +48,7 @@ export function DefectsTab() {
       }
     },
     onSuccess: () => { invalidateCats(); setEditingCatId(null); setShowNewCat(false); setNewCatName(""); toast.success("Salvo!"); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const deleteCatMutation = useMutation({
@@ -59,12 +59,12 @@ export function DefectsTab() {
       if (error) throw error;
     },
     onSuccess: () => { invalidateCats(); toast.success("Removido!"); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const saveDeductionMutation = useMutation({
     mutationFn: async ({ catId, value }: { catId: string; value: number }) => {
-      const existing = deductions?.find((d: any) => d.damage_category_id === catId);
+      const existing = deductions?.find((d) => d.damage_category_id === catId);
       if (existing) {
         const { error } = await supabase.from("damage_deductions").update({ deduction_value: value }).eq("id", existing.id);
         if (error) throw error;
@@ -74,10 +74,10 @@ export function DefectsTab() {
       }
     },
     onSuccess: () => { invalidateCats(); toast.success("Valor salvo!"); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const getDeduction = (catId: string) => deductions?.find((d: any) => d.damage_category_id === catId);
+  const getDeduction = (catId: string) => deductions?.find((d) => d.damage_category_id === catId);
 
   return (
     <div className="space-y-4">
@@ -110,7 +110,7 @@ export function DefectsTab() {
           {categories?.length === 0 && (
             <p className="text-center text-muted-foreground py-8">Nenhuma categoria de defeito cadastrada.</p>
           )}
-          {categories?.map((cat: any) => {
+          {categories?.map((cat) => {
             const ded = getDeduction(cat.id);
             const isEditing = editingCatId === cat.id;
             return (
@@ -126,10 +126,7 @@ export function DefectsTab() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Label className="text-xs text-muted-foreground whitespace-nowrap">Dedução R$</Label>
                   <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    className="w-24 text-sm"
+                    type="number" min={0} step={1} className="w-24 text-sm"
                     defaultValue={ded?.deduction_value || 0}
                     onBlur={(e) => {
                       const val = Number(e.target.value);

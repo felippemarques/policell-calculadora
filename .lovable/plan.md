@@ -79,3 +79,23 @@
 - `src/pages/admin/AdminSections.tsx` — reescrita completa
 - `src/pages/Index.tsx` — reescrita com renderizadores dedicados
 
+---
+
+## Fases do Backoffice
+
+### ✅ Fase A — Banco de Dados e Autenticação Admin (concluída)
+### ✅ Fase B — Layout Admin (concluída)
+### ✅ Fase C — Gestão de Seções da LP (concluída)
+### ❌ Fase D — Gestão de Vídeos (desconsiderada — contemplada nas seções)
+
+### 🔄 Fase E — Catálogo de Aparelhos
+- Tabela com busca e filtros
+- CRUD: marca, modelo, armazenamento, preço, cores
+- Gestão de defeitos (categorias + deduções com valor fixo)
+
+### Fase F — Precificação (Checklist)
+- Editar itens/opções do checklist, valores fixos/%, crítico
+
+### Fase G — Clientes com Verificação
+- Fluxo público: email existente → código OTP → histórico de avaliações
+- Admin: listagem de clientes + histórico

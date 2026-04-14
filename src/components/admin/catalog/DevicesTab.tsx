@@ -32,6 +32,7 @@ export function DevicesTab() {
   const [bulkValue, setBulkValue] = useState("");
   const [bulkPriceMode, setBulkPriceMode] = useState<"absolute" | "percent">("absolute");
   const [bulkPriceValue, setBulkPriceValue] = useState("");
+  const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; from: string; to: string }> | null>(null);
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],
@@ -102,19 +103,38 @@ export function DevicesTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const computePendingChanges = () => {
+    const ids = Array.from(selected);
+    const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
+    const changes: Array<{ id: string; label: string; field: string; from: string; to: string }> = [];
+
+    for (const dev of selectedDevices) {
+      const label = `${dev.brand} ${dev.model} ${dev.storage}`;
+      if (bulkField === "base_price") {
+        const val = Number(bulkPriceValue);
+        if (isNaN(val)) continue;
+        const oldPrice = Number(dev.base_price);
+        const newPrice = bulkPriceMode === "absolute" ? val : Math.round(oldPrice * (1 + val / 100) * 100) / 100;
+        changes.push({ id: dev.id, label, field: "Preço", from: `R$ ${oldPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, to: `R$ ${Math.max(0, newPrice).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` });
+      } else {
+        const fieldLabels: Record<string, string> = { brand: "Marca", model: "Modelo", storage: "Armazenamento", colors: "Cores" };
+        const oldVal = (dev as any)[bulkField] || "—";
+        changes.push({ id: dev.id, label, field: fieldLabels[bulkField] || bulkField, from: oldVal, to: bulkValue });
+      }
+    }
+    setPendingChanges(changes);
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async () => {
       const ids = Array.from(selected);
       if (bulkField === "base_price") {
-        // Price update: by absolute value or percentage
         const val = Number(bulkPriceValue);
         if (isNaN(val)) throw new Error("Valor inválido");
-        
         if (bulkPriceMode === "absolute") {
           const { error } = await supabase.from("devices").update({ base_price: val }).in("id", ids);
           if (error) throw error;
         } else {
-          // Percentage: fetch current prices, calculate new ones
           const selectedDevices = devices?.filter((d) => ids.includes(d.id)) || [];
           for (const dev of selectedDevices) {
             const newPrice = Math.round(Number(dev.base_price) * (1 + val / 100) * 100) / 100;
@@ -129,7 +149,7 @@ export function DevicesTab() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { invalidate(); setSelected(new Set()); setShowBulk(false); setBulkValue(""); setBulkPriceValue(""); toast.success("Atualizado em massa!"); },
+    onSuccess: () => { invalidate(); setSelected(new Set()); setShowBulk(false); setBulkValue(""); setBulkPriceValue(""); setPendingChanges(null); toast.success("Atualizado em massa!"); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -318,10 +338,47 @@ export function DevicesTab() {
               </div>
             )}
 
-            <Button size="sm" onClick={() => bulkUpdateMutation.mutate()} disabled={bulkUpdateMutation.isPending || (bulkField === "base_price" ? !bulkPriceValue : !bulkValue)}>
-              <Check className="mr-1 h-3.5 w-3.5" /> Aplicar
+            <Button size="sm" onClick={computePendingChanges} disabled={bulkField === "base_price" ? !bulkPriceValue : !bulkValue}>
+              <Check className="mr-1 h-3.5 w-3.5" /> Pré-visualizar
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowBulk(false)}>Cancelar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowBulk(false); setPendingChanges(null); }}>Cancelar</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Preview */}
+      {pendingChanges && pendingChanges.length > 0 && (
+        <div className="bg-accent/30 border-2 border-primary/30 rounded-lg p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-foreground">Aprovar alterações? — {pendingChanges.length} aparelho(s)</h4>
+          <div className="max-h-60 overflow-auto border rounded-md">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50 sticky top-0">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Aparelho</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Campo</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">De</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Para</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {pendingChanges.map((c, i) => (
+                  <tr key={i} className="hover:bg-muted/20">
+                    <td className="px-3 py-1.5 font-medium">{c.label}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{c.field}</td>
+                    <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
+                    <td className="px-3 py-1.5 text-primary font-medium">{c.to}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => bulkUpdateMutation.mutate()} disabled={bulkUpdateMutation.isPending}>
+              <Check className="mr-1 h-3.5 w-3.5" /> Sim, aplicar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPendingChanges(null)}>
+              <X className="mr-1 h-3.5 w-3.5" /> Não, cancelar
+            </Button>
           </div>
         </div>
       )}

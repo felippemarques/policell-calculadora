@@ -1,4 +1,4 @@
-import { Smartphone, ClipboardCheck, CreditCard, Gift } from "lucide-react";
+import { Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote, Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles } from "lucide-react";
 
 interface StepsSectionProps {
   section: any;
@@ -16,6 +16,20 @@ const iconMap: Record<string, React.ReactNode> = {
   "clipboard": <ClipboardCheck className="h-8 w-8" />,
   "credit-card": <CreditCard className="h-8 w-8" />,
   "gift": <Gift className="h-8 w-8" />,
+  "shield": <Shield className="h-8 w-8" />,
+  "zap": <Zap className="h-8 w-8" />,
+  "thumbs-up": <ThumbsUp className="h-8 w-8" />,
+  "banknote": <Banknote className="h-8 w-8" />,
+  "heart": <Heart className="h-8 w-8" />,
+  "award": <Award className="h-8 w-8" />,
+  "clock": <Clock className="h-8 w-8" />,
+  "check-circle": <CheckCircle className="h-8 w-8" />,
+  "rocket": <Rocket className="h-8 w-8" />,
+  "target": <Target className="h-8 w-8" />,
+  "users": <Users className="h-8 w-8" />,
+  "globe": <Globe className="h-8 w-8" />,
+  "lock": <Lock className="h-8 w-8" />,
+  "sparkles": <Sparkles className="h-8 w-8" />,
 };
 
 const StepsSection = ({ section }: StepsSectionProps) => {

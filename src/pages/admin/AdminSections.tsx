@@ -845,6 +845,7 @@ function TestimonialsEditor({ items, setItems, form }: any) {
           setItems={setItems}
           label="Depoimento"
           maxItems={10}
+          defaultNewItem={{ name: "", text: "", city: "", photo: "", active: true }}
           renderItem={(item, i, update) => (
             <div className="space-y-3">
               <div className="flex items-center justify-between">

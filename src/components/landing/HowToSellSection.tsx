@@ -4,6 +4,7 @@ import {
   Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
   Send, Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
 } from "lucide-react";
+import SectionCtaButton from "./SectionCtaButton";
 
 const iconMap: Record<string, React.ReactNode> = {
   smartphone: <Smartphone className="h-5 w-5" />,
@@ -122,6 +123,7 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
             ))}
           </div>
         </div>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

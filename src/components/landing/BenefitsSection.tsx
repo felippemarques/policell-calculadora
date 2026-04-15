@@ -4,6 +4,7 @@ import {
   Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
   Send, Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
 } from "lucide-react";
+import SectionCtaButton from "./SectionCtaButton";
 
 interface BenefitsSectionProps {
   section: any;
@@ -105,6 +106,7 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
             </div>
           ))}
         </div>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

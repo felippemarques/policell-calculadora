@@ -1272,4 +1272,95 @@ function ImageUploader({ form, setForm, onUpload, uploading, label, recommendedS
   );
 }
 
+// ========== CTA BANNER EDITOR ==========
+function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
+  const contentData = (() => {
+    try { return form.content ? JSON.parse(form.content) : {}; } catch { return {}; }
+  })();
+  const setContentField = (key: string, value: string) => {
+    const updated = { ...contentData, [key]: value };
+    setForm({ ...form, content: JSON.stringify(updated) });
+  };
+
+  return (
+    <>
+      <SectionCard icon={<Type className="h-4 w-4" />} title="Subtítulo / Texto destaque" description="Texto em destaque abaixo do título principal do banner.">
+        <div>
+          <LabelWithHint label="Subtítulo" hint="Frase de impacto. Ex: Entre para o nosso grupo vip no WhatsApp" />
+          <Textarea value={contentData.subtitle || ""} onChange={(e) => setContentField("subtitle", e.target.value)} rows={2} className="mt-1" placeholder="Ex: Entre para o nosso grupo vip no WhatsApp" maxLength={120} />
+          <div className="flex justify-between mt-1">
+            <FieldHint text="Texto em destaque no banner" />
+            <CharCount current={(contentData.subtitle || "").length} max={120} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard icon={<Image className="h-4 w-4" />} title="Imagem de Fundo" description="Imagem de fundo do banner. Recomendado: 1920×400px, JPG.">
+        <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem de fundo" recommendedSize="1920×400px" />
+      </SectionCard>
+
+      <SectionCard icon={<Link2 className="h-4 w-4" />} title="Botão CTA" description="Configure o botão de ação e a URL de destino.">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <LabelWithHint label="Texto do botão" hint="Texto curto. Ex: eu quero" />
+            <Input value={form.cta_text || ""} onChange={(e) => setForm({ ...form, cta_text: e.target.value })} className="mt-1" placeholder="Ex: eu quero" maxLength={30} />
+          </div>
+          <div>
+            <LabelWithHint label="URL de destino" hint="Link que o botão abrirá. Ex: https://wa.me/5511999999999" />
+            <Input value={contentData.cta_url || ""} onChange={(e) => setContentField("cta_url", e.target.value)} className="mt-1" placeholder="https://wa.me/5511999999999" />
+            {contentData.cta_url && !isValidUrl(contentData.cta_url) && (
+              <p className="text-xs text-destructive mt-1">⚠ URL inválida. Use https://</p>
+            )}
+          </div>
+          <div>
+            <LabelWithHint label="Border Radius (px)" hint="0 = quadrado, 25 = arredondado" />
+            <Input type="number" min={0} max={50} value={form.cta_border_radius ?? 25} onChange={(e) => setForm({ ...form, cta_border_radius: Number(e.target.value) })} className="mt-1" />
+          </div>
+          <div>
+            <LabelWithHint label="Cor de fundo do botão" hint="Cor de fundo do CTA" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.cta_bg_color || "#6ee7b7"} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.cta_bg_color || ""} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <LabelWithHint label="Cor do texto do botão" hint="Cor do texto do CTA" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.cta_text_color || "#1a5c3a"} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.cta_text_color || ""} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Preview */}
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como o banner aparecerá na landing page">
+        <div className="rounded-lg border overflow-hidden relative" style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}>
+          {form.image_url && (
+            <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          <div className="relative p-6 md:p-8">
+            <div className="max-w-md">
+              {form.title && <p className="text-xs opacity-80">{form.title}</p>}
+              {contentData.subtitle && <p className="text-sm md:text-base font-extrabold mt-1">{contentData.subtitle}</p>}
+              {form.cta_text && (
+                <button
+                  className="mt-3 px-5 py-1.5 text-xs font-bold rounded"
+                  style={{
+                    backgroundColor: form.cta_bg_color || "#6ee7b7",
+                    color: form.cta_text_color || "#1a5c3a",
+                    borderRadius: `${form.cta_border_radius ?? 25}px`,
+                  }}
+                >
+                  {form.cta_text}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+    </>
+  );
+}
+
 export default AdminSections;

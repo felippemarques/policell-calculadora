@@ -1,4 +1,9 @@
-import { Shield, Zap, ThumbsUp, Banknote, Smartphone, ClipboardCheck, CreditCard, Gift, Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles } from "lucide-react";
+import {
+  Shield, Zap, ThumbsUp, Banknote, Smartphone, ClipboardCheck, CreditCard, Gift,
+  Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
+  Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
+  Send, Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
+} from "lucide-react";
 
 interface BenefitsSectionProps {
   section: any;
@@ -12,24 +17,45 @@ const defaultCards = [
 ];
 
 const iconMap: Record<string, React.ReactNode> = {
-  "shield": <Shield className="h-6 w-6" />,
-  "zap": <Zap className="h-6 w-6" />,
+  shield: <Shield className="h-6 w-6" />,
+  zap: <Zap className="h-6 w-6" />,
   "thumbs-up": <ThumbsUp className="h-6 w-6" />,
-  "banknote": <Banknote className="h-6 w-6" />,
-  "smartphone": <Smartphone className="h-6 w-6" />,
-  "clipboard": <ClipboardCheck className="h-6 w-6" />,
+  banknote: <Banknote className="h-6 w-6" />,
+  smartphone: <Smartphone className="h-6 w-6" />,
+  clipboard: <ClipboardCheck className="h-6 w-6" />,
   "credit-card": <CreditCard className="h-6 w-6" />,
-  "gift": <Gift className="h-6 w-6" />,
-  "heart": <Heart className="h-6 w-6" />,
-  "award": <Award className="h-6 w-6" />,
-  "clock": <Clock className="h-6 w-6" />,
+  gift: <Gift className="h-6 w-6" />,
+  heart: <Heart className="h-6 w-6" />,
+  award: <Award className="h-6 w-6" />,
+  clock: <Clock className="h-6 w-6" />,
   "check-circle": <CheckCircle className="h-6 w-6" />,
-  "rocket": <Rocket className="h-6 w-6" />,
-  "target": <Target className="h-6 w-6" />,
-  "users": <Users className="h-6 w-6" />,
-  "globe": <Globe className="h-6 w-6" />,
-  "lock": <Lock className="h-6 w-6" />,
-  "sparkles": <Sparkles className="h-6 w-6" />,
+  rocket: <Rocket className="h-6 w-6" />,
+  target: <Target className="h-6 w-6" />,
+  users: <Users className="h-6 w-6" />,
+  globe: <Globe className="h-6 w-6" />,
+  lock: <Lock className="h-6 w-6" />,
+  sparkles: <Sparkles className="h-6 w-6" />,
+  star: <Star className="h-6 w-6" />,
+  mail: <Mail className="h-6 w-6" />,
+  phone: <Phone className="h-6 w-6" />,
+  "map-pin": <MapPin className="h-6 w-6" />,
+  "shopping-cart": <ShoppingCart className="h-6 w-6" />,
+  truck: <Truck className="h-6 w-6" />,
+  camera: <Camera className="h-6 w-6" />,
+  wifi: <Wifi className="h-6 w-6" />,
+  settings: <Settings className="h-6 w-6" />,
+  package: <Package className="h-6 w-6" />,
+  send: <Send className="h-6 w-6" />,
+  bell: <Bell className="h-6 w-6" />,
+  calendar: <Calendar className="h-6 w-6" />,
+  "file-text": <FileText className="h-6 w-6" />,
+  home: <Home className="h-6 w-6" />,
+  search: <Search className="h-6 w-6" />,
+  play: <Play className="h-6 w-6" />,
+  headphones: <Headphones className="h-6 w-6" />,
+  monitor: <Monitor className="h-6 w-6" />,
+  wrench: <Wrench className="h-6 w-6" />,
+  lightbulb: <Lightbulb className="h-6 w-6" />,
 };
 
 const BenefitsSection = ({ section }: BenefitsSectionProps) => {
@@ -40,7 +66,6 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
 
   const videoUrl = section.video_url;
 
-  // Convert YouTube URL to embed format
   const getEmbedUrl = (url: string) => {
     if (!url) return "";
     if (url.includes("embed")) return url;

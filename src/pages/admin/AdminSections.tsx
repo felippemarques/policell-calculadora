@@ -75,7 +75,7 @@ const sectionLabels: Record<string, string> = {
 const sectionDescriptions: Record<string, string> = {
   hero: "Banner principal no topo da página. Inclui título, subtítulo, imagem de fundo e botão CTA.",
   steps: "Seção que mostra o passo a passo do processo de venda. Cada item tem ícone, título e descrição.",
-  "how-to-sell": "Explica como vender o aparelho. Inclui lista de itens e uma imagem lateral.",
+  "how-to-sell": "Dois quadros comparativos lado a lado (ex: Prós vs Contras, Nós vs Concorrente). Até 6 tópicos por quadro com ícones.",
   benefits: "Cards com as vantagens/facilidades e um vídeo do YouTube opcional.",
   testimonials: "Depoimentos de clientes com nome, cidade, texto e foto.",
   faq: "Perguntas e respostas frequentes exibidas em accordion.",
@@ -251,13 +251,12 @@ const AdminSections = () => {
     }
 
     // Validate content arrays
-    if (sType && ["steps", "benefits", "how-to-sell", "testimonials", "faq"].includes(sType)) {
+    if (sType && ["steps", "benefits", "testimonials", "faq"].includes(sType)) {
       const items = getContentArray();
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (sType === "steps" && (!item.title?.trim())) { toast.error(`Passo ${i + 1}: título obrigatório`); return; }
         if (sType === "benefits" && (!item.title?.trim())) { toast.error(`Card ${i + 1}: título obrigatório`); return; }
-        if (sType === "how-to-sell" && (!item.title?.trim())) { toast.error(`Item ${i + 1}: título obrigatório`); return; }
         if (sType === "testimonials") {
           if (!item.name?.trim()) { toast.error(`Depoimento ${i + 1}: nome obrigatório`); return; }
           if (!item.text?.trim()) { toast.error(`Depoimento ${i + 1}: texto obrigatório`); return; }
@@ -268,6 +267,17 @@ const AdminSections = () => {
           if (!item.answer?.trim()) { toast.error(`FAQ ${i + 1}: resposta obrigatória`); return; }
         }
       }
+    }
+
+    // Validate how-to-sell cards
+    if (sType === "how-to-sell") {
+      try {
+        const parsed = form.content ? JSON.parse(form.content) : {};
+        const cards = parsed.cards || [];
+        for (let c = 0; c < cards.length; c++) {
+          if (!cards[c].title?.trim()) { toast.error(`Quadro ${c + 1}: título obrigatório`); return; }
+        }
+      } catch {}
     }
 
     // Validate mega-footer links
@@ -395,7 +405,7 @@ const AdminSections = () => {
             {/* Section-specific editors */}
             {editingSection.section_type === "hero" && <HeroEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
             {editingSection.section_type === "steps" && <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} />}
-            {editingSection.section_type === "how-to-sell" && <HowToSellEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} imgDimensions={imgDimensions} />}
+            {editingSection.section_type === "how-to-sell" && <HowToSellEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "benefits" && <BenefitsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />}
             {editingSection.section_type === "testimonials" && <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "faq" && <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />}
@@ -542,59 +552,122 @@ function StepsEditor({ items, setItems, form }: { items: any[]; setItems: (arr: 
 }
 
 // ========== HOW TO SELL EDITOR ==========
-function HowToSellEditor({ items, setItems, form, setForm, onUpload, uploading, imgDimensions }: any) {
+function HowToSellEditor({ form, setForm }: any) {
+  const getCards = (): any[] => {
+    try {
+      const parsed = form.content ? JSON.parse(form.content) : {};
+      return parsed.cards || [
+        { title: "OPÇÃO 1", subtitle: "Subtítulo do quadro 1", items: [] },
+        { title: "OPÇÃO 2", subtitle: "Subtítulo do quadro 2", items: [] },
+      ];
+    } catch { return [{ title: "OPÇÃO 1", subtitle: "", items: [] }, { title: "OPÇÃO 2", subtitle: "", items: [] }]; }
+  };
+  const setCards = (cards: any[]) => setForm({ ...form, content: JSON.stringify({ cards }) });
+  const cards = getCards();
+
+  const updateCard = (cardIdx: number, field: string, value: string) => {
+    const updated = [...cards];
+    updated[cardIdx] = { ...updated[cardIdx], [field]: value };
+    setCards(updated);
+  };
+  const addItem = (cardIdx: number) => {
+    if ((cards[cardIdx].items?.length || 0) >= 6) { toast.error("Máximo de 6 tópicos por quadro"); return; }
+    const updated = [...cards];
+    updated[cardIdx] = { ...updated[cardIdx], items: [...(updated[cardIdx].items || []), { icon: "check-circle", text: "" }] };
+    setCards(updated);
+  };
+  const removeItem = (cardIdx: number, itemIdx: number) => {
+    const updated = [...cards];
+    updated[cardIdx] = { ...updated[cardIdx], items: updated[cardIdx].items.filter((_: any, j: number) => j !== itemIdx) };
+    setCards(updated);
+  };
+  const updateItem = (cardIdx: number, itemIdx: number, field: string, value: string) => {
+    const updated = [...cards];
+    const items = [...updated[cardIdx].items];
+    items[itemIdx] = { ...items[itemIdx], [field]: value };
+    updated[cardIdx] = { ...updated[cardIdx], items };
+    setCards(updated);
+  };
+
   return (
     <>
-      <SectionCard icon={<Type className="h-4 w-4" />} title="Itens Informativos" description="Lista de benefícios/informações sobre como vender o aparelho. Recomendado: 3 itens.">
-        <ReorderableList
-          items={items}
-          setItems={setItems}
-          label="Item"
-          maxItems={5}
-          renderItem={(item, _i, update) => (
-            <div className="grid grid-cols-1 gap-3">
+      {cards.map((card: any, cardIdx: number) => (
+        <SectionCard key={cardIdx} icon={<LayoutGrid className="h-4 w-4" />} title={`Quadro ${cardIdx + 1}`} description={`Configure título, subtítulo e até 6 tópicos com ícones.`}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <LabelWithHint label="Título" hint="Título curto e atrativo. Ex: 'Avaliação rápida'" />
-                <Input value={item.title || ""} onChange={(e) => update("title", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Avaliação rápida" maxLength={40} />
-                <CharCount current={(item.title || "").length} max={40} />
+                <LabelWithHint label="Título do quadro" hint="Título em destaque no topo do card. Ex: VENDA AGORA" />
+                <Input value={card.title || ""} onChange={(e) => updateCard(cardIdx, "title", e.target.value)} className="mt-0.5 text-sm font-semibold" placeholder="Ex: VENDA AGORA" maxLength={30} />
+                <CharCount current={(card.title || "").length} max={30} />
               </div>
               <div>
-                <LabelWithHint label="Descrição" hint="Texto explicativo curto." />
-                <Textarea value={item.description || ""} onChange={(e) => update("description", e.target.value)} rows={2} className="mt-0.5 text-sm" placeholder="Ex: Em poucos minutos você sabe quanto vale seu aparelho." maxLength={100} />
-                <CharCount current={(item.description || "").length} max={100} />
+                <LabelWithHint label="Subtítulo" hint="Texto descritivo abaixo do título. Ex: IDEAL PARA QUEM QUER VENDER RÁPIDO" />
+                <Input value={card.subtitle || ""} onChange={(e) => updateCard(cardIdx, "subtitle", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Ideal para quem quer vender rápido" maxLength={80} />
+                <CharCount current={(card.subtitle || "").length} max={80} />
               </div>
             </div>
-          )}
-        />
-      </SectionCard>
 
-      <SectionCard icon={<Image className="h-4 w-4" />} title="Imagem Lateral" description="Imagem exibida ao lado do texto. Recomendado: 600×800px, formato PNG ou JPG.">
-        <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem lateral" recommendedSize="600×800px" imgDimensions={imgDimensions} />
-      </SectionCard>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Tópicos ({card.items?.length || 0}/6)</Label>
+                <Button variant="outline" size="sm" onClick={() => addItem(cardIdx)} disabled={(card.items?.length || 0) >= 6}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar tópico
+                </Button>
+              </div>
+              {card.items?.map((item: any, itemIdx: number) => (
+                <div key={itemIdx} className="flex gap-2 items-center border rounded-lg p-2 bg-muted/30">
+                  <Select value={item.icon || "check-circle"} onValueChange={(v) => updateItem(cardIdx, itemIdx, "icon", v)}>
+                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(availableIcons).map(([key, { label, icon }]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-1.5">{icon} {label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input value={item.text || ""} onChange={(e) => updateItem(cardIdx, itemIdx, "text", e.target.value)} className="flex-1 text-sm h-8" placeholder="Texto do tópico" maxLength={80} />
+                  <button onClick={() => removeItem(cardIdx, itemIdx)} className="text-destructive hover:text-destructive/80 p-1"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+              {(!card.items || card.items.length === 0) && (
+                <div className="text-center py-4 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground">Nenhum tópico adicionado.</p>
+                  <Button variant="ghost" size="sm" className="mt-1" onClick={() => addItem(cardIdx)}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar primeiro tópico
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </SectionCard>
+      ))}
 
       {/* Preview */}
-      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como esta seção aparecerá na landing page">
-        <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}>
-          <div className="p-6 flex gap-6">
-            <div className="flex-1">
-              <p className="font-bold text-sm mb-3">{form.title || "Saiba como vender"}</p>
-              <div className="space-y-2">
-                {(items.length > 0 ? items : [{ title: "Item", description: "Descrição" }]).map((item: any, i: number) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</div>
-                    <div>
-                      <p className="text-xs font-semibold">{item.title || "Título"}</p>
-                      <p className="text-[10px] opacity-70">{item.description || "Descrição"}</p>
-                    </div>
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como os dois quadros aparecerão na landing page">
+        <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: form.bg_color || "#f5f5f5", color: form.text_color || "#000000" }}>
+          <div className="p-6">
+            <p className="text-center font-bold text-sm mb-4">{form.title || "Saiba como vender"}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {cards.map((card: any, cardIdx: number) => (
+                <div key={cardIdx} className="rounded-xl border p-4 space-y-3" style={{ backgroundColor: "rgba(255,255,255,0.8)" }}>
+                  <div className="text-center">
+                    <p className="text-xs font-bold text-orange-500">{card.title || `QUADRO ${cardIdx + 1}`}</p>
+                    <p className="text-[10px] font-semibold mt-0.5 opacity-80">{card.subtitle || "Subtítulo"}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2">
+                    {(card.items?.length > 0 ? card.items : [{ icon: "check-circle", text: "Tópico de exemplo" }]).map((item: any, i: number) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <span className="text-primary flex-shrink-0 mt-0.5">{iconComponentMap[item.icon] ? <span className="[&>svg]:h-3.5 [&>svg]:w-3.5">{availableIcons[item.icon]?.icon}</span> : <CheckCircle className="h-3.5 w-3.5" />}</span>
+                        <p className="text-[10px]">{item.text || "Tópico"}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-            {form.image_url && (
-              <div className="w-24 flex-shrink-0">
-                <img src={form.image_url} alt="" className="rounded-lg w-full h-24 object-cover" />
-              </div>
-            )}
           </div>
         </div>
       </SectionCard>

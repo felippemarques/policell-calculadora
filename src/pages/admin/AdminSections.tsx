@@ -582,6 +582,10 @@ function StepsEditor({ items, setItems, form }: { items: any[]; setItems: (arr: 
                 <IconPicker value={item.icon || ""} onChange={(v) => update("icon", v)} />
               </div>
               <div>
+                <LabelWithHint label="Cor do ícone" hint="Cor do ícone neste passo." />
+                <Input type="color" value={item.icon_color || "#f97316"} onChange={(e) => update("icon_color", e.target.value)} className="mt-0.5 h-9 w-16 p-1 cursor-pointer" />
+              </div>
+              <div>
                 <LabelWithHint label="Título" hint="Título curto do passo. Ex: 'Escolha seu aparelho'" />
                 <Input value={item.title || ""} onChange={(e) => update("title", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Escolha seu aparelho" maxLength={30} />
                 <CharCount current={(item.title || "").length} max={30} />
@@ -696,6 +700,7 @@ function HowToSellEditor({ form, setForm }: any) {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Input type="color" value={item.icon_color || "#f97316"} onChange={(e) => updateItem(cardIdx, itemIdx, "icon_color", e.target.value)} className="h-8 w-10 p-0.5 cursor-pointer" title="Cor do ícone" />
                   <Input value={item.text || ""} onChange={(e) => updateItem(cardIdx, itemIdx, "text", e.target.value)} className="flex-1 text-sm h-8" placeholder="Texto do tópico" maxLength={80} />
                   <button onClick={() => removeItem(cardIdx, itemIdx)} className="text-destructive hover:text-destructive/80 p-1"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
@@ -781,6 +786,10 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
               <div>
                 <LabelWithHint label="Ícone" hint="Selecione um ícone visual para este benefício." />
                 <IconPicker value={item.icon || ""} onChange={(v) => update("icon", v)} />
+              </div>
+              <div>
+                <LabelWithHint label="Cor do ícone" hint="Cor do ícone neste card." />
+                <Input type="color" value={item.icon_color || "#f97316"} onChange={(e) => update("icon_color", e.target.value)} className="mt-0.5 h-9 w-16 p-1 cursor-pointer" />
               </div>
               <div>
                 <LabelWithHint label="Título" hint="Nome do benefício. Ex: 'Segurança'" />

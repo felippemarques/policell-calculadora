@@ -648,25 +648,27 @@ function HowToSellEditor({ form, setForm }: any) {
       {/* Preview */}
       <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como os dois quadros aparecerão na landing page">
         <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: form.bg_color || "#f5f5f5", color: form.text_color || "#000000" }}>
-          <div className="p-6">
-            <p className="text-center font-bold text-sm mb-4">{form.title || "Saiba como vender"}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cards.map((card: any, cardIdx: number) => (
-                <div key={cardIdx} className="rounded-xl border p-4 space-y-3" style={{ backgroundColor: "rgba(255,255,255,0.8)" }}>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-orange-500">{card.title || `QUADRO ${cardIdx + 1}`}</p>
-                    <p className="text-[10px] font-semibold mt-0.5 opacity-80">{card.subtitle || "Subtítulo"}</p>
+          <div className="p-6 md:p-8">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-center font-bold text-sm mb-4">{form.title || "Saiba como vender"}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {cards.map((card: any, cardIdx: number) => (
+                  <div key={cardIdx} className="rounded-xl border p-5 md:p-6 space-y-4 h-full" style={{ backgroundColor: "rgba(255,255,255,0.8)" }}>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-orange-500">{card.title || `QUADRO ${cardIdx + 1}`}</p>
+                      <p className="text-[10px] font-semibold mt-0.5 opacity-80">{card.subtitle || "Subtítulo"}</p>
+                    </div>
+                    <div className="space-y-2.5">
+                      {(card.items?.length > 0 ? card.items : [{ icon: "check-circle", text: "Tópico de exemplo" }]).map((item: any, i: number) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <span className="text-primary flex-shrink-0 mt-0.5">{iconComponentMap[item.icon] ? <span className="[&>svg]:h-3.5 [&>svg]:w-3.5">{availableIcons[item.icon]?.icon}</span> : <CheckCircle className="h-3.5 w-3.5" />}</span>
+                          <p className="text-[10px]">{item.text || "Tópico"}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {(card.items?.length > 0 ? card.items : [{ icon: "check-circle", text: "Tópico de exemplo" }]).map((item: any, i: number) => (
-                      <div key={i} className="flex gap-2 items-start">
-                        <span className="text-primary flex-shrink-0 mt-0.5">{iconComponentMap[item.icon] ? <span className="[&>svg]:h-3.5 [&>svg]:w-3.5">{availableIcons[item.icon]?.icon}</span> : <CheckCircle className="h-3.5 w-3.5" />}</span>
-                        <p className="text-[10px]">{item.text || "Tópico"}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -943,6 +943,7 @@ function FaqEditor({ items, setItems, form }: any) {
           setItems={setItems}
           label="Pergunta"
           maxItems={10}
+          defaultNewItem={{ question: "", answer: "" }}
           renderItem={(item, _i, update) => (
             <div className="grid grid-cols-1 gap-3">
               <div>

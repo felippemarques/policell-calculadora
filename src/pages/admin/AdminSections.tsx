@@ -432,7 +432,7 @@ function ReorderableList({ items, setItems, renderItem, label, maxItems }: {
 }) {
   const addItem = () => {
     if (maxItems && items.length >= maxItems) { toast.error(`Máximo de ${maxItems} itens`); return; }
-    setItems([...items, {}]);
+    setItems([...items, { icon: "smartphone" }]);
   };
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const moveItem = (i: number, dir: "up" | "down") => {

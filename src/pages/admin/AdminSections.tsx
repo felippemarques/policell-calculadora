@@ -468,6 +468,7 @@ const AdminSections = () => {
             {editingSection.section_type === "mega-footer" && <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "cta-banner" && <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
+            {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} />}
 
             {/* Visibility */}
             <SectionCard icon={<Eye className="h-4 w-4" />} title="Visibilidade" description="Controle se esta seção aparece na landing page">

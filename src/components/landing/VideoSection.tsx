@@ -1,3 +1,5 @@
+import SectionCtaButton from "./SectionCtaButton";
+
 interface VideoSectionProps {
   section: any;
 }
@@ -34,6 +36,7 @@ const VideoSection = ({ section }: VideoSectionProps) => {
             allowFullScreen
           />
         </div>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

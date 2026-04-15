@@ -491,12 +491,12 @@ function ReorderableList({ items, setItems, renderItem, label, maxItems }: {
 function StepsEditor({ items, setItems, form }: { items: any[]; setItems: (arr: any[]) => void; form: any }) {
   return (
     <>
-      <SectionCard icon={<LayoutGrid className="h-4 w-4" />} title="Passos do Processo" description="Cada passo exibe um ícone, título curto e descrição. Recomendado: 3–4 passos.">
+      <SectionCard icon={<LayoutGrid className="h-4 w-4" />} title="Passos do Processo" description="Cada passo exibe um ícone, título curto e descrição. Recomendado: 8 passos (2 fileiras de 4).">
         <ReorderableList
           items={items}
           setItems={setItems}
           label="Passo"
-          maxItems={6}
+          maxItems={8}
           renderItem={(item, _i, update) => (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>

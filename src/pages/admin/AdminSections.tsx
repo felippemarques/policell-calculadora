@@ -754,40 +754,71 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
 
 // ========== TESTIMONIALS EDITOR ==========
 function TestimonialsEditor({ items, setItems, form }: any) {
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  const handlePhotoUpload = async (file: File, idx: number, update: (key: string, val: any) => void) => {
+    if (!file) return;
+    setUploadingIdx(idx);
+    const ext = file.name.split(".").pop();
+    const path = `testimonials/${Date.now()}_${idx}.${ext}`;
+    const { error } = await supabase.storage.from("lp-images").upload(path, file);
+    if (error) { toast.error("Erro no upload: " + error.message); setUploadingIdx(null); return; }
+    const { data: urlData } = supabase.storage.from("lp-images").getPublicUrl(path);
+    update("photo", urlData.publicUrl);
+    setUploadingIdx(null);
+    toast.success("Foto enviada!");
+  };
+
   return (
     <>
-      <SectionCard icon={<MessageSquare className="h-4 w-4" />} title="Depoimentos de Clientes" description="Cada depoimento inclui nome, cidade, texto e foto (opcional). Recomendado: 3 depoimentos.">
+      <SectionCard icon={<MessageSquare className="h-4 w-4" />} title="Depoimentos de Clientes" description="Até 10 depoimentos. Cada um com foto, nome, cargo, empresa e segmento. Exibidos em carrossel na landing page.">
         <ReorderableList
           items={items}
           setItems={setItems}
           label="Depoimento"
-          maxItems={6}
-          renderItem={(item, _i, update) => (
+          maxItems={10}
+          renderItem={(item, i, update) => (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <LabelWithHint label="Nome" hint="Nome do cliente. Ex: Maria S." />
-                <Input value={item.name || ""} onChange={(e) => update("name", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Maria S." maxLength={30} />
-                <CharCount current={(item.name || "").length} max={30} />
-              </div>
-              <div>
-                <LabelWithHint label="Cidade" hint="Cidade e estado do cliente." />
-                <Input value={item.city || ""} onChange={(e) => update("city", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: São Paulo, SP" maxLength={30} />
-              </div>
               <div className="md:col-span-2">
                 <LabelWithHint label="Depoimento" hint="Texto do depoimento. Mantenha autêntico e direto." />
-                <Textarea value={item.text || ""} onChange={(e) => update("text", e.target.value)} rows={3} className="mt-0.5 text-sm" placeholder="Ex: Processo super rápido e recebi um valor justo!" maxLength={200} />
-                <CharCount current={(item.text || "").length} max={200} />
+                <Textarea value={item.text || ""} onChange={(e) => update("text", e.target.value)} rows={3} className="mt-0.5 text-sm" placeholder="Ex: Processo super rápido e recebi um valor justo!" maxLength={300} />
+                <CharCount current={(item.text || "").length} max={300} />
+              </div>
+              <div>
+                <LabelWithHint label="Nome" hint="Nome do cliente." />
+                <Input value={item.name || ""} onChange={(e) => update("name", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Maria Silva" maxLength={40} />
+              </div>
+              <div>
+                <LabelWithHint label="Cargo / Função" hint="Ex: Proprietário, Gerente, Coordenador" />
+                <Input value={item.role || ""} onChange={(e) => update("role", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Proprietário" maxLength={40} />
+              </div>
+              <div>
+                <LabelWithHint label="Empresa" hint="Nome da empresa do cliente." />
+                <Input value={item.company || ""} onChange={(e) => update("company", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Tech Store" maxLength={40} />
+              </div>
+              <div>
+                <LabelWithHint label="Segmento" hint="Ex: Eletrônicos • Loja física e virtual" />
+                <Input value={item.category || ""} onChange={(e) => update("category", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Eletrônicos • Loja física" maxLength={60} />
               </div>
               <div className="md:col-span-2">
-                <LabelWithHint label="URL da Foto (opcional)" hint="Link direto para a foto do cliente. Use https://. Recomendado: 100×100px, quadrada." />
-                <Input value={item.photo || ""} onChange={(e) => update("photo", e.target.value)} className="mt-0.5 text-sm" placeholder="https://exemplo.com/foto.jpg" />
-                {item.photo && !isValidUrl(item.photo) && <p className="text-xs text-destructive mt-1">⚠ URL inválida. Use https://</p>}
-                {item.photo && isValidUrl(item.photo) && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <img src={item.photo} alt="" className="w-10 h-10 rounded-full object-cover border" />
-                    <span className="text-[11px] text-muted-foreground">Preview da foto</span>
-                  </div>
-                )}
+                <LabelWithHint label="Foto do cliente" hint="Recomendado: 100×100px, quadrada, JPG ou PNG." />
+                <div className="flex items-center gap-3 mt-1">
+                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-card text-xs cursor-pointer hover:bg-accent/50 transition-colors">
+                    <Upload className="h-3.5 w-3.5" />
+                    {uploadingIdx === i ? "Enviando..." : "Subir foto"}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePhotoUpload(f, i, update);
+                    }} disabled={uploadingIdx === i} />
+                  </label>
+                  {item.photo && (
+                    <div className="flex items-center gap-2">
+                      <img src={item.photo} alt="" className="w-10 h-10 rounded-full object-cover border" />
+                      <button onClick={() => update("photo", "")} className="text-xs text-destructive hover:underline">Remover</button>
+                    </div>
+                  )}
+                </div>
+                <FieldHint text="📐 Recomendado: 100×100px | JPG ou PNG | Máx: 2MB" />
               </div>
             </div>
           )}
@@ -795,31 +826,31 @@ function TestimonialsEditor({ items, setItems, form }: any) {
       </SectionCard>
 
       {/* Testimonials Preview */}
-      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como os depoimentos aparecerão na landing page">
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Prévia dos cards de depoimento (na landing será carrossel)">
         <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}>
           <div className="p-6">
             <p className="text-center font-bold text-sm mb-4">{form.title || "O que nossos clientes dizem"}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {(items.length > 0 ? items : [{ name: "Nome", city: "Cidade", text: "Depoimento do cliente" }]).map((t: any, i: number) => (
-                <div key={i} className="rounded-lg border p-3 space-y-2" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
-                  <div className="flex gap-0.5 text-yellow-500">
-                    {[...Array(5)].map((_, j) => <Star key={j} className="h-3 w-3 fill-current" />)}
-                  </div>
-                  <p className="text-[10px] opacity-80 italic">"{t.text || "Depoimento"}"</p>
-                  <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(items.length > 0 ? items : [{ name: "Nome", text: "Depoimento", role: "Cargo", company: "Empresa", category: "Segmento" }]).slice(0, 4).map((t: any, i: number) => (
+                <div key={i} className="rounded-xl border p-3 space-y-2 flex flex-col" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                  <div className="text-primary/40 text-lg font-serif leading-none">"</div>
+                  <p className="text-[9px] opacity-80 flex-1">{t.text || "Depoimento"}</p>
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/30">
                     {t.photo ? (
                       <img src={t.photo} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">{(t.name || "?").charAt(0)}</div>
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-semibold">{(t.name || "?").charAt(0)}</div>
                     )}
                     <div>
-                      <p className="text-[10px] font-semibold">{t.name || "Nome"}</p>
-                      {t.city && <p className="text-[8px] opacity-60">{t.city}</p>}
+                      <p className="text-[9px] font-semibold">{t.name || "Nome"}</p>
+                      <p className="text-[7px] opacity-60">{[t.company, t.role].filter(Boolean).join(" • ")}</p>
                     </div>
                   </div>
+                  {t.category && <p className="text-[7px] opacity-50 border-t border-border/20 pt-1">{t.category}</p>}
                 </div>
               ))}
             </div>
+            {items.length > 4 && <p className="text-[9px] text-center opacity-50 mt-2">+ {items.length - 4} depoimentos (visíveis no carrossel)</p>}
           </div>
         </div>
       </SectionCard>

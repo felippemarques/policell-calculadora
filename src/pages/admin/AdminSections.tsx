@@ -505,12 +505,12 @@ const AdminSections = () => {
 };
 
 // ========== REUSABLE: List with reorder ==========
-function ReorderableList({ items, setItems, renderItem, label, maxItems }: {
-  items: any[]; setItems: (arr: any[]) => void; renderItem: (item: any, i: number, update: (field: string, value: string) => void) => React.ReactNode; label: string; maxItems?: number;
+function ReorderableList({ items, setItems, renderItem, label, maxItems, defaultNewItem }: {
+  items: any[]; setItems: (arr: any[]) => void; renderItem: (item: any, i: number, update: (field: string, value: string) => void) => React.ReactNode; label: string; maxItems?: number; defaultNewItem?: any;
 }) {
   const addItem = () => {
     if (maxItems && items.length >= maxItems) { toast.error(`Máximo de ${maxItems} itens`); return; }
-    setItems([...items, { icon: "smartphone" }]);
+    setItems([...items, defaultNewItem || { icon: "smartphone" }]);
   };
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const moveItem = (i: number, dir: "up" | "down") => {
@@ -1410,37 +1410,11 @@ function VideoEditor({ form, setForm }: any) {
         </div>
       </SectionCard>
 
-      <SectionCard icon={<Type className="h-4 w-4" />} title="Texto (opcional)" description="Título e descrição exibidos acima do vídeo.">
-        <div className="space-y-3">
-          <div>
-            <LabelWithHint label="Título" hint="Opcional. Ex: Veja como funciona" />
-            <Input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-1" placeholder="Ex: Veja como funciona" maxLength={60} />
-            <CharCount current={(form.title || "").length} max={60} />
-          </div>
-          <div>
-            <LabelWithHint label="Descrição" hint="Texto curto abaixo do título" />
-            <Textarea value={form.content || ""} onChange={(e) => setForm({ ...form, content: e.target.value })} className="mt-1" rows={2} placeholder="Opcional" maxLength={150} />
-            <CharCount current={(form.content || "").length} max={150} />
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon={<Palette className="h-4 w-4" />} title="Cores" description="Cores de fundo e texto da seção.">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <LabelWithHint label="Cor de fundo" hint="Fundo da seção" />
-            <div className="flex items-center gap-2 mt-1">
-              <input type="color" value={form.bg_color || "#ffffff"} onChange={(e) => setForm({ ...form, bg_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
-              <Input value={form.bg_color || ""} onChange={(e) => setForm({ ...form, bg_color: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <LabelWithHint label="Cor do texto" hint="Cor dos textos" />
-            <div className="flex items-center gap-2 mt-1">
-              <input type="color" value={form.text_color || "#000000"} onChange={(e) => setForm({ ...form, text_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
-              <Input value={form.text_color || ""} onChange={(e) => setForm({ ...form, text_color: e.target.value })} />
-            </div>
-          </div>
+      <SectionCard icon={<Type className="h-4 w-4" />} title="Descrição (opcional)" description="Texto exibido abaixo do título, acima do vídeo.">
+        <div>
+          <LabelWithHint label="Descrição" hint="Texto curto abaixo do título" />
+          <Textarea value={form.content || ""} onChange={(e) => setForm({ ...form, content: e.target.value })} className="mt-1" rows={2} placeholder="Opcional" maxLength={150} />
+          <CharCount current={(form.content || "").length} max={150} />
         </div>
       </SectionCard>
 

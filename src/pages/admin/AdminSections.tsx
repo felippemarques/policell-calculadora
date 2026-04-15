@@ -352,15 +352,31 @@ const AdminSections = () => {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Seções da Landing Page</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Gerencie as 8 seções fixas da sua landing page. Ative, desative e personalize cada uma.
+            Gerencie as seções da sua landing page. Ative, desative, reordene e personalize cada uma.
           </p>
         </div>
 
         {/* Section List */}
         {!editingId && (
           <div className="space-y-2">
-            {sections?.map((section: any) => (
+            {sections?.map((section: any, idx: number) => {
+              const isFixed = FIXED_SECTIONS.includes(section.section_type);
+              const canMoveUp = !isFixed && idx > 0 && !FIXED_SECTIONS.includes(sections[idx - 1]?.section_type);
+              const canMoveDown = !isFixed && idx < sections.length - 1 && !FIXED_SECTIONS.includes(sections[idx + 1]?.section_type);
+              return (
               <div key={section.id} className={`bg-card border rounded-xl p-4 flex items-center gap-4 transition-all hover:shadow-sm ${!section.is_active ? "opacity-50" : ""}`}>
+                {!isFixed ? (
+                  <div className="flex flex-col gap-0.5">
+                    <button onClick={() => handleMoveSection(section.id, "up")} disabled={!canMoveUp || reorderMutation.isPending} className="p-1 rounded hover:bg-accent disabled:opacity-20 transition-colors" title="Mover para cima">
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => handleMoveSection(section.id, "down")} disabled={!canMoveDown || reorderMutation.isPending} className="p-1 rounded hover:bg-accent disabled:opacity-20 transition-colors" title="Mover para baixo">
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-7" />
+                )}
                 <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
                   {sectionIcons[section.section_type] || <Type className="h-4 w-4" />}
                 </div>

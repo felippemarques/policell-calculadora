@@ -30,21 +30,21 @@ interface HowToSellSectionProps {
 
 const defaultCards = [
   {
-    title: "VENDA AGORA",
-    subtitle: "Ideal para quem quer vender rápido e com praticidade.",
+    title: "Concorrente",
+    subtitle: "COMO FAZEM:",
     items: [
-      { icon: "check-circle", text: "Avaliação imediata após envio das informações" },
-      { icon: "check-circle", text: "Pagamento em até 10 dias corridos" },
-      { icon: "check-circle", text: "Aceitamos aparelhos em qualquer condição" },
+      { icon: "lock", text: "Demoram te atender" },
+      { icon: "lock", text: "Não valorizam seu aparelho" },
+      { icon: "lock", text: "Não emitem laudo homologado" },
     ],
   },
   {
-    title: "VENDA MAIS VALOR",
-    subtitle: "Para modelos elegíveis, com potencial de valor mais alto.",
+    title: "Policell",
+    subtitle: "COMO FAZEMOS:",
     items: [
-      { icon: "check-circle", text: "Receba até 20% a mais pelo seu aparelho" },
-      { icon: "check-circle", text: "Venda com reparo e revenda garantidos" },
-      { icon: "check-circle", text: "Pós-venda com garantia" },
+      { icon: "check-circle", text: "Te atendemos em até 10 min" },
+      { icon: "check-circle", text: "Valorizamos seu bem" },
+      { icon: "check-circle", text: "Emitimos laudo e certificado" },
     ],
   },
 ];
@@ -59,41 +59,45 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
   } catch {}
 
   return (
-    <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
-      <div className="max-w-5xl mx-auto px-4 py-16">
-        <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
+    <section style={{ backgroundColor: section.bg_color || "#f8f9fa", color: section.text_color || "#1a1a1a" }}>
+      <div className="max-w-5xl mx-auto px-4 py-16 md:py-20">
+        <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">
           {section.title || "Saiba como vender"}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {cards.map((card: any, cardIdx: number) => (
-            <div
-              key={cardIdx}
-              className="rounded-2xl border bg-white/80 backdrop-blur-sm p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col"
-            >
-              <div className="text-center mb-6">
-                <h3 className="text-lg md:text-xl font-extrabold text-orange-500 tracking-wide">
-                  {card.title}
-                </h3>
-                {card.subtitle && (
-                  <p className="text-xs md:text-sm font-semibold mt-1 opacity-75 uppercase tracking-wide">
-                    {card.subtitle}
-                  </p>
-                )}
-              </div>
+        <div className="flex justify-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
+            {cards.map((card: any, cardIdx: number) => (
+              <div
+                key={cardIdx}
+                className="rounded-2xl bg-white p-8 md:p-10 shadow-md border border-gray-100"
+              >
+                <div className="text-center mb-8">
+                  <h3 className="text-xl md:text-2xl font-extrabold text-orange-500 tracking-wide">
+                    {card.title}
+                  </h3>
+                  {card.subtitle && (
+                    <p className="text-xs md:text-sm font-bold mt-2 text-gray-700 uppercase tracking-widest">
+                      {card.subtitle}
+                    </p>
+                  )}
+                </div>
 
-              <div className="space-y-4">
-                {card.items?.map((item: any, i: number) => (
-                  <div key={i} className="flex gap-3 items-start">
-                    <span className="text-orange-500 flex-shrink-0 mt-0.5">
-                      {iconMap[item.icon] || <CheckCircle className="h-5 w-5" />}
-                    </span>
-                    <p className="text-sm leading-relaxed">{item.text}</p>
-                  </div>
-                ))}
+                <div className="space-y-5">
+                  {card.items?.map((item: any, i: number) => (
+                    <div key={i} className="flex gap-4 items-center">
+                      <span className="text-orange-500 flex-shrink-0">
+                        {iconMap[item.icon] || <CheckCircle className="h-5 w-5" />}
+                      </span>
+                      <p className="text-sm md:text-base leading-relaxed font-medium text-gray-800">
+                        {item.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

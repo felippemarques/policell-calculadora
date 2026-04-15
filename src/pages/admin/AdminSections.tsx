@@ -342,6 +342,34 @@ const AdminSections = () => {
 // --- Sub-components ---
 
 function HeroEditor({ form, setForm, onUpload, uploading }: any) {
+  const layoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setLayoutField = (key: string, value: string) => {
+    const updated = { ...layoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
+  const vAlign = layoutData.vAlign || "center";
+  const hAlign = layoutData.hAlign || "center";
+  const textAlign = layoutData.textAlign || "center";
+
+  const vOptions = [
+    { value: "top", label: "⬆ Topo" },
+    { value: "center", label: "⬌ Centro" },
+    { value: "bottom", label: "⬇ Baixo" },
+  ];
+  const hOptions = [
+    { value: "left", label: "◀ Esquerda" },
+    { value: "center", label: "⬌ Centro" },
+    { value: "right", label: "▶ Direita" },
+  ];
+  const tOptions = [
+    { value: "left", label: "Esquerda" },
+    { value: "center", label: "Centro" },
+    { value: "right", label: "Direita" },
+  ];
+
   return (
     <>
       <SectionCard icon={<Type className="h-4 w-4" />} title="Subtítulo" description="Texto secundário exibido abaixo do título principal do hero">
@@ -354,6 +382,93 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
 
       <SectionCard icon={<Image className="h-4 w-4" />} title="Imagem de Fundo" description="Imagem de fundo do banner hero. Recomendado: 1920×800px, JPG, máx. 500KB.">
         <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem de fundo" recommendedSize="1920×800px" />
+      </SectionCard>
+
+      {/* Position Controls */}
+      <SectionCard icon={<LayoutGrid className="h-4 w-4" />} title="Posição do Conteúdo" description="Ajuste onde o título, subtítulo e botão aparecem sobre o banner. Evite sobreposição com elementos da imagem.">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <LabelWithHint label="Alinhamento Vertical" hint="Posiciona o bloco de texto no topo, centro ou parte inferior do banner." />
+            <div className="flex gap-1 mt-1.5">
+              {vOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLayoutField("vAlign", opt.value)}
+                  className={`flex-1 text-xs py-2 px-1 rounded-md border transition-colors ${
+                    vAlign === opt.value ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <LabelWithHint label="Alinhamento Horizontal" hint="Posiciona o bloco de texto à esquerda, centro ou direita do banner." />
+            <div className="flex gap-1 mt-1.5">
+              {hOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLayoutField("hAlign", opt.value)}
+                  className={`flex-1 text-xs py-2 px-1 rounded-md border transition-colors ${
+                    hAlign === opt.value ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <LabelWithHint label="Alinhamento do Texto" hint="Alinha o texto dentro do bloco (esquerda, centro ou direita)." />
+            <div className="flex gap-1 mt-1.5">
+              {tOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLayoutField("textAlign", opt.value)}
+                  className={`flex-1 text-xs py-2 px-1 rounded-md border transition-colors ${
+                    textAlign === opt.value ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Mini preview */}
+        <div className="mt-3">
+          <p className="text-xs text-muted-foreground mb-2">Pré-visualização da posição:</p>
+          <div
+            className="relative border rounded-lg overflow-hidden h-32"
+            style={{ backgroundColor: form.bg_color || "#1a1a2e" }}
+          >
+            {form.image_url && <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+            <div
+              className="relative w-full h-full flex p-3"
+              style={{
+                justifyContent: hAlign === "left" ? "flex-start" : hAlign === "right" ? "flex-end" : "center",
+                alignItems: vAlign === "top" ? "flex-start" : vAlign === "bottom" ? "flex-end" : "center",
+                textAlign: textAlign as any,
+              }}
+            >
+              <div className="max-w-[60%]" style={{ textAlign: textAlign as any }}>
+                <div className="text-xs font-bold text-white truncate">{form.title || "Título"}</div>
+                <div className="text-[10px] text-white/70 truncate mt-0.5">{form.content || "Subtítulo"}</div>
+                <div
+                  className="inline-block mt-1 px-2 py-0.5 text-[9px] font-medium rounded"
+                  style={{
+                    backgroundColor: form.cta_bg_color || "#7c3aed",
+                    color: form.cta_text_color || "#fff",
+                    borderRadius: `${Math.min(form.cta_border_radius ?? 8, 12)}px`,
+                  }}
+                >
+                  {form.cta_text || "CTA"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </SectionCard>
 
       <SectionCard icon={<Palette className="h-4 w-4" />} title="Botão CTA (Call to Action)" description="Botão principal que leva o visitante à calculadora. Personalize texto, cores e arredondamento.">

@@ -69,6 +69,7 @@ const sectionLabels: Record<string, string> = {
   testimonials: "Depoimentos",
   faq: "Dúvidas Frequentes",
   "cta-banner": "Banner com CTA",
+  video: "Vídeo do YouTube",
   "mega-footer": "Mega Footer",
   footer: "Footer",
 };
@@ -81,6 +82,7 @@ const sectionDescriptions: Record<string, string> = {
   testimonials: "Depoimentos de clientes com nome, cidade, texto e foto.",
   faq: "Perguntas e respostas frequentes exibidas em accordion.",
   "cta-banner": "Banner com imagem de fundo e botão CTA que leva a uma URL externa (ex: WhatsApp, link de compra).",
+  video: "Seção dedicada para exibir um vídeo do YouTube com título opcional.",
   "mega-footer": "Rodapé com colunas de links organizados por categoria.",
   footer: "Rodapé final com texto de copyright.",
 };
@@ -93,6 +95,7 @@ const sectionIcons: Record<string, React.ReactNode> = {
   testimonials: <MessageSquare className="h-4 w-4" />,
   faq: <HelpCircle className="h-4 w-4" />,
   "cta-banner": <Link2 className="h-4 w-4" />,
+  video: <Video className="h-4 w-4" />,
   "mega-footer": <Link2 className="h-4 w-4" />,
   footer: <Type className="h-4 w-4" />,
 };
@@ -465,6 +468,7 @@ const AdminSections = () => {
             {editingSection.section_type === "mega-footer" && <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "cta-banner" && <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
+            {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} />}
 
             {/* Visibility */}
             <SectionCard icon={<Eye className="h-4 w-4" />} title="Visibilidade" description="Controle se esta seção aparece na landing page">
@@ -1361,6 +1365,87 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
           </div>
         </div>
       </SectionCard>
+    </>
+  );
+}
+
+// ========== VIDEO EDITOR ==========
+function VideoEditor({ form, setForm }: any) {
+  const getEmbedUrl = (url: string) => {
+    if (!url) return "";
+    if (url.includes("embed")) return url;
+    const match = url.match(/(?:youtu\.be\/|v=)([^&\s]+)/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+  };
+
+  const isValidYouTube = (url: string) => {
+    if (!url) return false;
+    return /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))/.test(url);
+  };
+
+  return (
+    <>
+      <SectionCard icon={<Video className="h-4 w-4" />} title="URL do Vídeo" description="Cole o link do YouTube aqui.">
+        <div>
+          <LabelWithHint label="URL do YouTube" hint="Ex: https://www.youtube.com/watch?v=xxxxx" />
+          <Input
+            value={form.video_url || ""}
+            onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+            className="mt-1"
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          {form.video_url && !isValidYouTube(form.video_url) && (
+            <p className="text-xs text-destructive mt-1">⚠ URL inválida. Cole um link do YouTube.</p>
+          )}
+        </div>
+      </SectionCard>
+
+      <SectionCard icon={<Type className="h-4 w-4" />} title="Texto (opcional)" description="Título e descrição exibidos acima do vídeo.">
+        <div className="space-y-3">
+          <div>
+            <LabelWithHint label="Título" hint="Opcional. Ex: Veja como funciona" />
+            <Input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-1" placeholder="Ex: Veja como funciona" maxLength={60} />
+            <CharCount current={(form.title || "").length} max={60} />
+          </div>
+          <div>
+            <LabelWithHint label="Descrição" hint="Texto curto abaixo do título" />
+            <Textarea value={form.content || ""} onChange={(e) => setForm({ ...form, content: e.target.value })} className="mt-1" rows={2} placeholder="Opcional" maxLength={150} />
+            <CharCount current={(form.content || "").length} max={150} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard icon={<Palette className="h-4 w-4" />} title="Cores" description="Cores de fundo e texto da seção.">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <LabelWithHint label="Cor de fundo" hint="Fundo da seção" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.bg_color || "#ffffff"} onChange={(e) => setForm({ ...form, bg_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.bg_color || ""} onChange={(e) => setForm({ ...form, bg_color: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <LabelWithHint label="Cor do texto" hint="Cor dos textos" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.text_color || "#000000"} onChange={(e) => setForm({ ...form, text_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.text_color || ""} onChange={(e) => setForm({ ...form, text_color: e.target.value })} />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Preview */}
+      {form.video_url && isValidYouTube(form.video_url) && (
+        <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como o vídeo aparecerá na landing page">
+          <div className="rounded-lg border overflow-hidden p-4" style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}>
+            {form.title && <p className="text-sm font-bold text-center mb-2">{form.title}</p>}
+            {form.content && <p className="text-xs text-center opacity-80 mb-3">{form.content}</p>}
+            <div className="aspect-video rounded-lg overflow-hidden">
+              <iframe src={getEmbedUrl(form.video_url)} title="Preview" className="w-full h-full" allowFullScreen />
+            </div>
+          </div>
+        </SectionCard>
+      )}
     </>
   );
 }

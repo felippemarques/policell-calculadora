@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Upload, Trash2 } from "lucide-react";
+import { Save, Upload, Trash2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,18 +12,43 @@ const settingsKeys = [
   { key: "logo_url", label: "Logo da Loja", type: "image" },
   { key: "header_bg_color", label: "Cor de Fundo do Header", type: "color" },
   { key: "header_text_color", label: "Cor do Texto do Header", type: "color" },
-  { key: "phone", label: "Telefone", type: "text", placeholder: "(11) 99999-9999" },
-  { key: "email", label: "E-mail", type: "text", placeholder: "contato@loja.com" },
-  { key: "whatsapp", label: "WhatsApp (link)", type: "text", placeholder: "https://wa.me/5511999999999" },
-  { key: "instagram", label: "Instagram (link)", type: "text", placeholder: "https://instagram.com/loja" },
-  { key: "facebook", label: "Facebook (link)", type: "text", placeholder: "https://facebook.com/loja" },
-  { key: "tiktok", label: "TikTok (link)", type: "text", placeholder: "https://tiktok.com/@loja" },
+  { key: "phone", label: "Telefone", type: "phone", placeholder: "(11) 99999-9999" },
+  { key: "email", label: "E-mail", type: "email", placeholder: "contato@loja.com" },
+  { key: "whatsapp", label: "WhatsApp (link)", type: "url", placeholder: "https://wa.me/5511999999999" },
+  { key: "instagram", label: "Instagram (link)", type: "url", placeholder: "https://instagram.com/loja" },
+  { key: "facebook", label: "Facebook (link)", type: "url", placeholder: "https://facebook.com/loja" },
+  { key: "tiktok", label: "TikTok (link)", type: "url", placeholder: "https://tiktok.com/@loja" },
 ];
+
+const RECOMMENDED_WIDTH = 300;
+const RECOMMENDED_HEIGHT = 80;
+
+function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validateUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 const AdminHeader = () => {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [logoDimensions, setLogoDimensions] = useState<{ w: number; h: number } | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["lp-settings"],
@@ -62,6 +87,16 @@ const AdminHeader = () => {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Read dimensions
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setLogoDimensions({ w: img.naturalWidth, h: img.naturalHeight });
+      URL.revokeObjectURL(objectUrl);
+    };
+    img.src = objectUrl;
+
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `header/${Date.now()}.${ext}`;
@@ -74,11 +109,44 @@ const AdminHeader = () => {
   };
 
   const handleSave = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate email
+    if (form.email && !validateEmail(form.email)) {
+      newErrors.email = "E-mail inválido";
+    }
+
+    // Validate URLs
+    const urlFields = ["whatsapp", "instagram", "facebook", "tiktok"];
+    urlFields.forEach((key) => {
+      if (form[key] && !validateUrl(form[key])) {
+        newErrors[key] = "URL inválida (deve começar com https://)";
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Corrija os campos destacados antes de salvar");
+      return;
+    }
+
     const entries = [
       ...settingsKeys.map((s) => ({ key: s.key, value: form[s.key] || "" })),
       { key: "header_fixed", value: form.header_fixed || "false" },
     ];
     saveMutation.mutate(entries);
+  };
+
+  const getLogoWarning = () => {
+    if (!logoDimensions) return null;
+    const { w, h } = logoDimensions;
+    const ratio = w / h;
+    const warnings: string[] = [];
+    if (ratio > 5) warnings.push("Imagem muito larga (proporção > 5:1)");
+    if (ratio < 2) warnings.push("Imagem muito quadrada (proporção < 2:1)");
+    if (w > 600) warnings.push("Largura muito grande, pode ficar pesada");
+    return warnings;
   };
 
   if (isLoading) {
@@ -88,6 +156,8 @@ const AdminHeader = () => {
       </div>
     );
   }
+
+  const logoWarnings = getLogoWarning();
 
   return (
     <div className="p-6 space-y-6 max-w-2xl">
@@ -146,12 +216,28 @@ const AdminHeader = () => {
                   {form.logo_url && (
                     <div className="flex items-center gap-2">
                       <img src={form.logo_url} alt="Logo" className="h-10 max-w-[100px] object-contain rounded border" />
-                      <button onClick={() => setForm({ ...form, logo_url: "" })} className="text-xs text-destructive hover:underline">
+                      <button onClick={() => { setForm({ ...form, logo_url: "" }); setLogoDimensions(null); }} className="text-xs text-destructive hover:underline">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Recomendado: {RECOMMENDED_WIDTH}x{RECOMMENDED_HEIGHT}px, PNG transparente
+                </p>
+                {logoDimensions && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Dimensões detectadas: {logoDimensions.w} x {logoDimensions.h}px
+                  </p>
+                )}
+                {logoWarnings && logoWarnings.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {logoWarnings.map((w, i) => (
+                      <p key={i} className="text-xs text-amber-500 dark:text-amber-400">⚠ {w}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           }
@@ -177,15 +263,53 @@ const AdminHeader = () => {
             );
           }
 
+          if (setting.type === "phone") {
+            return (
+              <div key={setting.key}>
+                <Label>{setting.label}</Label>
+                <Input
+                  value={form[setting.key] || ""}
+                  onChange={(e) => setForm({ ...form, [setting.key]: maskPhone(e.target.value) })}
+                  placeholder={setting.placeholder}
+                  className="mt-1"
+                  maxLength={15}
+                />
+              </div>
+            );
+          }
+
+          if (setting.type === "email") {
+            return (
+              <div key={setting.key}>
+                <Label>{setting.label}</Label>
+                <Input
+                  value={form[setting.key] || ""}
+                  onChange={(e) => {
+                    setForm({ ...form, [setting.key]: e.target.value });
+                    if (errors[setting.key]) setErrors((prev) => { const n = { ...prev }; delete n[setting.key]; return n; });
+                  }}
+                  placeholder={setting.placeholder}
+                  className={`mt-1 ${errors[setting.key] ? "border-destructive" : ""}`}
+                />
+                {errors[setting.key] && <p className="text-xs text-destructive mt-0.5">{errors[setting.key]}</p>}
+              </div>
+            );
+          }
+
+          // URL fields
           return (
             <div key={setting.key}>
               <Label>{setting.label}</Label>
               <Input
                 value={form[setting.key] || ""}
-                onChange={(e) => setForm({ ...form, [setting.key]: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, [setting.key]: e.target.value });
+                  if (errors[setting.key]) setErrors((prev) => { const n = { ...prev }; delete n[setting.key]; return n; });
+                }}
                 placeholder={setting.placeholder}
-                className="mt-1"
+                className={`mt-1 ${errors[setting.key] ? "border-destructive" : ""}`}
               />
+              {errors[setting.key] && <p className="text-xs text-destructive mt-0.5">{errors[setting.key]}</p>}
             </div>
           );
         })}

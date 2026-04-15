@@ -69,6 +69,7 @@ const sectionLabels: Record<string, string> = {
   testimonials: "Depoimentos",
   faq: "Dúvidas Frequentes",
   "cta-banner": "Banner com CTA",
+  video: "Vídeo do YouTube",
   "mega-footer": "Mega Footer",
   footer: "Footer",
 };
@@ -81,6 +82,7 @@ const sectionDescriptions: Record<string, string> = {
   testimonials: "Depoimentos de clientes com nome, cidade, texto e foto.",
   faq: "Perguntas e respostas frequentes exibidas em accordion.",
   "cta-banner": "Banner com imagem de fundo e botão CTA que leva a uma URL externa (ex: WhatsApp, link de compra).",
+  video: "Seção dedicada para exibir um vídeo do YouTube com título opcional.",
   "mega-footer": "Rodapé com colunas de links organizados por categoria.",
   footer: "Rodapé final com texto de copyright.",
 };
@@ -93,6 +95,7 @@ const sectionIcons: Record<string, React.ReactNode> = {
   testimonials: <MessageSquare className="h-4 w-4" />,
   faq: <HelpCircle className="h-4 w-4" />,
   "cta-banner": <Link2 className="h-4 w-4" />,
+  video: <Video className="h-4 w-4" />,
   "mega-footer": <Link2 className="h-4 w-4" />,
   footer: <Type className="h-4 w-4" />,
 };

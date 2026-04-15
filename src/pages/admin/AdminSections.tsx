@@ -6,7 +6,9 @@ import {
   Image, Type, Palette, Video, HelpCircle, MessageSquare, LayoutGrid, Link2, ArrowLeft,
   ArrowUp, ArrowDown, Star,
   Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote,
-  Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles
+  Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
+  Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package, Send,
+  Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,28 +40,36 @@ const availableIcons: Record<string, { label: string; icon: React.ReactNode }> =
   globe: { label: "Global", icon: <Globe className="h-4 w-4" /> },
   lock: { label: "Cadeado", icon: <Lock className="h-4 w-4" /> },
   sparkles: { label: "Brilho", icon: <Sparkles className="h-4 w-4" /> },
+  star: { label: "Estrela", icon: <Star className="h-4 w-4" /> },
+  mail: { label: "Email", icon: <Mail className="h-4 w-4" /> },
+  phone: { label: "Telefone", icon: <Phone className="h-4 w-4" /> },
+  "map-pin": { label: "Localização", icon: <MapPin className="h-4 w-4" /> },
+  "shopping-cart": { label: "Carrinho", icon: <ShoppingCart className="h-4 w-4" /> },
+  truck: { label: "Entrega", icon: <Truck className="h-4 w-4" /> },
+  camera: { label: "Câmera", icon: <Camera className="h-4 w-4" /> },
+  wifi: { label: "Wi-Fi", icon: <Wifi className="h-4 w-4" /> },
+  settings: { label: "Config.", icon: <Settings className="h-4 w-4" /> },
+  package: { label: "Pacote", icon: <Package className="h-4 w-4" /> },
+  send: { label: "Enviar", icon: <Send className="h-4 w-4" /> },
+  bell: { label: "Notificação", icon: <Bell className="h-4 w-4" /> },
+  calendar: { label: "Calendário", icon: <Calendar className="h-4 w-4" /> },
+  "file-text": { label: "Documento", icon: <FileText className="h-4 w-4" /> },
+  home: { label: "Casa", icon: <Home className="h-4 w-4" /> },
+  search: { label: "Busca", icon: <Search className="h-4 w-4" /> },
+  play: { label: "Play", icon: <Play className="h-4 w-4" /> },
+  headphones: { label: "Fone", icon: <Headphones className="h-4 w-4" /> },
+  monitor: { label: "Monitor", icon: <Monitor className="h-4 w-4" /> },
+  wrench: { label: "Ferramenta", icon: <Wrench className="h-4 w-4" /> },
+  lightbulb: { label: "Ideia", icon: <Lightbulb className="h-4 w-4" /> },
 };
 
-const iconComponentMap: Record<string, React.ReactNode> = {
-  smartphone: <Smartphone className="h-8 w-8" />,
-  clipboard: <ClipboardCheck className="h-8 w-8" />,
-  "credit-card": <CreditCard className="h-8 w-8" />,
-  gift: <Gift className="h-8 w-8" />,
-  shield: <Shield className="h-6 w-6" />,
-  zap: <Zap className="h-6 w-6" />,
-  "thumbs-up": <ThumbsUp className="h-6 w-6" />,
-  banknote: <Banknote className="h-6 w-6" />,
-  heart: <Heart className="h-6 w-6" />,
-  award: <Award className="h-6 w-6" />,
-  clock: <Clock className="h-6 w-6" />,
-  "check-circle": <CheckCircle className="h-6 w-6" />,
-  rocket: <Rocket className="h-6 w-6" />,
-  target: <Target className="h-6 w-6" />,
-  users: <Users className="h-6 w-6" />,
-  globe: <Globe className="h-6 w-6" />,
-  lock: <Lock className="h-6 w-6" />,
-  sparkles: <Sparkles className="h-6 w-6" />,
-};
+const iconComponentMap: Record<string, React.ReactNode> = Object.fromEntries(
+  Object.entries(availableIcons).map(([key, { icon }]) => {
+    // Clone the icon element with larger size for previews
+    const el = icon as React.ReactElement;
+    return [key, <el.type key={key} className="h-6 w-6" />];
+  })
+);
 
 const sectionLabels: Record<string, string> = {
   hero: "Hero Banner",

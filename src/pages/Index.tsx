@@ -9,6 +9,7 @@ import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import FaqSection from "@/components/landing/FaqSection";
 import MegaFooterSection from "@/components/landing/MegaFooterSection";
 import FooterSection from "@/components/landing/FooterSection";
+import CtaBannerSection from "@/components/landing/CtaBannerSection";
 
 const sectionComponents: Record<string, React.ComponentType<any>> = {
   hero: HeroSection,
@@ -19,6 +20,7 @@ const sectionComponents: Record<string, React.ComponentType<any>> = {
   faq: FaqSection,
   "mega-footer": MegaFooterSection,
   footer: FooterSection,
+  "cta-banner": CtaBannerSection,
 };
 
 const Index = () => {

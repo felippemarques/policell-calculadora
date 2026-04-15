@@ -68,6 +68,7 @@ const sectionLabels: Record<string, string> = {
   benefits: "Benefícios / Facilidades",
   testimonials: "Depoimentos",
   faq: "Dúvidas Frequentes",
+  "cta-banner": "Banner com CTA",
   "mega-footer": "Mega Footer",
   footer: "Footer",
 };
@@ -79,6 +80,7 @@ const sectionDescriptions: Record<string, string> = {
   benefits: "Cards com as vantagens/facilidades e um vídeo do YouTube opcional.",
   testimonials: "Depoimentos de clientes com nome, cidade, texto e foto.",
   faq: "Perguntas e respostas frequentes exibidas em accordion.",
+  "cta-banner": "Banner com imagem de fundo e botão CTA que leva a uma URL externa (ex: WhatsApp, link de compra).",
   "mega-footer": "Rodapé com colunas de links organizados por categoria.",
   footer: "Rodapé final com texto de copyright.",
 };
@@ -90,9 +92,13 @@ const sectionIcons: Record<string, React.ReactNode> = {
   benefits: <Video className="h-4 w-4" />,
   testimonials: <MessageSquare className="h-4 w-4" />,
   faq: <HelpCircle className="h-4 w-4" />,
+  "cta-banner": <Link2 className="h-4 w-4" />,
   "mega-footer": <Link2 className="h-4 w-4" />,
   footer: <Type className="h-4 w-4" />,
 };
+
+// Sections that cannot be reordered (fixed positions)
+const FIXED_SECTIONS = ["hero", "mega-footer", "footer"];
 
 // --- Helpers ---
 function SectionCard({ icon, title, description, children }: {
@@ -210,6 +216,33 @@ const AdminSections = () => {
     onError: (e) => toast.error(e.message),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id1, order1, id2, order2 }: { id1: string; order1: number; id2: string; order2: number }) => {
+      const { error: e1 } = await supabase.from("lp_sections").update({ display_order: order1 }).eq("id", id1);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("lp_sections").update({ display_order: order2 }).eq("id", id2);
+      if (e2) throw e2;
+    },
+    onSuccess: () => { invalidate(); toast.success("Ordem atualizada!"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
+    if (!sections) return;
+    const idx = sections.findIndex((s: any) => s.id === sectionId);
+    if (idx < 0) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= sections.length) return;
+    const current = sections[idx];
+    const target = sections[targetIdx];
+    // Don't swap with fixed sections
+    if (FIXED_SECTIONS.includes(current.section_type) || FIXED_SECTIONS.includes(target.section_type)) return;
+    reorderMutation.mutate({
+      id1: current.id, order1: target.display_order,
+      id2: target.id, order2: current.display_order,
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -319,15 +352,31 @@ const AdminSections = () => {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Seções da Landing Page</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Gerencie as 8 seções fixas da sua landing page. Ative, desative e personalize cada uma.
+            Gerencie as seções da sua landing page. Ative, desative, reordene e personalize cada uma.
           </p>
         </div>
 
         {/* Section List */}
         {!editingId && (
           <div className="space-y-2">
-            {sections?.map((section: any) => (
+            {sections?.map((section: any, idx: number) => {
+              const isFixed = FIXED_SECTIONS.includes(section.section_type);
+              const canMoveUp = !isFixed && idx > 0 && !FIXED_SECTIONS.includes(sections[idx - 1]?.section_type);
+              const canMoveDown = !isFixed && idx < sections.length - 1 && !FIXED_SECTIONS.includes(sections[idx + 1]?.section_type);
+              return (
               <div key={section.id} className={`bg-card border rounded-xl p-4 flex items-center gap-4 transition-all hover:shadow-sm ${!section.is_active ? "opacity-50" : ""}`}>
+                {!isFixed ? (
+                  <div className="flex flex-col gap-0.5">
+                    <button onClick={() => handleMoveSection(section.id, "up")} disabled={!canMoveUp || reorderMutation.isPending} className="p-1 rounded hover:bg-accent disabled:opacity-20 transition-colors" title="Mover para cima">
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => handleMoveSection(section.id, "down")} disabled={!canMoveDown || reorderMutation.isPending} className="p-1 rounded hover:bg-accent disabled:opacity-20 transition-colors" title="Mover para baixo">
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-7" />
+                )}
                 <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
                   {sectionIcons[section.section_type] || <Type className="h-4 w-4" />}
                 </div>
@@ -345,7 +394,9 @@ const AdminSections = () => {
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
+
           </div>
         )}
 
@@ -411,6 +462,7 @@ const AdminSections = () => {
             {editingSection.section_type === "faq" && <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "mega-footer" && <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
+            {editingSection.section_type === "cta-banner" && <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
 
             {/* Visibility */}
             <SectionCard icon={<Eye className="h-4 w-4" />} title="Visibilidade" description="Controle se esta seção aparece na landing page">
@@ -1217,6 +1269,97 @@ function ImageUploader({ form, setForm, onUpload, uploading, label, recommendedS
         <FieldHint text={`📐 Recomendado: ${recommendedSize} | Formatos: JPG, PNG ou WebP | Máx: 2MB`} />
       )}
     </div>
+  );
+}
+
+// ========== CTA BANNER EDITOR ==========
+function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
+  const contentData = (() => {
+    try { return form.content ? JSON.parse(form.content) : {}; } catch { return {}; }
+  })();
+  const setContentField = (key: string, value: string) => {
+    const updated = { ...contentData, [key]: value };
+    setForm({ ...form, content: JSON.stringify(updated) });
+  };
+
+  return (
+    <>
+      <SectionCard icon={<Type className="h-4 w-4" />} title="Subtítulo / Texto destaque" description="Texto em destaque abaixo do título principal do banner.">
+        <div>
+          <LabelWithHint label="Subtítulo" hint="Frase de impacto. Ex: Entre para o nosso grupo vip no WhatsApp" />
+          <Textarea value={contentData.subtitle || ""} onChange={(e) => setContentField("subtitle", e.target.value)} rows={2} className="mt-1" placeholder="Ex: Entre para o nosso grupo vip no WhatsApp" maxLength={120} />
+          <div className="flex justify-between mt-1">
+            <FieldHint text="Texto em destaque no banner" />
+            <CharCount current={(contentData.subtitle || "").length} max={120} />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard icon={<Image className="h-4 w-4" />} title="Imagem de Fundo" description="Imagem de fundo do banner. Recomendado: 1920×400px, JPG.">
+        <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem de fundo" recommendedSize="1920×400px" />
+      </SectionCard>
+
+      <SectionCard icon={<Link2 className="h-4 w-4" />} title="Botão CTA" description="Configure o botão de ação e a URL de destino.">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <LabelWithHint label="Texto do botão" hint="Texto curto. Ex: eu quero" />
+            <Input value={form.cta_text || ""} onChange={(e) => setForm({ ...form, cta_text: e.target.value })} className="mt-1" placeholder="Ex: eu quero" maxLength={30} />
+          </div>
+          <div>
+            <LabelWithHint label="URL de destino" hint="Link que o botão abrirá. Ex: https://wa.me/5511999999999" />
+            <Input value={contentData.cta_url || ""} onChange={(e) => setContentField("cta_url", e.target.value)} className="mt-1" placeholder="https://wa.me/5511999999999" />
+            {contentData.cta_url && !isValidUrl(contentData.cta_url) && (
+              <p className="text-xs text-destructive mt-1">⚠ URL inválida. Use https://</p>
+            )}
+          </div>
+          <div>
+            <LabelWithHint label="Border Radius (px)" hint="0 = quadrado, 25 = arredondado" />
+            <Input type="number" min={0} max={50} value={form.cta_border_radius ?? 25} onChange={(e) => setForm({ ...form, cta_border_radius: Number(e.target.value) })} className="mt-1" />
+          </div>
+          <div>
+            <LabelWithHint label="Cor de fundo do botão" hint="Cor de fundo do CTA" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.cta_bg_color || "#6ee7b7"} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.cta_bg_color || ""} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <LabelWithHint label="Cor do texto do botão" hint="Cor do texto do CTA" />
+            <div className="flex items-center gap-2 mt-1">
+              <input type="color" value={form.cta_text_color || "#1a5c3a"} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+              <Input value={form.cta_text_color || ""} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Preview */}
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como o banner aparecerá na landing page">
+        <div className="rounded-lg border overflow-hidden relative" style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}>
+          {form.image_url && (
+            <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          <div className="relative p-6 md:p-8">
+            <div className="max-w-md">
+              {form.title && <p className="text-xs opacity-80">{form.title}</p>}
+              {contentData.subtitle && <p className="text-sm md:text-base font-extrabold mt-1">{contentData.subtitle}</p>}
+              {form.cta_text && (
+                <button
+                  className="mt-3 px-5 py-1.5 text-xs font-bold rounded"
+                  style={{
+                    backgroundColor: form.cta_bg_color || "#6ee7b7",
+                    color: form.cta_text_color || "#1a5c3a",
+                    borderRadius: `${form.cta_border_radius ?? 25}px`,
+                  }}
+                >
+                  {form.cta_text}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+    </>
   );
 }
 

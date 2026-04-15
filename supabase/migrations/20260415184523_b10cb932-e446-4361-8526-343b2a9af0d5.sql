@@ -1,0 +1,2 @@
+INSERT INTO public.lp_sections (section_type, title, content, display_order, is_active, layout, bg_color, text_color, cta_text, cta_bg_color, cta_text_color, cta_border_radius)
+VALUES ('cta-banner', 'Fique por dentro de tudo em primeira mão!', '{"subtitle":"Entre para o nosso grupo vip no Whatsapp","cta_url":"https://wa.me/"}', 7, false, '{}', '#1a5c3a', '#ffffff', 'eu quero', '#6ee7b7', '#1a5c3a', 25);

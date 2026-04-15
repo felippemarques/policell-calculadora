@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 
 interface TestimonialsSectionProps {
   section: any;
@@ -89,10 +89,16 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
             {visibleItems.map((t: any, i: number) => (
               <div
                 key={`${currentIndex}-${i}`}
-                className="rounded-xl border bg-background/50 backdrop-blur-sm p-6 flex flex-col justify-between space-y-4 transition-all duration-300"
+                className="rounded-xl border bg-background/50 backdrop-blur-sm p-6 flex flex-col justify-between space-y-3 transition-all duration-300"
               >
                 <div>
-                  <div className="text-primary/30 text-3xl font-serif leading-none mb-3">"</div>
+                  {/* 5 estrelas douradas */}
+                  <div className="flex gap-0.5 mb-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <div className="text-primary/30 text-3xl font-serif leading-none mb-2">"</div>
                   <p className="text-sm leading-relaxed opacity-80">{t.text}</p>
                 </div>
 

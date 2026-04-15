@@ -65,11 +65,11 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
           {section.title || "Saiba como vender"}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {cards.map((card: any, cardIdx: number) => (
             <div
               key={cardIdx}
-              className="rounded-2xl border bg-white/80 backdrop-blur-sm p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow"
+              className="rounded-2xl border bg-white/80 backdrop-blur-sm p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col"
             >
               <div className="text-center mb-6">
                 <h3 className="text-lg md:text-xl font-extrabold text-orange-500 tracking-wide">

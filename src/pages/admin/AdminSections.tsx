@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Pencil, X, Check, Eye, EyeOff, Upload, Plus, Trash2,
   Image, Type, Palette, Video, HelpCircle, MessageSquare, LayoutGrid, Link2, ArrowLeft,
-  ArrowUp, ArrowDown, Star,
+  ArrowUp, ArrowDown, Star, MousePointerClick,
   Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote,
   Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
   Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package, Send,

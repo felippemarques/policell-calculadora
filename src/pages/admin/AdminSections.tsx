@@ -216,6 +216,33 @@ const AdminSections = () => {
     onError: (e) => toast.error(e.message),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id1, order1, id2, order2 }: { id1: string; order1: number; id2: string; order2: number }) => {
+      const { error: e1 } = await supabase.from("lp_sections").update({ display_order: order1 }).eq("id", id1);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("lp_sections").update({ display_order: order2 }).eq("id", id2);
+      if (e2) throw e2;
+    },
+    onSuccess: () => { invalidate(); toast.success("Ordem atualizada!"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
+    if (!sections) return;
+    const idx = sections.findIndex((s: any) => s.id === sectionId);
+    if (idx < 0) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= sections.length) return;
+    const current = sections[idx];
+    const target = sections[targetIdx];
+    // Don't swap with fixed sections
+    if (FIXED_SECTIONS.includes(current.section_type) || FIXED_SECTIONS.includes(target.section_type)) return;
+    reorderMutation.mutate({
+      id1: current.id, order1: target.display_order,
+      id2: target.id, order2: current.display_order,
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

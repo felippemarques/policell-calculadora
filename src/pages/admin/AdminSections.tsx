@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Pencil, X, Check, Eye, EyeOff, Upload, Plus, Trash2,
   Image, Type, Palette, Video, HelpCircle, MessageSquare, LayoutGrid, Link2, ArrowLeft,
-  ArrowUp, ArrowDown, Star,
+  ArrowUp, ArrowDown, Star, MousePointerClick,
   Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote,
   Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
   Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package, Send,
@@ -479,6 +479,44 @@ const AdminSections = () => {
             {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "cta-banner" && <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
             {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} />}
+
+            {/* CTA Button (for applicable sections) */}
+            {["steps", "video", "how-to-sell", "cta-banner", "testimonials", "benefits", "faq"].includes(editingSection.section_type) && (
+              <SectionCard icon={<MousePointerClick className="h-4 w-4" />} title="Botão CTA (opcional)" description="Adicione um botão que leva o visitante direto à calculadora de trade-in.">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="md:col-span-2">
+                    <LabelWithHint label="Texto do botão" hint="Texto exibido no botão. Deixe vazio para não exibir o botão." />
+                    <Input value={form.cta_text || ""} onChange={(e) => setForm({ ...form, cta_text: e.target.value })} className="mt-0.5" placeholder="Ex: Avaliar meu aparelho" maxLength={40} />
+                    <CharCount current={(form.cta_text || "").length} max={40} />
+                  </div>
+                  <div>
+                    <LabelWithHint label="Cor do fundo" hint="Cor de fundo do botão CTA." />
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="color" value={form.cta_bg_color || "#f97316"} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+                      <Input value={form.cta_bg_color || ""} onChange={(e) => setForm({ ...form, cta_bg_color: e.target.value })} placeholder="#f97316" />
+                    </div>
+                  </div>
+                  <div>
+                    <LabelWithHint label="Cor do texto" hint="Cor do texto do botão CTA." />
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="color" value={form.cta_text_color || "#ffffff"} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+                      <Input value={form.cta_text_color || ""} onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })} placeholder="#ffffff" />
+                    </div>
+                  </div>
+                  <div>
+                    <LabelWithHint label="Arredondamento" hint="Borda arredondada do botão (em px)." />
+                    <Input type="number" min={0} max={50} value={form.cta_border_radius ?? 8} onChange={(e) => setForm({ ...form, cta_border_radius: parseInt(e.target.value) || 0 })} className="mt-0.5 w-24" />
+                  </div>
+                </div>
+                {form.cta_text && (
+                  <div className="mt-3 flex justify-center">
+                    <span className="inline-block px-6 py-2.5 font-semibold text-sm cursor-default" style={{ backgroundColor: form.cta_bg_color || "#f97316", color: form.cta_text_color || "#ffffff", borderRadius: `${form.cta_border_radius ?? 8}px` }}>
+                      {form.cta_text}
+                    </span>
+                  </div>
+                )}
+              </SectionCard>
+            )}
 
             {/* Visibility */}
             <SectionCard icon={<Eye className="h-4 w-4" />} title="Visibilidade" description="Controle se esta seção aparece na landing page">

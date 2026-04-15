@@ -4,6 +4,7 @@ import {
   Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
   Send, Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
 } from "lucide-react";
+import SectionCtaButton from "./SectionCtaButton";
 
 interface StepsSectionProps {
   section: any;
@@ -81,6 +82,7 @@ const StepsSection = ({ section }: StepsSectionProps) => {
             </div>
           ))}
         </div>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

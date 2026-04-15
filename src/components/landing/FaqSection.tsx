@@ -1,4 +1,5 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import SectionCtaButton from "./SectionCtaButton";
 
 interface FaqSectionProps {
   section: any;
@@ -31,6 +32,7 @@ const FaqSection = ({ section }: FaqSectionProps) => {
             </AccordionItem>
           ))}
         </Accordion>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

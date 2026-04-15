@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import SectionCtaButton from "./SectionCtaButton";
 
 interface TestimonialsSectionProps {
   section: any;
@@ -137,6 +138,7 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
             </div>
           )}
         </div>
+        <SectionCtaButton section={section} />
       </div>
     </section>
   );

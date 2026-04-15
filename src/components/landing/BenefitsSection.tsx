@@ -97,7 +97,7 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {cards.map((card: any, i: number) => (
             <div key={i} className="bg-background/50 backdrop-blur-sm rounded-xl p-6 border text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center" style={{ color: card.icon_color || undefined }}>
                 {iconMap[card.icon] || <span className="font-bold">{i + 1}</span>}
               </div>
               <h3 className="font-semibold">{card.title}</h3>

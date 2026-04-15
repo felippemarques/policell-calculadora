@@ -109,7 +109,7 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
                 <div className="space-y-5">
                   {card.items?.map((item: any, i: number) => (
                     <div key={i} className="flex gap-4 items-center">
-                      <span className="text-orange-500 flex-shrink-0">
+                      <span className="flex-shrink-0" style={{ color: item.icon_color || "#f97316" }}>
                         {iconMap[item.icon] || <CheckCircle className="h-5 w-5" />}
                       </span>
                       <p className="text-sm md:text-base leading-relaxed font-medium text-gray-800">

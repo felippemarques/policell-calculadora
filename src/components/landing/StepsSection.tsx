@@ -73,7 +73,7 @@ const StepsSection = ({ section }: StepsSectionProps) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step: any, i: number) => (
             <div key={i} className="text-center space-y-3">
-              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center" style={{ color: step.icon_color || undefined }}>
                 {iconMap[step.icon] || <span className="text-2xl font-bold">{i + 1}</span>}
               </div>
               <h3 className="font-semibold text-lg">{step.title}</h3>

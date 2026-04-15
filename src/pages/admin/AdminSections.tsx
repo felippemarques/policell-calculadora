@@ -405,7 +405,7 @@ const AdminSections = () => {
             {/* Section-specific editors */}
             {editingSection.section_type === "hero" && <HeroEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />}
             {editingSection.section_type === "steps" && <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} />}
-            {editingSection.section_type === "how-to-sell" && <HowToSellEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} imgDimensions={imgDimensions} />}
+            {editingSection.section_type === "how-to-sell" && <HowToSellEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "benefits" && <BenefitsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />}
             {editingSection.section_type === "testimonials" && <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} />}
             {editingSection.section_type === "faq" && <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />}

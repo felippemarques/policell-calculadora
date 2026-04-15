@@ -394,7 +394,9 @@ const AdminSections = () => {
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
+
           </div>
         )}
 

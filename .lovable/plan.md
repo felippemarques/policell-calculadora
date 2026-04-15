@@ -1,101 +1,26 @@
 
 
-## Plano: Seções fixas da Landing Page (atualizado)
+## Plano: Mascaras, validacao e orientacao de imagem no AdminHeader
 
-### Estrutura das 8 seções fixas
+### O que sera feito
 
-```text
-1. HERO BANNER
-   - Imagem de fundo, título, subtítulo
-   - CTA customizável (texto, cor bg, cor texto, radius)
-   - Toggle ativo/inativo
+1. **Mascara de telefone** — campo Telefone formatado automaticamente como `(99) 99999-9999`
+2. **Validacao de e-mail** — verificar formato valido antes de salvar, exibir erro inline
+3. **Validacao de URLs** — campos WhatsApp, Instagram, Facebook e TikTok validam se comecam com `https://`
+4. **Orientacao de imagem para logo** — ao fazer upload, ler as dimensoes da imagem com `Image()` e:
+   - Exibir as dimensoes detectadas (ex: "1200 x 400px")
+   - Recomendar tamanho ideal (ex: "Recomendado: 300x80px, formato PNG transparente")
+   - Avisar se a imagem for muito grande ou desproporcional (ex: ratio > 5:1 ou < 2:1)
+   - Nao bloquear o upload, apenas orientar
 
-2. PASSO A PASSO
-   - Título, subtítulo
-   - 3-4 passos (ícone/título/descrição) em JSON
-   - Cores bg/texto, toggle ativo
+### Detalhes tecnicos
 
-3. COMO VENDER (info cards)
-   - Título, subtítulo, imagem lateral opcional
-   - Lista de bullets/cards em JSON
-   - Cores, toggle ativo
+**Arquivo**: `src/pages/admin/AdminHeader.tsx`
 
-4. BENEFÍCIOS / FACILIDADES (ATUALIZADO)
-   - Título, subtítulo
-   - Linha 1: vídeo do YouTube (URL embed, largura completa)
-   - Linha 2: até 4 cards (ícone/título/descrição) em JSON
-   - Cores bg/texto, toggle ativo
+- Mascara de telefone: funcao `maskPhone(value)` aplicada no `onChange` do campo phone, permitindo apenas digitos e formatando em tempo real
+- Validacao ao salvar (`handleSave`): verificar email com regex simples e URLs com `URL()` constructor; se invalido, exibir `toast.error` e nao prosseguir
+- Mensagens de erro inline com `<p className="text-xs text-destructive">` abaixo dos campos invalidos
+- Dimensoes da imagem: no `handleLogoUpload`, apos obter o file, criar `new Image()` com `URL.createObjectURL`, ler `naturalWidth/naturalHeight`, armazenar no state e exibir dica abaixo do preview
 
-5. DEPOIMENTOS
-   - Título, lista de depoimentos (nome, cidade, texto, foto) em JSON
-   - Cores, toggle ativo
+Nenhuma dependencia nova necessaria.
 
-6. DÚVIDAS FREQUENTES (FAQ)
-   - Título, itens pergunta/resposta em JSON (accordion)
-   - Cores, toggle ativo
-
-7. MEGA FOOTER
-   - Colunas de links em JSON, texto institucional
-   - Cores bg/texto, toggle ativo
-
-8. FOOTER
-   - Texto de copyright
-   - Cores bg/texto, toggle ativo
-```
-
-### Mudanças técnicas
-
-**1. Migração de banco**
-- `ALTER COLUMN title DROP NOT NULL` em `lp_sections`
-- Adicionar coluna `video_url text` para seções que usam vídeo (seção 4)
-- Deletar seções existentes e inserir 8 seções fixas com `section_type`: `hero`, `steps`, `how-to-sell`, `benefits`, `testimonials`, `faq`, `mega-footer`, `footer`
-- Campo `content` (text/JSON) armazenará dados estruturados (passos, cards, FAQ items, depoimentos, links)
-
-**2. AdminSections.tsx — reescrita**
-- Sem botão "Adicionar" ou "Deletar" — apenas editar e toggle ativo/inativo
-- Formulário contextual por `section_type`:
-  - **Hero**: imagem de fundo + CTA (texto, cores, radius)
-  - **Passo a passo**: editor de lista de passos
-  - **Como vender**: título + bullets/cards + imagem
-  - **Benefícios**: campo de URL YouTube + editor de até 4 cards
-  - **Depoimentos**: editor de lista (nome, cidade, texto, foto)
-  - **FAQ**: editor de lista pergunta/resposta
-  - **Mega Footer**: editor de colunas de links
-  - **Footer**: campo de copyright + cores
-
-**3. Index.tsx — reescrita com componentes por seção**
-- Hero: banner fullwidth + CTA
-- Passo a passo: grid numerado
-- Como vender: layout lado a lado
-- **Benefícios**: linha 1 com iframe YouTube 100% largura + linha 2 com grid de até 4 cards
-- Depoimentos: grid de cards com foto/nome/cidade
-- FAQ: accordion (componente existente)
-- Mega Footer: grid de colunas
-- Footer: barra simples
-- Cada seção renderiza apenas se `is_active = true`
-
-**4. Arquivos afetados**
-- `supabase/migrations/` — nova migração (schema + seed)
-- `src/pages/admin/AdminSections.tsx` — reescrita completa
-- `src/pages/Index.tsx` — reescrita com renderizadores dedicados
-
----
-
-## Fases do Backoffice
-
-### ✅ Fase A — Banco de Dados e Autenticação Admin (concluída)
-### ✅ Fase B — Layout Admin (concluída)
-### ✅ Fase C — Gestão de Seções da LP (concluída)
-### ❌ Fase D — Gestão de Vídeos (desconsiderada — contemplada nas seções)
-
-### 🔄 Fase E — Catálogo de Aparelhos
-- Tabela com busca e filtros
-- CRUD: marca, modelo, armazenamento, preço, cores
-- Gestão de defeitos (categorias + deduções com valor fixo)
-
-### Fase F — Precificação (Checklist)
-- Editar itens/opções do checklist, valores fixos/%, crítico
-
-### Fase G — Clientes com Verificação
-- Fluxo público: email existente → código OTP → histórico de avaliações
-- Admin: listagem de clientes + histórico

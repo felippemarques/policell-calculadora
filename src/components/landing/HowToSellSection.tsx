@@ -1,6 +1,8 @@
 import {
   Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote,
-  Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles
+  Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
+  Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
+  Send, Bell, Calendar, FileText, Home, Search, Play, Headphones, Monitor, Wrench, Lightbulb
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -22,6 +24,27 @@ const iconMap: Record<string, React.ReactNode> = {
   globe: <Globe className="h-5 w-5" />,
   lock: <Lock className="h-5 w-5" />,
   sparkles: <Sparkles className="h-5 w-5" />,
+  star: <Star className="h-5 w-5" />,
+  mail: <Mail className="h-5 w-5" />,
+  phone: <Phone className="h-5 w-5" />,
+  "map-pin": <MapPin className="h-5 w-5" />,
+  "shopping-cart": <ShoppingCart className="h-5 w-5" />,
+  truck: <Truck className="h-5 w-5" />,
+  camera: <Camera className="h-5 w-5" />,
+  wifi: <Wifi className="h-5 w-5" />,
+  settings: <Settings className="h-5 w-5" />,
+  package: <Package className="h-5 w-5" />,
+  send: <Send className="h-5 w-5" />,
+  bell: <Bell className="h-5 w-5" />,
+  calendar: <Calendar className="h-5 w-5" />,
+  "file-text": <FileText className="h-5 w-5" />,
+  home: <Home className="h-5 w-5" />,
+  search: <Search className="h-5 w-5" />,
+  play: <Play className="h-5 w-5" />,
+  headphones: <Headphones className="h-5 w-5" />,
+  monitor: <Monitor className="h-5 w-5" />,
+  wrench: <Wrench className="h-5 w-5" />,
+  lightbulb: <Lightbulb className="h-5 w-5" />,
 };
 
 interface HowToSellSectionProps {

@@ -375,7 +375,9 @@ const AdminSections = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="w-7" />
+                  <div className="w-7 flex items-center justify-center" title="Posição fixa">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  </div>
                 )}
                 <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
                   {sectionIcons[section.section_type] || <Type className="h-4 w-4" />}

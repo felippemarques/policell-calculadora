@@ -771,36 +771,34 @@ function TestimonialsEditor({ items, setItems, form }: any) {
 
   return (
     <>
-      <SectionCard icon={<MessageSquare className="h-4 w-4" />} title="Depoimentos de Clientes" description="Até 10 depoimentos. Cada um com foto, nome, cargo, empresa e segmento. Exibidos em carrossel na landing page.">
+      <SectionCard icon={<MessageSquare className="h-4 w-4" />} title="Depoimentos de Clientes" description="Até 10 depoimentos. Ative/desative individualmente quais aparecerão na landing page. Exibidos em carrossel.">
         <ReorderableList
           items={items}
           setItems={setItems}
           label="Depoimento"
           maxItems={10}
           renderItem={(item, i, update) => (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">Ativo na landing</Label>
+                <Switch checked={item.active !== false} onCheckedChange={(v) => update("active", v)} />
+              </div>
               <div className="md:col-span-2">
                 <LabelWithHint label="Depoimento" hint="Texto do depoimento. Mantenha autêntico e direto." />
                 <Textarea value={item.text || ""} onChange={(e) => update("text", e.target.value)} rows={3} className="mt-0.5 text-sm" placeholder="Ex: Processo super rápido e recebi um valor justo!" maxLength={300} />
                 <CharCount current={(item.text || "").length} max={300} />
               </div>
-              <div>
-                <LabelWithHint label="Nome" hint="Nome do cliente." />
-                <Input value={item.name || ""} onChange={(e) => update("name", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Maria Silva" maxLength={40} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <LabelWithHint label="Nome e Sobrenome" hint="Nome completo do cliente." />
+                  <Input value={item.name || ""} onChange={(e) => update("name", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Maria Silva" maxLength={40} />
+                </div>
+                <div>
+                  <LabelWithHint label="Cidade e Estado" hint="Ex: São Paulo, SP" />
+                  <Input value={item.city || ""} onChange={(e) => update("city", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: São Paulo, SP" maxLength={40} />
+                </div>
               </div>
               <div>
-                <LabelWithHint label="Cargo / Função" hint="Ex: Proprietário, Gerente, Coordenador" />
-                <Input value={item.role || ""} onChange={(e) => update("role", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Proprietário" maxLength={40} />
-              </div>
-              <div>
-                <LabelWithHint label="Empresa" hint="Nome da empresa do cliente." />
-                <Input value={item.company || ""} onChange={(e) => update("company", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Tech Store" maxLength={40} />
-              </div>
-              <div>
-                <LabelWithHint label="Segmento" hint="Ex: Eletrônicos • Loja física e virtual" />
-                <Input value={item.category || ""} onChange={(e) => update("category", e.target.value)} className="mt-0.5 text-sm" placeholder="Ex: Eletrônicos • Loja física" maxLength={60} />
-              </div>
-              <div className="md:col-span-2">
                 <LabelWithHint label="Foto do cliente" hint="Recomendado: 100×100px, quadrada, JPG ou PNG." />
                 <div className="flex items-center gap-3 mt-1">
                   <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-card text-xs cursor-pointer hover:bg-accent/50 transition-colors">
@@ -826,31 +824,39 @@ function TestimonialsEditor({ items, setItems, form }: any) {
       </SectionCard>
 
       {/* Testimonials Preview */}
-      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Prévia dos cards de depoimento (na landing será carrossel)">
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Prévia dos cards ativos (na landing será carrossel)">
         <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}>
           <div className="p-6">
             <p className="text-center font-bold text-sm mb-4">{form.title || "O que nossos clientes dizem"}</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(items.length > 0 ? items : [{ name: "Nome", text: "Depoimento", role: "Cargo", company: "Empresa", category: "Segmento" }]).slice(0, 4).map((t: any, i: number) => (
-                <div key={i} className="rounded-xl border p-3 space-y-2 flex flex-col" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
-                  <div className="text-primary/40 text-lg font-serif leading-none">"</div>
-                  <p className="text-[9px] opacity-80 flex-1">{t.text || "Depoimento"}</p>
-                  <div className="flex items-center gap-2 pt-1 border-t border-border/30">
-                    {t.photo ? (
-                      <img src={t.photo} alt="" className="w-6 h-6 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-semibold">{(t.name || "?").charAt(0)}</div>
-                    )}
-                    <div>
-                      <p className="text-[9px] font-semibold">{t.name || "Nome"}</p>
-                      <p className="text-[7px] opacity-60">{[t.company, t.role].filter(Boolean).join(" • ")}</p>
-                    </div>
+            {(() => {
+              const activeItems = items.filter((t: any) => t.active !== false);
+              const displayItems = activeItems.length > 0 ? activeItems : [{ name: "Nome", text: "Depoimento", city: "Cidade, UF" }];
+              return (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {displayItems.slice(0, 4).map((t: any, i: number) => (
+                      <div key={i} className="rounded-xl border p-3 space-y-2 flex flex-col" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                        <div className="text-primary/40 text-lg font-serif leading-none">"</div>
+                        <p className="text-[9px] opacity-80 flex-1">{t.text || "Depoimento"}</p>
+                        <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+                          {t.photo ? (
+                            <img src={t.photo} alt="" className="w-6 h-6 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-semibold">{(t.name || "?").charAt(0)}</div>
+                          )}
+                          <div>
+                            <p className="text-[9px] font-semibold">{t.name || "Nome"}</p>
+                            {t.city && <p className="text-[7px] opacity-60">{t.city}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {t.category && <p className="text-[7px] opacity-50 border-t border-border/20 pt-1">{t.category}</p>}
-                </div>
-              ))}
-            </div>
-            {items.length > 4 && <p className="text-[9px] text-center opacity-50 mt-2">+ {items.length - 4} depoimentos (visíveis no carrossel)</p>}
+                  {activeItems.length > 4 && <p className="text-[9px] text-center opacity-50 mt-2">+ {activeItems.length - 4} depoimentos (visíveis no carrossel)</p>}
+                  <p className="text-[9px] text-center opacity-40 mt-2">{activeItems.length} de {items.length} depoimentos ativos</p>
+                </>
+              );
+            })()}
           </div>
         </div>
       </SectionCard>

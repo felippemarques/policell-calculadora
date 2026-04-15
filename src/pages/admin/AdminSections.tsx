@@ -75,7 +75,7 @@ const sectionLabels: Record<string, string> = {
 const sectionDescriptions: Record<string, string> = {
   hero: "Banner principal no topo da página. Inclui título, subtítulo, imagem de fundo e botão CTA.",
   steps: "Seção que mostra o passo a passo do processo de venda. Cada item tem ícone, título e descrição.",
-  "how-to-sell": "Explica como vender o aparelho. Inclui lista de itens e uma imagem lateral.",
+  "how-to-sell": "Dois quadros comparativos lado a lado (ex: Prós vs Contras, Nós vs Concorrente). Até 6 tópicos por quadro com ícones.",
   benefits: "Cards com as vantagens/facilidades e um vídeo do YouTube opcional.",
   testimonials: "Depoimentos de clientes com nome, cidade, texto e foto.",
   faq: "Perguntas e respostas frequentes exibidas em accordion.",
@@ -251,13 +251,12 @@ const AdminSections = () => {
     }
 
     // Validate content arrays
-    if (sType && ["steps", "benefits", "how-to-sell", "testimonials", "faq"].includes(sType)) {
+    if (sType && ["steps", "benefits", "testimonials", "faq"].includes(sType)) {
       const items = getContentArray();
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (sType === "steps" && (!item.title?.trim())) { toast.error(`Passo ${i + 1}: título obrigatório`); return; }
         if (sType === "benefits" && (!item.title?.trim())) { toast.error(`Card ${i + 1}: título obrigatório`); return; }
-        if (sType === "how-to-sell" && (!item.title?.trim())) { toast.error(`Item ${i + 1}: título obrigatório`); return; }
         if (sType === "testimonials") {
           if (!item.name?.trim()) { toast.error(`Depoimento ${i + 1}: nome obrigatório`); return; }
           if (!item.text?.trim()) { toast.error(`Depoimento ${i + 1}: texto obrigatório`); return; }
@@ -268,6 +267,17 @@ const AdminSections = () => {
           if (!item.answer?.trim()) { toast.error(`FAQ ${i + 1}: resposta obrigatória`); return; }
         }
       }
+    }
+
+    // Validate how-to-sell cards
+    if (sType === "how-to-sell") {
+      try {
+        const parsed = form.content ? JSON.parse(form.content) : {};
+        const cards = parsed.cards || [];
+        for (let c = 0; c < cards.length; c++) {
+          if (!cards[c].title?.trim()) { toast.error(`Quadro ${c + 1}: título obrigatório`); return; }
+        }
+      } catch {}
     }
 
     // Validate mega-footer links

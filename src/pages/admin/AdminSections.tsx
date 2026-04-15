@@ -781,7 +781,7 @@ function TestimonialsEditor({ items, setItems, form }: any) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium">Ativo na landing</Label>
-                <Switch checked={item.active !== false} onCheckedChange={(v) => update("active", v)} />
+                <Switch checked={item.active !== false} onCheckedChange={(v) => update("active", v as any)} />
               </div>
               <div className="md:col-span-2">
                 <LabelWithHint label="Depoimento" hint="Texto do depoimento. Mantenha autêntico e direto." />

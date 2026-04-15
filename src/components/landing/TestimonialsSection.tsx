@@ -98,13 +98,11 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
                       <Star key={star} className="w-4 h-4 fill-amber-400 text-amber-400" />
                     ))}
                   </div>
-                  {/* Aspas douradas no início */}
-                  <div className="text-amber-400 text-3xl font-serif leading-none mb-1">"</div>
-                  {/* Frase do depoimento entre aspas */}
-                  <p className="text-sm leading-relaxed opacity-80">
-                    <span className="text-amber-400">"</span>
+                  {/* Aspas grandes antes do texto */}
+                  <p className="text-base leading-relaxed opacity-90 font-medium">
+                    <span className="text-amber-400 text-xl font-serif">"</span>
                     {t.text}
-                    <span className="text-amber-400">"</span>
+                    <span className="text-amber-400 text-xl font-serif">"</span>
                   </p>
                 </div>
 

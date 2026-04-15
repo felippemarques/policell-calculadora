@@ -1,26 +1,42 @@
 
 
-## Plano: Mascaras, validacao e orientacao de imagem no AdminHeader
+## Plano: Elevar UX de todas as seções ao nível do Hero Banner
 
-### O que sera feito
+### Contexto
+O Hero Banner já tem controles de posição, pré-visualizações em tempo real, tooltips, hints e máscaras. As demais 7 seções (Passo a Passo, Como Vender, Benefícios, Depoimentos, FAQ, Mega Footer, Footer) ainda usam editores genéricos sem previews nem validações.
 
-1. **Mascara de telefone** — campo Telefone formatado automaticamente como `(99) 99999-9999`
-2. **Validacao de e-mail** — verificar formato valido antes de salvar, exibir erro inline
-3. **Validacao de URLs** — campos WhatsApp, Instagram, Facebook e TikTok validam se comecam com `https://`
-4. **Orientacao de imagem para logo** — ao fazer upload, ler as dimensoes da imagem com `Image()` e:
-   - Exibir as dimensoes detectadas (ex: "1200 x 400px")
-   - Recomendar tamanho ideal (ex: "Recomendado: 300x80px, formato PNG transparente")
-   - Avisar se a imagem for muito grande ou desproporcional (ex: ratio > 5:1 ou < 2:1)
-   - Nao bloquear o upload, apenas orientar
+### O que será feito
 
-### Detalhes tecnicos
+**1. Passo a Passo** — Preview em tempo real dos 4 passos com ícones renderizados; seletor de ícone via dropdown (smartphone, clipboard, credit-card, gift, etc.) em vez de campo texto livre; contador de caracteres nos campos título (30) e descrição (80).
 
-**Arquivo**: `src/pages/admin/AdminHeader.tsx`
+**2. Como Vender** — Preview ao vivo da seção com itens numerados + imagem lateral; validação de dimensões da imagem (600×800px recomendado) com detecção automática como feito na logo do AdminHeader; contadores de caracteres.
 
-- Mascara de telefone: funcao `maskPhone(value)` aplicada no `onChange` do campo phone, permitindo apenas digitos e formatando em tempo real
-- Validacao ao salvar (`handleSave`): verificar email com regex simples e URLs com `URL()` constructor; se invalido, exibir `toast.error` e nao prosseguir
-- Mensagens de erro inline com `<p className="text-xs text-destructive">` abaixo dos campos invalidos
-- Dimensoes da imagem: no `handleLogoUpload`, apos obter o file, criar `new Image()` com `URL.createObjectURL`, ler `naturalWidth/naturalHeight`, armazenar no state e exibir dica abaixo do preview
+**3. Benefícios / Facilidades** — Preview dos cards renderizados; seletor de ícone dropdown (shield, zap, thumbs-up, banknote); validação de URL do YouTube com mensagem inline; preview do vídeo embed se URL válida; limite visual de 4 cards reforçado.
 
-Nenhuma dependencia nova necessaria.
+**4. Depoimentos** — Preview dos cards de depoimento com estrelas; validação de URL da foto (https://); preview da foto inline ao colar URL; contadores: nome (30), texto (200).
+
+**5. Dúvidas Frequentes** — Preview em accordion funcional dentro do editor; contadores: pergunta (80), resposta (300); reordenação drag visual (setas ▲▼).
+
+**6. Mega Footer** — Preview renderizado das colunas com links; validação de URLs dos links (https://); hint sobre limites (máx. 4 colunas, 6 links por coluna).
+
+**7. Footer** — Preview do rodapé final com cores aplicadas; placeholder dinâmico com ano atual; hint de caracteres (100).
+
+### Melhorias transversais
+
+- **Reordenação** — Botões ▲/▼ em todos os ListEditor para mover itens sem precisar excluir e recriar
+- **Validação ao salvar** — URLs com https://, campos obrigatórios não vazios, toast de erro específico
+- **Preview de seção** — Cada seção terá um mini-preview estilizado mostrando como ficará na landing page, similar ao que o Hero já tem
+- **Detecção de imagem** — Reutilizar lógica de dimensões do AdminHeader no ImageUploader (mostrar WxH detectados + aviso de proporção)
+
+### Detalhes técnicos
+
+**Arquivo**: `src/pages/admin/AdminSections.tsx`
+
+- Expandir `ImageUploader` para detectar dimensões via `new Image()` + `URL.createObjectURL` e exibir feedback
+- Criar componente `IconPicker` com dropdown dos ícones disponíveis (lucide) mapeados ao `iconMap` existente nas seções
+- Criar previews específicos: `StepsPreview`, `BenefitsPreview`, `TestimonialsPreview`, `FaqPreview`, `FooterPreview`, `MegaFooterPreview`, `HowToSellPreview`
+- Adicionar funções `moveUp(i)` / `moveDown(i)` ao `ListEditor`
+- Validação no `handleSave`: iterar content array e verificar campos obrigatórios preenchidos
+
+Nenhuma dependência nova. Nenhuma alteração de banco de dados.
 

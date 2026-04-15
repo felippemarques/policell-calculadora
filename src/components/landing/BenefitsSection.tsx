@@ -1,4 +1,4 @@
-import { Shield, Zap, ThumbsUp, Banknote } from "lucide-react";
+import { Shield, Zap, ThumbsUp, Banknote, Smartphone, ClipboardCheck, CreditCard, Gift, Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles } from "lucide-react";
 
 interface BenefitsSectionProps {
   section: any;
@@ -16,6 +16,20 @@ const iconMap: Record<string, React.ReactNode> = {
   "zap": <Zap className="h-6 w-6" />,
   "thumbs-up": <ThumbsUp className="h-6 w-6" />,
   "banknote": <Banknote className="h-6 w-6" />,
+  "smartphone": <Smartphone className="h-6 w-6" />,
+  "clipboard": <ClipboardCheck className="h-6 w-6" />,
+  "credit-card": <CreditCard className="h-6 w-6" />,
+  "gift": <Gift className="h-6 w-6" />,
+  "heart": <Heart className="h-6 w-6" />,
+  "award": <Award className="h-6 w-6" />,
+  "clock": <Clock className="h-6 w-6" />,
+  "check-circle": <CheckCircle className="h-6 w-6" />,
+  "rocket": <Rocket className="h-6 w-6" />,
+  "target": <Target className="h-6 w-6" />,
+  "users": <Users className="h-6 w-6" />,
+  "globe": <Globe className="h-6 w-6" />,
+  "lock": <Lock className="h-6 w-6" />,
+  "sparkles": <Sparkles className="h-6 w-6" />,
 };
 
 const BenefitsSection = ({ section }: BenefitsSectionProps) => {

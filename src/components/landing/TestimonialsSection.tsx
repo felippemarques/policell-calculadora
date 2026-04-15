@@ -6,23 +6,34 @@ interface TestimonialsSectionProps {
 }
 
 const defaultTestimonials = [
-  { name: "Maria S.", role: "Proprietária", company: "Tech Store", text: "Processo super rápido e recebi um valor justo pelo meu iPhone antigo!", photo: "", category: "Eletrônicos • Loja física" },
-  { name: "João P.", role: "Gerente", company: "Cell Shop", text: "Adorei a facilidade. Fiz tudo pelo celular em menos de 5 minutos.", photo: "", category: "Celulares • E-commerce" },
-  { name: "Ana L.", role: "Proprietária", company: "Mobile Center", text: "Recomendo! Consegui um ótimo desconto para comprar meu novo aparelho.", photo: "", category: "Assistência • Loja física" },
-  { name: "Carlos R.", role: "Coordenador", company: "Digital Phones", text: "Ótimo serviço. A avaliação foi transparente e o pagamento rápido.", photo: "", category: "Eletrônicos • Marketplace" },
+  { name: "Maria Silva", city: "São Paulo, SP", text: "Processo super rápido e recebi um valor justo pelo meu iPhone antigo!", photo: "", active: true },
+  { name: "João Pereira", city: "Rio de Janeiro, RJ", text: "Adorei a facilidade. Fiz tudo pelo celular em menos de 5 minutos.", photo: "", active: true },
+  { name: "Ana Lima", city: "Belo Horizonte, MG", text: "Recomendo! Consegui um ótimo desconto para comprar meu novo aparelho.", photo: "", active: true },
+  { name: "Carlos Rocha", city: "Curitiba, PR", text: "Ótimo serviço. A avaliação foi transparente e o pagamento rápido.", photo: "", active: true },
 ];
 
 const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
-  let testimonials = defaultTestimonials;
+  let allTestimonials = defaultTestimonials;
   try {
     if (section.content) {
       const parsed = JSON.parse(section.content);
-      if (parsed.length > 0) testimonials = parsed;
+      if (parsed.length > 0) allTestimonials = parsed;
     }
   } catch {}
 
+  // Only show active testimonials
+  const testimonials = allTestimonials.filter((t: any) => t.active !== false);
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerPage = typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 4;
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+
+  useEffect(() => {
+    const check = () => setItemsPerPage(window.innerWidth < 768 ? 1 : 4);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const maxIndex = Math.max(0, testimonials.length - itemsPerPage);
 
   const next = useCallback(() => {
@@ -41,10 +52,11 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
   }, [next, testimonials.length, itemsPerPage]);
 
   const visibleItems = testimonials.slice(currentIndex, currentIndex + itemsPerPage);
-  // Handle wrap-around
   if (visibleItems.length < itemsPerPage) {
     visibleItems.push(...testimonials.slice(0, itemsPerPage - visibleItems.length));
   }
+
+  if (testimonials.length === 0) return null;
 
   return (
     <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
@@ -79,42 +91,28 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
                 key={`${currentIndex}-${i}`}
                 className="rounded-xl border bg-background/50 backdrop-blur-sm p-6 flex flex-col justify-between space-y-4 transition-all duration-300"
               >
-                {/* Quote icon */}
                 <div>
                   <div className="text-primary/30 text-3xl font-serif leading-none mb-3">"</div>
                   <p className="text-sm leading-relaxed opacity-80">{t.text}</p>
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  {/* Author info */}
-                  <div className="flex items-center gap-3">
-                    {t.photo ? (
-                      <img src={t.photo} alt={t.name} className="w-10 h-10 rounded-full object-cover border" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
-                        {t.name?.charAt(0)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold">{t.name}</p>
-                      <p className="text-xs opacity-60">
-                        {[t.company, t.role].filter(Boolean).join(" • ")}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Category tag */}
-                  {t.category && (
-                    <div className="border-t pt-2">
-                      <p className="text-xs opacity-50">{t.category}</p>
+                <div className="flex items-center gap-3 pt-2 border-t">
+                  {t.photo ? (
+                    <img src={t.photo} alt={t.name} className="w-10 h-10 rounded-full object-cover border" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
+                      {t.name?.charAt(0)}
                     </div>
                   )}
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    {t.city && <p className="text-xs opacity-60">{t.city}</p>}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Dots indicator */}
           {testimonials.length > itemsPerPage && (
             <div className="flex justify-center gap-1.5 mt-6">
               {Array.from({ length: maxIndex + 1 }).map((_, i) => (

@@ -168,8 +168,9 @@ export function DevicesTab() {
   };
 
   const startEdit = (device: any) => { setForm({ ...device }); setEditingId(device.id); setShowNew(false); };
-  const startNew = () => { setForm(emptyDevice); setShowNew(true); setEditingId(null); };
-  const cancel = () => { setEditingId(null); setShowNew(false); setForm(emptyDevice); };
+  const startNew = () => { setForm(emptyDevice); setShowNew(true); setEditingId(null); setShowMatrix(false); };
+  const startMatrix = () => { setShowMatrix(true); setShowNew(false); setEditingId(null); };
+  const cancel = () => { setEditingId(null); setShowNew(false); setShowMatrix(false); setForm(emptyDevice); };
 
   const clearFilters = () => {
     setSearch(""); setFilterBrand("all"); setFilterModel("all");

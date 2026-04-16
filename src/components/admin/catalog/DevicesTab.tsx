@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3, Settings2 } from "lucide-react";
 import { DeviceMatrixGenerator } from "./DeviceMatrixGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ export function DevicesTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [showMatrix, setShowMatrix] = useState(false);
+  const [matrixEditModel, setMatrixEditModel] = useState<string | null>(null);
+  const [matrixEditBrand, setMatrixEditBrand] = useState<string | null>(null);
   const emptyDevice = { brand: "Apple", model: "", storage: "", base_price: 0, colors: "" };
   const [form, setForm] = useState<any>(emptyDevice);
 
@@ -169,8 +171,9 @@ export function DevicesTab() {
 
   const startEdit = (device: any) => { setForm({ ...device }); setEditingId(device.id); setShowNew(false); };
   const startNew = () => { setForm(emptyDevice); setShowNew(true); setEditingId(null); setShowMatrix(false); };
-  const startMatrix = () => { setShowMatrix(true); setShowNew(false); setEditingId(null); };
-  const cancel = () => { setEditingId(null); setShowNew(false); setShowMatrix(false); setForm(emptyDevice); };
+  const startMatrix = () => { setShowMatrix(true); setShowNew(false); setEditingId(null); setMatrixEditModel(null); setMatrixEditBrand(null); };
+  const startManageVariations = (brand: string, model: string) => { setMatrixEditBrand(brand); setMatrixEditModel(model); setShowMatrix(true); setShowNew(false); setEditingId(null); };
+  const cancel = () => { setEditingId(null); setShowNew(false); setShowMatrix(false); setMatrixEditModel(null); setMatrixEditBrand(null); setForm(emptyDevice); };
 
   const clearFilters = () => {
     setSearch(""); setFilterBrand("all"); setFilterModel("all");
@@ -405,7 +408,12 @@ export function DevicesTab() {
 
       {/* Matrix Generator */}
       {showMatrix && (
-        <DeviceMatrixGenerator onClose={cancel} />
+        <DeviceMatrixGenerator
+          onClose={cancel}
+          editModel={matrixEditModel || undefined}
+          editBrand={matrixEditBrand || undefined}
+          existingDevices={matrixEditModel ? devices?.filter((d) => d.model === matrixEditModel && d.brand === matrixEditBrand) : undefined}
+        />
       )}
 
       {/* New / Edit Form */}
@@ -485,6 +493,9 @@ export function DevicesTab() {
                   <td className="px-4 py-3 text-muted-foreground text-xs">{d.colors || "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" title="Gerenciar variações" onClick={() => startManageVariations(d.brand, d.model)}>
+                        <Settings2 className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => startEdit(d)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>

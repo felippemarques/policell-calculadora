@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Check, X, Grid3X3 } from "lucide-react";
@@ -16,22 +16,38 @@ interface Model { id: string; brand_id: string; name: string; }
 interface Storage { id: string; capacity: string; }
 interface Color { id: string; name: string; }
 
+interface ExistingDevice {
+  id: string;
+  brand: string;
+  model: string;
+  storage: string;
+  colors: string | null;
+  base_price: number;
+}
+
 interface MatrixRow {
   key: string;
+  existingId?: string;
   brand: string;
   model: string;
   storage: string;
   color: string;
   base_price: number;
   active: boolean;
+  wasActive: boolean; // tracks original state for upsert logic
 }
 
 interface DeviceMatrixGeneratorProps {
   onClose: () => void;
+  /** When provided, opens in edit mode for this model */
+  editModel?: string;
+  editBrand?: string;
+  existingDevices?: ExistingDevice[];
 }
 
-export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
+export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingDevices }: DeviceMatrixGeneratorProps) {
   const qc = useQueryClient();
+  const isEditMode = Boolean(editModel);
 
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
@@ -86,6 +102,71 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
   const brandName = brands.find((b) => b.id === selectedBrand)?.name || "";
   const modelName = allModels.find((m) => m.id === selectedModel)?.name || "";
 
+  // Hydrate edit mode: set brand/model selects and pre-select storages/colors
+  useEffect(() => {
+    if (!isEditMode || !editBrand || !editModel || brands.length === 0 || allModels.length === 0 || storages.length === 0 || colors.length === 0 || !existingDevices) return;
+
+    // Find brand id
+    const brand = brands.find((b) => b.name === editBrand);
+    if (brand) setSelectedBrand(brand.id);
+
+    // Find model id
+    const model = allModels.find((m) => m.name === editModel && (brand ? m.brand_id === brand.id : true));
+    if (model) setSelectedModel(model.id);
+
+    // Collect existing storages/colors
+    const existingStorageNames = [...new Set(existingDevices.map((d) => d.storage))];
+    const existingColorNames = [...new Set(existingDevices.map((d) => d.colors).filter(Boolean) as string[])];
+
+    const storageIds = storages.filter((s) => existingStorageNames.includes(s.capacity)).map((s) => s.id);
+    const colorIds = colors.filter((c) => existingColorNames.includes(c.name)).map((c) => c.id);
+
+    setSelectedStorages(storageIds);
+    setSelectedColors(colorIds);
+  }, [isEditMode, editBrand, editModel, brands, allModels, storages, colors, existingDevices]);
+
+  // Auto-generate matrix in edit mode once selections are hydrated
+  useEffect(() => {
+    if (!isEditMode || !selectedBrand || !selectedModel || selectedStorages.length === 0 || selectedColors.length === 0 || generated) return;
+    if (!existingDevices || existingDevices.length === 0) return;
+
+    const bName = brands.find((b) => b.id === selectedBrand)?.name || "";
+    const mName = allModels.find((m) => m.id === selectedModel)?.name || "";
+    if (!bName || !mName) return;
+
+    buildMatrix(bName, mName);
+  }, [isEditMode, selectedBrand, selectedModel, selectedStorages, selectedColors, brands, allModels, storages, colors, existingDevices]);
+
+  const buildMatrix = useCallback((bName: string, mName: string) => {
+    const selStorages = storages.filter((s) => selectedStorages.includes(s.id));
+    const selColors = colors.filter((c) => selectedColors.includes(c.id));
+
+    if (selStorages.length === 0 || selColors.length === 0) return;
+
+    const newRows: MatrixRow[] = [];
+    for (const st of selStorages) {
+      for (const co of selColors) {
+        // Check if this combination already exists
+        const existing = existingDevices?.find(
+          (d) => d.storage === st.capacity && d.colors === co.name
+        );
+        newRows.push({
+          key: `${st.id}-${co.id}`,
+          existingId: existing?.id,
+          brand: bName,
+          model: mName,
+          storage: st.capacity,
+          color: co.name,
+          base_price: existing ? Number(existing.base_price) : (globalPrice ? Number(globalPrice) : 0),
+          active: true,
+          wasActive: Boolean(existing),
+        });
+      }
+    }
+    setRows(newRows);
+    setGenerated(true);
+  }, [storages, colors, selectedStorages, selectedColors, existingDevices, globalPrice]);
+
   // Toggle helpers for multi-select chips
   const toggleStorage = (id: string) => {
     setSelectedStorages((prev) =>
@@ -101,33 +182,14 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
     setGenerated(false);
   };
 
-  // Generate matrix
+  // Generate matrix (manual button)
   const generateMatrix = useCallback(() => {
-    const selStorages = storages.filter((s) => selectedStorages.includes(s.id));
-    const selColors = colors.filter((c) => selectedColors.includes(c.id));
-
-    if (!brandName || !modelName || selStorages.length === 0 || selColors.length === 0) {
+    if (!brandName || !modelName || selectedStorages.length === 0 || selectedColors.length === 0) {
       toast.error("Selecione marca, modelo, pelo menos 1 armazenamento e 1 cor.");
       return;
     }
-
-    const newRows: MatrixRow[] = [];
-    for (const st of selStorages) {
-      for (const co of selColors) {
-        newRows.push({
-          key: `${st.id}-${co.id}`,
-          brand: brandName,
-          model: modelName,
-          storage: st.capacity,
-          color: co.name,
-          base_price: globalPrice ? Number(globalPrice) : 0,
-          active: true,
-        });
-      }
-    }
-    setRows(newRows);
-    setGenerated(true);
-  }, [brandName, modelName, storages, colors, selectedStorages, selectedColors, globalPrice]);
+    buildMatrix(brandName, modelName);
+  }, [brandName, modelName, selectedStorages, selectedColors, buildMatrix]);
 
   // Apply global price
   const applyGlobalPrice = () => {
@@ -148,28 +210,86 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (activeRows.length === 0) throw new Error("Nenhuma linha ativa para salvar.");
+      if (isEditMode) {
+        // UPSERT logic
+        const toInsert = rows.filter((r) => r.active && !r.existingId);
+        const toUpdate = rows.filter((r) => r.active && r.existingId);
+        const toDelete = rows.filter((r) => !r.active && r.existingId);
 
-      const inserts = activeRows.map((r) => ({
-        brand: r.brand,
-        model: r.model,
-        storage: r.storage,
-        colors: r.color,
-        base_price: r.base_price,
-      }));
+        // Insert new
+        if (toInsert.length > 0) {
+          const inserts = toInsert.map((r) => ({
+            brand: r.brand,
+            model: r.model,
+            storage: r.storage,
+            colors: r.color,
+            base_price: r.base_price,
+          }));
+          const { error } = await supabase.from("devices").insert(inserts);
+          if (error) throw error;
+        }
 
-      const { error } = await supabase.from("devices").insert(inserts);
-      if (error) throw error;
+        // Update existing
+        for (const r of toUpdate) {
+          const { error } = await supabase
+            .from("devices")
+            .update({ base_price: r.base_price, colors: r.color, storage: r.storage })
+            .eq("id", r.existingId!);
+          if (error) throw error;
+        }
+
+        // Delete deactivated
+        if (toDelete.length > 0) {
+          const ids = toDelete.map((r) => r.existingId!);
+          const { error } = await supabase.from("devices").delete().in("id", ids);
+          if (error) throw error;
+        }
+      } else {
+        // Create mode - simple insert
+        if (activeRows.length === 0) throw new Error("Nenhuma linha ativa para salvar.");
+        const inserts = activeRows.map((r) => ({
+          brand: r.brand,
+          model: r.model,
+          storage: r.storage,
+          colors: r.color,
+          base_price: r.base_price,
+        }));
+        const { error } = await supabase.from("devices").insert(inserts);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-devices"] });
-      toast.success(`${activeRows.length} aparelho(s) criado(s) com sucesso!`);
+      if (isEditMode) {
+        const toInsert = rows.filter((r) => r.active && !r.existingId).length;
+        const toUpdate = rows.filter((r) => r.active && r.existingId).length;
+        const toDelete = rows.filter((r) => !r.active && r.existingId).length;
+        const parts: string[] = [];
+        if (toInsert > 0) parts.push(`${toInsert} criado(s)`);
+        if (toUpdate > 0) parts.push(`${toUpdate} atualizado(s)`);
+        if (toDelete > 0) parts.push(`${toDelete} removido(s)`);
+        toast.success(parts.join(", ") || "Salvo!");
+      } else {
+        toast.success(`${activeRows.length} aparelho(s) criado(s) com sucesso!`);
+      }
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const canGenerate = selectedBrand && selectedModel && selectedStorages.length > 0 && selectedColors.length > 0;
+
+  const summaryLabel = useMemo(() => {
+    if (!isEditMode || !generated) return null;
+    const newCount = rows.filter((r) => r.active && !r.existingId).length;
+    const updateCount = rows.filter((r) => r.active && r.existingId).length;
+    const deleteCount = rows.filter((r) => !r.active && r.existingId).length;
+    const parts: string[] = [];
+    if (newCount > 0) parts.push(`${newCount} novo(s)`);
+    if (updateCount > 0) parts.push(`${updateCount} existente(s)`);
+    if (deleteCount > 0) parts.push(`${deleteCount} a remover`);
+    return parts.join(" · ");
+  }, [isEditMode, generated, rows]);
 
   return (
     <div className="space-y-6">
@@ -180,9 +300,14 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
         </Button>
         <div>
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5 text-primary" /> Cadastrar mais de 1
+            <Grid3X3 className="h-5 w-5 text-primary" />
+            {isEditMode ? `Gerenciar variações — ${editBrand} ${editModel}` : "Cadastrar mais de 1"}
           </h3>
-          <p className="text-xs text-muted-foreground">Selecione os parâmetros para gerar todas as combinações automaticamente.</p>
+          <p className="text-xs text-muted-foreground">
+            {isEditMode
+              ? "Edite preços, adicione ou remova variações de armazenamento e cor."
+              : "Selecione os parâmetros para gerar todas as combinações automaticamente."}
+          </p>
         </div>
       </div>
 
@@ -190,7 +315,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>1. Marca</Label>
-          <Select value={selectedBrand} onValueChange={(v) => { setSelectedBrand(v); setSelectedModel(""); setGenerated(false); }}>
+          <Select value={selectedBrand} onValueChange={(v) => { setSelectedBrand(v); setSelectedModel(""); setGenerated(false); }} disabled={isEditMode}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione uma marca..." /></SelectTrigger>
             <SelectContent>
               {brands.map((b) => (
@@ -201,7 +326,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
         </div>
         <div>
           <Label>2. Modelo</Label>
-          <Select value={selectedModel} onValueChange={(v) => { setSelectedModel(v); setGenerated(false); }} disabled={!selectedBrand}>
+          <Select value={selectedModel} onValueChange={(v) => { setSelectedModel(v); setGenerated(false); }} disabled={!selectedBrand || isEditMode}>
             <SelectTrigger className="mt-1"><SelectValue placeholder={selectedBrand ? "Selecione um modelo..." : "Selecione uma marca primeiro"} /></SelectTrigger>
             <SelectContent>
               {filteredModels.map((m) => (
@@ -230,7 +355,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
               </Badge>
             );
           })}
-          {storages.length === 0 && <p className="text-xs text-muted-foreground">Nenhum armazenamento cadastrado. Cadastre na aba Armazenamento.</p>}
+          {storages.length === 0 && <p className="text-xs text-muted-foreground">Nenhum armazenamento cadastrado.</p>}
         </div>
       </div>
 
@@ -252,14 +377,14 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
               </Badge>
             );
           })}
-          {colors.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma cor cadastrada. Cadastre na aba Cores.</p>}
+          {colors.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma cor cadastrada.</p>}
         </div>
       </div>
 
       {/* Generate button */}
       <div className="flex items-center gap-3">
         <Button onClick={generateMatrix} disabled={!canGenerate}>
-          <Grid3X3 className="h-4 w-4 mr-2" /> Gerar Matriz
+          <Grid3X3 className="h-4 w-4 mr-2" /> {isEditMode ? "Atualizar Matriz" : "Gerar Matriz"}
         </Button>
         {canGenerate && (
           <span className="text-xs text-muted-foreground">
@@ -289,7 +414,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
               Aplicar a todas
             </Button>
             <span className="text-xs text-muted-foreground ml-auto">
-              {activeRows.length} de {rows.length} ativa(s)
+              {summaryLabel || `${activeRows.length} de ${rows.length} ativa(s)`}
             </span>
           </div>
 
@@ -304,6 +429,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
                   <TableHead>Armazenamento</TableHead>
                   <TableHead>Cor</TableHead>
                   <TableHead className="w-40">Preço Base (R$)</TableHead>
+                  {isEditMode && <TableHead className="w-20">Status</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -329,6 +455,15 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
                         disabled={!r.active}
                       />
                     </TableCell>
+                    {isEditMode && (
+                      <TableCell>
+                        {r.existingId ? (
+                          <Badge variant="outline" className="text-xs">Existente</Badge>
+                        ) : (
+                          <Badge className="text-xs bg-green-600">Novo</Badge>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -337,9 +472,9 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
 
           {/* Save */}
           <div className="flex gap-3">
-            <Button onClick={() => saveMutation.mutate()} disabled={activeRows.length === 0 || saveMutation.isPending}>
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
               <Check className="h-4 w-4 mr-2" />
-              Salvar {activeRows.length} aparelho(s)
+              {isEditMode ? "Salvar alterações" : `Salvar ${activeRows.length} aparelho(s)`}
             </Button>
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
           </div>

@@ -4,14 +4,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { Pencil, Trash2, Check, X, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 type AttributeField = "brand" | "model" | "storage" | "colors";
+type FormatRule = "lowercase" | "uppercase" | "capitalize";
+
+const FORMAT_LABELS: Record<FormatRule, string> = {
+  lowercase: "Minúsculo",
+  uppercase: "Maiúsculo",
+  capitalize: "Primeira Letra Maiúscula",
+};
+
+function applyFormatRule(value: string, rule: FormatRule): string {
+  switch (rule) {
+    case "lowercase":
+      return value.toLowerCase();
+    case "uppercase":
+      return value.toUpperCase();
+    case "capitalize":
+      return value
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+  }
+}
 
 interface AttributeTabProps {
   field: AttributeField;
   label: string;
   description: string;
+  defaultFormatRule?: FormatRule;
 }
 
 export function AttributeTab({ field, label, description }: AttributeTabProps) {

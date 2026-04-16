@@ -13,7 +13,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSections from "./pages/admin/AdminSections";
 import AdminVideos from "./pages/admin/AdminVideos";
 import AdminCatalog from "./pages/admin/AdminCatalog";
-import AdminPricing from "./pages/admin/AdminPricing";
+
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminEvaluations from "./pages/admin/AdminEvaluations";
 import AdminHeader from "./pages/admin/AdminHeader";

@@ -225,6 +225,7 @@ export function TradeInWizard() {
               onBack={() => setStep(1)}
               onAnswer={handleAnswer}
               onReject={handleReject}
+              onResetAll={handleReset}
               isSubmitting={isSubmitting}
             />
           )}

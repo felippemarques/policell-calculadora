@@ -130,9 +130,13 @@ export function TradeInWizard() {
     );
   }
 
+  // Continuous progress (0..100)
+  const totalSteps = 3; // Steps 0,1,2 (Result is final)
+  const progressPct = step >= 3 ? 100 : Math.round(((step + 1) / (totalSteps + 1)) * 100);
+
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto">
-      <div className="text-center mb-10">
+      <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-primary/10 mb-5 shadow-sm">
           <Smartphone className="h-8 w-8 text-primary" />
         </div>
@@ -142,55 +146,67 @@ export function TradeInWizard() {
         <p className="text-muted-foreground mt-2">Descubra quanto vale seu aparelho</p>
       </div>
 
-      {/* Progress bar */}
-      {step < 3 && (
-        <div className="flex items-center gap-2 mb-10">
-          {steps.slice(0, 3).map((label, i) => (
-            <div key={label} className="flex-1">
-              <div
-                className={`h-1 rounded-full transition-colors ${
-                  i <= step ? "bg-primary" : "bg-border"
-                }`}
-              />
-              <p className={`text-xs mt-2 ${i <= step ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Premium card wrapper */}
+      <div className="relative rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
+        {/* Continuous progress bar at top of card */}
+        {step < 3 && (
+          <div className="h-1 w-full bg-muted/60 overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: `${progressPct}%` }}
+              aria-label={`Progresso: ${progressPct}%`}
+            />
+          </div>
+        )}
 
-      {step === 0 && (
-        <StepPersonalInfo
-          data={data}
-          onChange={(d) => setData({ ...data, ...d })}
-          onNext={() => setStep(1)}
-          onCreateLead={handleCreateLead}
-        />
-      )}
-      {step === 1 && (
-        <StepSelectDevice
-          data={data}
-          devices={devices || []}
-          onChange={(d) => setData({ ...data, ...d })}
-          onNext={handleDeviceSelected}
-          onBack={() => setStep(0)}
-        />
-      )}
-      {step === 2 && (
-        <StepEvaluationChecklist
-          data={data}
-          onChange={(d) => setData({ ...data, ...d })}
-          onSubmit={handleSubmit}
-          onBack={() => setStep(1)}
-          onAnswer={handleAnswer}
-          onReject={handleReject}
-          isSubmitting={isSubmitting}
-        />
-      )}
-      {step === 3 && result && (
-        <StepResult result={result} onReset={handleReset} />
-      )}
+        <div className="p-6 md:p-10">
+          {/* Step label */}
+          {step < 3 && (
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                Passo {step + 1} de {totalSteps}
+              </span>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {steps[step]}
+              </span>
+            </div>
+          )}
+
+          {step === 0 && (
+            <StepPersonalInfo
+              data={data}
+              onChange={(d) => setData({ ...data, ...d })}
+              onNext={() => setStep(1)}
+              onCreateLead={handleCreateLead}
+            />
+          )}
+          {step === 1 && (
+            <StepSelectDevice
+              data={data}
+              devices={devices || []}
+              onChange={(d) => setData({ ...data, ...d })}
+              onNext={handleDeviceSelected}
+              onBack={() => setStep(0)}
+            />
+          )}
+          {step === 2 && (
+            <StepEvaluationChecklist
+              data={data}
+              onChange={(d) => setData({ ...data, ...d })}
+              onSubmit={handleSubmit}
+              onBack={() => setStep(1)}
+              onAnswer={handleAnswer}
+              onReject={handleReject}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {step === 3 && result && (
+            <div className="animate-fade-in">
+              <StepResult result={result} onReset={handleReset} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

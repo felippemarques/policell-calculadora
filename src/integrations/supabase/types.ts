@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      brands: {
+        Row: {
+          created_at: string
+          format_rule: Database["public"]["Enums"]["format_rule"]
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      colors: {
+        Row: {
+          created_at: string
+          format_rule: Database["public"]["Enums"]["format_rule"]
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       condition_discounts: {
         Row: {
           condition_name: string
@@ -84,6 +126,38 @@ export type Database = {
             columns: ["damage_category_id"]
             isOneToOne: false
             referencedRelation: "damage_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_models: {
+        Row: {
+          brand_id: string
+          created_at: string
+          format_rule: Database["public"]["Enums"]["format_rule"]
+          id: string
+          name: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_models_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
             referencedColumns: ["id"]
           },
         ]
@@ -321,6 +395,27 @@ export type Database = {
         }
         Relationships: []
       }
+      storages: {
+        Row: {
+          capacity: string
+          created_at: string
+          format_rule: Database["public"]["Enums"]["format_rule"]
+          id: string
+        }
+        Insert: {
+          capacity: string
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+        }
+        Update: {
+          capacity?: string
+          created_at?: string
+          format_rule?: Database["public"]["Enums"]["format_rule"]
+          id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -354,6 +449,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      format_rule: "lowercase" | "uppercase" | "capitalize"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -482,6 +578,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      format_rule: ["lowercase", "uppercase", "capitalize"],
     },
   },
 } as const

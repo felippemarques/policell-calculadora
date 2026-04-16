@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { QuickCreateDialog } from "./QuickCreateDialog";
 import { toast } from "sonner";
 
 interface Brand { id: string; name: string; }
@@ -315,31 +316,57 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>1. Marca</Label>
-          <Select value={selectedBrand} onValueChange={(v) => { setSelectedBrand(v); setSelectedModel(""); setGenerated(false); }} disabled={isEditMode}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione uma marca..." /></SelectTrigger>
-            <SelectContent>
-              {brands.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 mt-1">
+            <Select value={selectedBrand} onValueChange={(v) => { setSelectedBrand(v); setSelectedModel(""); setGenerated(false); }} disabled={isEditMode}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma marca..." /></SelectTrigger>
+              <SelectContent>
+                {brands.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isEditMode && (
+              <QuickCreateDialog
+                type="brand"
+                invalidateKeys={[["admin", "brands"]]}
+                onCreated={(id) => { setSelectedBrand(id); setSelectedModel(""); setGenerated(false); }}
+              />
+            )}
+          </div>
         </div>
         <div>
           <Label>2. Modelo</Label>
-          <Select value={selectedModel} onValueChange={(v) => { setSelectedModel(v); setGenerated(false); }} disabled={!selectedBrand || isEditMode}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder={selectedBrand ? "Selecione um modelo..." : "Selecione uma marca primeiro"} /></SelectTrigger>
-            <SelectContent>
-              {filteredModels.map((m) => (
-                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 mt-1">
+            <Select value={selectedModel} onValueChange={(v) => { setSelectedModel(v); setGenerated(false); }} disabled={!selectedBrand || isEditMode}>
+              <SelectTrigger><SelectValue placeholder={selectedBrand ? "Selecione um modelo..." : "Selecione uma marca primeiro"} /></SelectTrigger>
+              <SelectContent>
+                {filteredModels.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isEditMode && (
+              <QuickCreateDialog
+                type="model"
+                brandId={selectedBrand}
+                invalidateKeys={[["admin", "device_models"]]}
+                onCreated={(id) => { setSelectedModel(id); setGenerated(false); }}
+              />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Step 3: Storages (chips) */}
       <div>
-        <Label>3. Armazenamentos</Label>
+        <div className="flex items-center justify-between">
+          <Label>3. Armazenamentos</Label>
+          <QuickCreateDialog
+            type="storage"
+            invalidateKeys={[["admin", "storages"]]}
+            onCreated={(id) => { setSelectedStorages((prev) => [...prev, id]); setGenerated(false); }}
+          />
+        </div>
         <div className="flex flex-wrap gap-2 mt-2">
           {storages.map((s) => {
             const selected = selectedStorages.includes(s.id);
@@ -361,7 +388,14 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
 
       {/* Step 4: Colors (chips) */}
       <div>
-        <Label>4. Cores</Label>
+        <div className="flex items-center justify-between">
+          <Label>4. Cores</Label>
+          <QuickCreateDialog
+            type="color"
+            invalidateKeys={[["admin", "colors"]]}
+            onCreated={(id) => { setSelectedColors((prev) => [...prev, id]); setGenerated(false); }}
+          />
+        </div>
         <div className="flex flex-wrap gap-2 mt-2">
           {colors.map((c) => {
             const selected = selectedColors.includes(c.id);

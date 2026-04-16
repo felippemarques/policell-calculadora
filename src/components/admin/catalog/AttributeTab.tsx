@@ -75,21 +75,20 @@ export function AttributeTab({ field, label, description, defaultFormatRule = "c
   }, [devices, field]);
 
   const renameMutation = useMutation({
-    mutationFn: async ({ oldValue, newVal }: { oldValue: string; newVal: string }) => {
+    mutationFn: async ({ oldValue, newVal, rule }: { oldValue: string; newVal: string; rule: FormatRule }) => {
       if (!devices) return;
+      const formatted = applyFormatRule(newVal.trim(), rule);
       if (field === "colors") {
-        // Update each device that has this color
         const affected = devices.filter((d) => (d.colors || "").split(",").map((c) => c.trim()).includes(oldValue));
         for (const dev of affected) {
-          const updatedColors = (dev.colors || "").split(",").map((c) => c.trim()).map((c) => c === oldValue ? newVal : c).join(", ");
+          const updatedColors = (dev.colors || "").split(",").map((c) => c.trim()).map((c) => c === oldValue ? formatted : c).join(", ");
           const { error } = await supabase.from("devices").update({ colors: updatedColors }).eq("id", dev.id);
           if (error) throw error;
         }
       } else {
-        // Rename attribute across all devices
         const affected = devices.filter((d) => (d as any)[field] === oldValue);
         for (const dev of affected) {
-          const { error } = await supabase.from("devices").update({ [field]: newVal } as any).eq("id", dev.id);
+          const { error } = await supabase.from("devices").update({ [field]: formatted } as any).eq("id", dev.id);
           if (error) throw error;
         }
       }

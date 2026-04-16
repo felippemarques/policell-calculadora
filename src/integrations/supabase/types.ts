@@ -177,19 +177,28 @@ export type Database = {
           created_at: string
           damage_category_id: string
           deduction_value: number
+          display_order: number
           id: string
+          is_rejected: boolean
+          option_name: string
         }
         Insert: {
           created_at?: string
           damage_category_id: string
           deduction_value: number
+          display_order?: number
           id?: string
+          is_rejected?: boolean
+          option_name?: string
         }
         Update: {
           created_at?: string
           damage_category_id?: string
           deduction_value?: number
+          display_order?: number
           id?: string
+          is_rejected?: boolean
+          option_name?: string
         }
         Relationships: [
           {

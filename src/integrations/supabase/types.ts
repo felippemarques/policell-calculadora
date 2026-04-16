@@ -17,19 +17,19 @@ export type Database = {
       brands: {
         Row: {
           created_at: string
-          format_rule: Database["public"]["Enums"]["format_rule"]
+          format_rule: string
           id: string
           name: string
         }
         Insert: {
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name: string
         }
         Update: {
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name?: string
         }
@@ -38,19 +38,19 @@ export type Database = {
       colors: {
         Row: {
           created_at: string
-          format_rule: Database["public"]["Enums"]["format_rule"]
+          format_rule: string
           id: string
           name: string
         }
         Insert: {
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name: string
         }
         Update: {
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name?: string
         }
@@ -134,21 +134,21 @@ export type Database = {
         Row: {
           brand_id: string
           created_at: string
-          format_rule: Database["public"]["Enums"]["format_rule"]
+          format_rule: string
           id: string
           name: string
         }
         Insert: {
           brand_id: string
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name: string
         }
         Update: {
           brand_id?: string
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
           name?: string
         }
@@ -399,19 +399,19 @@ export type Database = {
         Row: {
           capacity: string
           created_at: string
-          format_rule: Database["public"]["Enums"]["format_rule"]
+          format_rule: string
           id: string
         }
         Insert: {
           capacity: string
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
         }
         Update: {
           capacity?: string
           created_at?: string
-          format_rule?: Database["public"]["Enums"]["format_rule"]
+          format_rule?: string
           id?: string
         }
         Relationships: []

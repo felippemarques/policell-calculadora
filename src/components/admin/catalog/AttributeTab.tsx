@@ -4,20 +4,44 @@ import { supabase } from "@/integrations/supabase/client";
 import { Pencil, Trash2, Check, X, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 type AttributeField = "brand" | "model" | "storage" | "colors";
+type FormatRule = "lowercase" | "uppercase" | "capitalize";
+
+const FORMAT_LABELS: Record<FormatRule, string> = {
+  lowercase: "Minúsculo",
+  uppercase: "Maiúsculo",
+  capitalize: "Primeira Letra Maiúscula",
+};
+
+function applyFormatRule(value: string, rule: FormatRule): string {
+  switch (rule) {
+    case "lowercase":
+      return value.toLowerCase();
+    case "uppercase":
+      return value.toUpperCase();
+    case "capitalize":
+      return value
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+  }
+}
 
 interface AttributeTabProps {
   field: AttributeField;
   label: string;
   description: string;
+  defaultFormatRule?: FormatRule;
 }
 
-export function AttributeTab({ field, label, description }: AttributeTabProps) {
+export function AttributeTab({ field, label, description, defaultFormatRule = "capitalize" }: AttributeTabProps) {
   const queryClient = useQueryClient();
   const [editingValue, setEditingValue] = useState<string | null>(null);
   const [newValue, setNewValue] = useState("");
+  const [editRule, setEditRule] = useState<FormatRule>(defaultFormatRule);
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],
@@ -51,21 +75,20 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
   }, [devices, field]);
 
   const renameMutation = useMutation({
-    mutationFn: async ({ oldValue, newVal }: { oldValue: string; newVal: string }) => {
+    mutationFn: async ({ oldValue, newVal, rule }: { oldValue: string; newVal: string; rule: FormatRule }) => {
       if (!devices) return;
+      const formatted = applyFormatRule(newVal.trim(), rule);
       if (field === "colors") {
-        // Update each device that has this color
         const affected = devices.filter((d) => (d.colors || "").split(",").map((c) => c.trim()).includes(oldValue));
         for (const dev of affected) {
-          const updatedColors = (dev.colors || "").split(",").map((c) => c.trim()).map((c) => c === oldValue ? newVal : c).join(", ");
+          const updatedColors = (dev.colors || "").split(",").map((c) => c.trim()).map((c) => c === oldValue ? formatted : c).join(", ");
           const { error } = await supabase.from("devices").update({ colors: updatedColors }).eq("id", dev.id);
           if (error) throw error;
         }
       } else {
-        // Rename attribute across all devices
         const affected = devices.filter((d) => (d as any)[field] === oldValue);
         for (const dev of affected) {
-          const { error } = await supabase.from("devices").update({ [field]: newVal } as any).eq("id", dev.id);
+          const { error } = await supabase.from("devices").update({ [field]: formatted } as any).eq("id", dev.id);
           if (error) throw error;
         }
       }
@@ -108,31 +131,48 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
           {uniqueValues.map(({ value, count }) => {
             const isEditing = editingValue === value;
             return (
-              <div key={value} className="bg-card border rounded-lg p-4 flex items-center gap-4">
+              <div key={value} className="bg-card border rounded-lg p-4 flex items-center gap-4 flex-wrap">
                 <Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[180px]">
                   {isEditing ? (
-                    <Input
-                      value={newValue}
-                      onChange={(e) => setNewValue(e.target.value)}
-                      className="text-sm"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newValue) renameMutation.mutate({ oldValue: value, newVal: newValue });
-                        if (e.key === "Escape") setEditingValue(null);
-                      }}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        value={newValue}
+                        onChange={(e) => setNewValue(e.target.value)}
+                        className="text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newValue) renameMutation.mutate({ oldValue: value, newVal: newValue, rule: editRule });
+                          if (e.key === "Escape") setEditingValue(null);
+                        }}
+                      />
+                      {newValue.trim() && (
+                        <p className="text-xs text-muted-foreground">
+                          Preview: <span className="font-medium text-foreground">{applyFormatRule(newValue.trim(), editRule)}</span>
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <h4 className="font-medium text-foreground">{value}</h4>
                   )}
                 </div>
+                {isEditing && (
+                  <Select value={editRule} onValueChange={(v) => setEditRule(v as FormatRule)}>
+                    <SelectTrigger className="h-8 text-xs w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(FORMAT_LABELS) as FormatRule[]).map((r) => (
+                        <SelectItem key={r} value={r}>{FORMAT_LABELS[r]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded flex-shrink-0">
                   {count} aparelho(s)
                 </span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {isEditing ? (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => renameMutation.mutate({ oldValue: value, newVal: newValue })} disabled={!newValue || renameMutation.isPending}>
+                      <Button variant="ghost" size="sm" onClick={() => renameMutation.mutate({ oldValue: value, newVal: newValue, rule: editRule })} disabled={!newValue || renameMutation.isPending}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setEditingValue(null)}>
@@ -141,7 +181,7 @@ export function AttributeTab({ field, label, description }: AttributeTabProps) {
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => { setEditingValue(value); setNewValue(value); }}>
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingValue(value); setNewValue(value); setEditRule(defaultFormatRule); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       {field === "colors" && (

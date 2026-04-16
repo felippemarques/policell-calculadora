@@ -408,7 +408,12 @@ export function DevicesTab() {
 
       {/* Matrix Generator */}
       {showMatrix && (
-        <DeviceMatrixGenerator onClose={cancel} />
+        <DeviceMatrixGenerator
+          onClose={cancel}
+          editModel={matrixEditModel || undefined}
+          editBrand={matrixEditBrand || undefined}
+          existingDevices={matrixEditModel ? devices?.filter((d) => d.model === matrixEditModel && d.brand === matrixEditBrand) : undefined}
+        />
       )}
 
       {/* New / Edit Form */}

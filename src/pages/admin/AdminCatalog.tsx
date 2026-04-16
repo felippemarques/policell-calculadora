@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DevicesTab } from "@/components/admin/catalog/DevicesTab";
-import { DefectsTab } from "@/components/admin/catalog/DefectsTab";
+import { EvaluationCriteriaTab } from "@/components/admin/catalog/EvaluationCriteriaTab";
 import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
 import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
 
@@ -32,7 +32,7 @@ const AdminCatalog = () => (
       <TabsContent value="colors" className="mt-4">
         <AuxCrudTab table="colors" label="Cores" fieldName="name" fieldLabel="Nome da Cor" defaultFormatRule="capitalize" />
       </TabsContent>
-      <TabsContent value="defects" className="mt-4"><DefectsTab /></TabsContent>
+      <TabsContent value="defects" className="mt-4"><EvaluationCriteriaTab /></TabsContent>
     </Tabs>
   </div>
 );

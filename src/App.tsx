@@ -44,7 +44,7 @@ const App = () => (
               <Route path="secoes" element={<AdminSections />} />
               <Route path="videos" element={<AdminVideos />} />
               <Route path="catalogo" element={<AdminCatalog />} />
-              <Route path="precificacao" element={<AdminPricing />} />
+              
               <Route path="clientes" element={<AdminCustomers />} />
               <Route path="avaliacoes" element={<AdminEvaluations />} />
               <Route path="header" element={<AdminHeader />} />

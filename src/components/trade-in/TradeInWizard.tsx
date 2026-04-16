@@ -1,47 +1,51 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDevices } from "@/hooks/use-trade-in-data";
 import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
-import { checklistItems } from "@/data/checklist";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
-import { StepEvaluationChecklist } from "./StepEvaluationChecklist";
+import {
+  StepEvaluationChecklist,
+  type SubScreen,
+} from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
-import { Smartphone } from "lucide-react";
-
-const CONDITION_ITEM_ID = "__condition__";
+import { Smartphone, TrendingUp } from "lucide-react";
+import {
+  ChecklistAnswers,
+  ConditionRow,
+  DamageOption,
+  DamageCategory,
+  computePricing,
+  emptyAnswers,
+  formatBRL,
+} from "@/lib/trade-in-pricing";
 
 export interface WizardData {
   name: string;
   email: string;
   phone: string;
   deviceId: string;
-  checklistAnswers: Record<string, number | null>;
-}
-
-function initAnswers(): Record<string, number | null> {
-  const init: Record<string, number | null> = {};
-  checklistItems.forEach((item) => (init[item.id] = null));
-  return init;
+  answers: ChecklistAnswers;
 }
 
 export function TradeInWizard() {
   const [step, setStep] = useState(0);
+  const [subScreen, setSubScreen] = useState<SubScreen>("condition");
   const [data, setData] = useState<WizardData>({
     name: "",
     email: "",
     phone: "",
     deviceId: "",
-    checklistAnswers: initAnswers(),
+    answers: emptyAnswers(),
   });
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, updateLead, updateAssessment, markRejected } = useLead();
 
-  // Pull dynamic conditions for percent-discount calc on submit
+  // Pull dynamic catalog for live pricing
   const { data: conditions = [] } = useQuery({
     queryKey: ["condition_discounts_public"],
     queryFn: async () => {
@@ -50,7 +54,31 @@ export function TradeInWizard() {
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return data;
+      return (data || []) as ConditionRow[];
+    },
+  });
+
+  const { data: damageOptions = [] } = useQuery({
+    queryKey: ["damage_deductions_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_deductions")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as unknown as DamageOption[];
+    },
+  });
+
+  const { data: damageCategories = [] } = useQuery({
+    queryKey: ["damage_categories_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_categories")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as DamageCategory[];
     },
   });
 
@@ -58,6 +86,19 @@ export function TradeInWizard() {
 
   const steps = ["Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
 
+  const selectedDevice = useMemo(
+    () => devices?.find((d) => d.id === data.deviceId),
+    [devices, data.deviceId],
+  );
+  const basePrice = selectedDevice?.base_price ?? 0;
+
+  // ── Live pricing breakdown ──
+  const pricing = useMemo(
+    () => computePricing(basePrice, data.answers, conditions, damageOptions, damageCategories),
+    [basePrice, data.answers, conditions, damageOptions, damageCategories],
+  );
+
+  // ── Lead handlers ──
   const handleCreateLead = async () => {
     const id = await createLead({
       customer_name: data.name,
@@ -74,10 +115,28 @@ export function TradeInWizard() {
     setStep(2);
   };
 
-  const handleAnswer = async (itemId: string, optionIndex: number) => {
-    if (!leadId) return;
-    const newResponses = { ...data.checklistAnswers, [itemId]: optionIndex };
-    await updateAssessment(leadId, newResponses);
+  // Silent assessment update on every answers change (debounced via useEffect)
+  useEffect(() => {
+    if (!leadId || step !== 2) return;
+    const timer = setTimeout(() => {
+      updateAssessment(leadId, data.answers as any);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [leadId, step, data.answers, updateAssessment]);
+
+  // Force-flush the lead snapshot at every sub-screen transition
+  const handleSubScreenChange = useCallback(
+    (next: SubScreen) => {
+      setSubScreen(next);
+      if (leadId) {
+        updateAssessment(leadId, data.answers as any);
+      }
+    },
+    [leadId, data.answers, updateAssessment],
+  );
+
+  const handleAnswersChange = (next: ChecklistAnswers) => {
+    setData((prev) => ({ ...prev, answers: next }));
   };
 
   const handleReject = async (reason: string) => {
@@ -86,54 +145,26 @@ export function TradeInWizard() {
   };
 
   const handleSubmit = async () => {
-    if (!devices) return;
+    if (!selectedDevice) return;
 
-    const device = devices.find((d) => d.id === data.deviceId);
-    if (!device) return;
-
-    const basePrice = device.base_price;
-
-    let totalFixedDiscount = 0;
-    let totalPercentDiscount = 0;
-    let hasCriticalWarning = false;
-
-    checklistItems.forEach((item) => {
-      const idx = data.checklistAnswers[item.id];
-      if (idx !== null && idx !== undefined) {
-        const opt = item.options[idx];
-        totalFixedDiscount += opt.discountFixed;
-        totalPercentDiscount += opt.discountPercent;
-        if (opt.isCritical) hasCriticalWarning = true;
-      }
-    });
-
-    // Apply dynamic condition discount from DB (if selected)
-    const condIdx = data.checklistAnswers[CONDITION_ITEM_ID];
-    if (condIdx !== null && condIdx !== undefined && conditions[condIdx]) {
-      const cond = conditions[condIdx];
-      if (cond.is_rejected) {
-        hasCriticalWarning = true;
-      } else {
-        totalPercentDiscount += Number(cond.discount_percentage) || 0;
-      }
+    // Build legacy "damages" string array for evaluations table
+    const damageStrings: string[] = [];
+    if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
+    for (const [catId, optId] of Object.entries(data.answers.damageOptionByCategory)) {
+      if (optId) damageStrings.push(`damage:${catId}:${optId}`);
     }
-
-    const afterFixed = Math.max(0, basePrice - totalFixedDiscount);
-    const finalValue = Math.max(0, Math.round(afterFixed * (1 - totalPercentDiscount / 100) * 100) / 100);
 
     await submit({
       customerName: data.name,
       customerEmail: data.email,
       customerPhone: data.phone,
       deviceId: data.deviceId,
-      deviceCondition: hasCriticalWarning ? "critical" : "normal",
-      damages: Object.entries(data.checklistAnswers)
-        .filter(([, v]) => v !== null)
-        .map(([k, v]) => `${k}:${v}`),
-      basePrice,
-      conditionDiscount: totalPercentDiscount,
-      totalDeductions: totalFixedDiscount,
-      finalValue,
+      deviceCondition: pricing.isRejected ? "critical" : "normal",
+      damages: damageStrings,
+      basePrice: pricing.basePrice,
+      conditionDiscount: pricing.percentDiscount,
+      totalDeductions: pricing.fixedDeductions,
+      finalValue: pricing.finalValue,
     });
 
     if (leadId) {
@@ -144,10 +175,11 @@ export function TradeInWizard() {
   };
 
   const handleReset = () => {
-    setData({ name: "", email: "", phone: "", deviceId: "", checklistAnswers: initAnswers() });
+    setData({ name: "", email: "", phone: "", deviceId: "", answers: emptyAnswers() });
     setResult(null);
     setLeadId(null);
     setStep(0);
+    setSubScreen("condition");
   };
 
   if (isLoading) {
@@ -158,9 +190,12 @@ export function TradeInWizard() {
     );
   }
 
-  // Continuous progress (0..100)
-  const totalSteps = 3; // Steps 0,1,2 (Result is final)
+  const totalSteps = 3;
   const progressPct = step >= 3 ? 100 : Math.round(((step + 1) / (totalSteps + 1)) * 100);
+
+  // Show sticky price footer on Telas A and B (not on rejection screen, and only on step 2)
+  const showPriceFooter =
+    step === 2 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto">
@@ -174,9 +209,7 @@ export function TradeInWizard() {
         <p className="text-muted-foreground mt-2">Descubra quanto vale seu aparelho</p>
       </div>
 
-      {/* Premium card wrapper */}
       <div className="relative rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {/* Continuous progress bar at top of card */}
         {step < 3 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
@@ -187,16 +220,13 @@ export function TradeInWizard() {
           </div>
         )}
 
-        <div className="p-6 md:p-10">
-          {/* Step label */}
+        <div className="p-6 md:p-10 pb-6">
           {step < 3 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {step + 1} de {totalSteps}
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground">
-                {steps[step]}
-              </span>
+              <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
             </div>
           )}
 
@@ -210,7 +240,7 @@ export function TradeInWizard() {
           )}
           {step === 1 && (
             <StepSelectDevice
-              data={data}
+              data={data as any}
               devices={devices || []}
               onChange={(d) => setData({ ...data, ...d })}
               onNext={handleDeviceSelected}
@@ -219,14 +249,15 @@ export function TradeInWizard() {
           )}
           {step === 2 && (
             <StepEvaluationChecklist
-              data={data}
-              onChange={(d) => setData({ ...data, ...d })}
+              answers={data.answers}
+              onAnswersChange={handleAnswersChange}
               onSubmit={handleSubmit}
               onBack={() => setStep(1)}
-              onAnswer={handleAnswer}
+              onSubScreenChange={handleSubScreenChange}
               onReject={handleReject}
               onResetAll={handleReset}
               isSubmitting={isSubmitting}
+              basePrice={basePrice}
             />
           )}
           {step === 3 && result && (
@@ -235,6 +266,37 @@ export function TradeInWizard() {
             </div>
           )}
         </div>
+
+        {/* ───── Sticky price footer (telas A e B do checklist) ───── */}
+        {showPriceFooter && (
+          <div className="sticky bottom-0 left-0 right-0 border-t border-border/60 bg-card/95 backdrop-blur-md px-6 md:px-10 py-4 animate-fade-in">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Valor Estimado
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Atualiza conforme você responde
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xl md:text-2xl font-semibold tracking-tight text-foreground tabular-nums">
+                  {formatBRL(pricing.finalValue)}
+                </p>
+                {(pricing.percentDiscount > 0 || pricing.fixedDeductions > 0) && (
+                  <p className="text-[10px] text-muted-foreground">
+                    de {formatBRL(pricing.basePrice)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

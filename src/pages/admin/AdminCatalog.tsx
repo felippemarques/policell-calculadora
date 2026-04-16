@@ -1,13 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DevicesTab } from "@/components/admin/catalog/DevicesTab";
 import { DefectsTab } from "@/components/admin/catalog/DefectsTab";
-import { AttributeTab } from "@/components/admin/catalog/AttributeTab";
+import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
+import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
 
 const AdminCatalog = () => (
   <div className="p-6 space-y-6">
     <div>
-      <h2 className="text-2xl font-bold text-foreground">Catálogo de Aparelhos</h2>
-      <p className="text-sm text-muted-foreground">Gerencie aparelhos, atributos, preços e defeitos</p>
+      <h2 className="text-2xl font-bold text-foreground">Produtos e Parâmetros</h2>
+      <p className="text-sm text-muted-foreground">Gerencie aparelhos, marcas, modelos, armazenamento, cores e defeitos</p>
     </div>
     <Tabs defaultValue="devices">
       <TabsList className="flex-wrap h-auto gap-1">
@@ -20,16 +21,16 @@ const AdminCatalog = () => (
       </TabsList>
       <TabsContent value="devices" className="mt-4"><DevicesTab /></TabsContent>
       <TabsContent value="brands" className="mt-4">
-        <AttributeTab field="brand" label="Marca" description="Renomear uma marca altera todos os aparelhos que a utilizam." />
+        <AuxCrudTab table="brands" label="Marcas" fieldName="name" fieldLabel="Nome da Marca" defaultFormatRule="capitalize" />
       </TabsContent>
       <TabsContent value="models" className="mt-4">
-        <AttributeTab field="model" label="Modelo" description="Renomear um modelo altera todos os aparelhos com esse nome." />
+        <ModelsTab />
       </TabsContent>
       <TabsContent value="storages" className="mt-4">
-        <AttributeTab field="storage" label="Armazenamento" description="Renomear um armazenamento altera todos os aparelhos com esse valor." />
+        <AuxCrudTab table="storages" label="Armazenamento" fieldName="capacity" fieldLabel="Capacidade" defaultFormatRule="uppercase" />
       </TabsContent>
       <TabsContent value="colors" className="mt-4">
-        <AttributeTab field="colors" label="Cor" description="Gerencie as cores disponíveis. Renomear ou remover afeta todos os aparelhos." />
+        <AuxCrudTab table="colors" label="Cores" fieldName="name" fieldLabel="Nome da Cor" defaultFormatRule="capitalize" />
       </TabsContent>
       <TabsContent value="defects" className="mt-4"><DefectsTab /></TabsContent>
     </Tabs>

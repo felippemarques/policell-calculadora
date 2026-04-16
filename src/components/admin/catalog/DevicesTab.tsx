@@ -190,8 +190,11 @@ export function DevicesTab() {
         <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className={hasActiveFilters ? "border-primary text-primary" : ""}>
           <Filter className="mr-2 h-4 w-4" /> Filtros {hasActiveFilters && "•"}
         </Button>
-        <Button onClick={startNew} disabled={showNew}>
-          <Plus className="mr-2 h-4 w-4" /> Novo
+        <Button variant="outline" onClick={startNew} disabled={showNew || showMatrix}>
+          <Plus className="mr-2 h-4 w-4" /> Novo Individual
+        </Button>
+        <Button onClick={startMatrix} disabled={showMatrix || showNew}>
+          <Grid3X3 className="mr-2 h-4 w-4" /> Gerador de Matriz
         </Button>
       </div>
 

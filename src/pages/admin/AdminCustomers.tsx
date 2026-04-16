@@ -4,17 +4,17 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Search,
-  Filter,
-  Calendar as CalendarIcon,
   Smartphone,
   Mail,
   Phone,
   User,
-  X,
   CheckCircle2,
   Clock,
   XCircle,
   Eye,
+  Columns3,
+  Ban,
+  Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -37,10 +37,13 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -48,10 +51,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { checklistItems } from "@/data/checklist";
 
 type LeadRow = {
   id: string;
@@ -82,12 +84,19 @@ type EvaluationRow = {
   created_at: string;
 };
 
+type ConditionRow = {
+  id: string;
+  condition_name: string;
+  discount_percentage: number;
+  is_rejected: boolean;
+};
+
 const STATUS_META: Record<
   string,
   { label: string; icon: any; className: string }
 > = {
   in_progress: {
-    label: "Pendente",
+    label: "Aberto",
     icon: Clock,
     className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
   },
@@ -106,18 +115,46 @@ const STATUS_META: Record<
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos os status" },
-  { value: "in_progress", label: "Pendente" },
+  { value: "in_progress", label: "Aberto" },
   { value: "completed", label: "Concluído" },
   { value: "rejected", label: "Rejeitado" },
 ];
+
+type ColumnKey =
+  | "name"
+  | "email"
+  | "phone"
+  | "device"
+  | "status"
+  | "date"
+  | "value";
+
+const COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: "name", label: "Nome" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Telefone" },
+  { key: "device", label: "Aparelho" },
+  { key: "status", label: "Status" },
+  { key: "date", label: "Data" },
+  { key: "value", label: "Valor Final" },
+];
+
+const DEFAULT_VISIBLE: Record<ColumnKey, boolean> = {
+  name: true,
+  email: true,
+  phone: false,
+  device: true,
+  status: true,
+  date: true,
+  value: true,
+};
 
 const AdminCustomers = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
+  const [visible, setVisible] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["admin-leads"],
@@ -154,12 +191,23 @@ const AdminCustomers = () => {
     },
   });
 
+  const { data: conditions = [] } = useQuery({
+    queryKey: ["admin-leads-conditions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("condition_discounts")
+        .select("id, condition_name, discount_percentage, is_rejected")
+        .order("display_order");
+      if (error) throw error;
+      return data as ConditionRow[];
+    },
+  });
+
   const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
     [devices]
   );
 
-  // Map latest final_value per email
   const finalValueMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const e of evaluations) {
@@ -189,35 +237,16 @@ const AdminCustomers = () => {
         if (!dev || dev.brand !== brandFilter) return false;
       }
 
-      const created = new Date(l.created_at);
-      if (dateFrom && created < dateFrom) return false;
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        if (created > end) return false;
-      }
-
       return true;
     });
-  }, [leads, search, statusFilter, brandFilter, dateFrom, dateTo, deviceMap]);
-
-  const activeFiltersCount =
-    (statusFilter !== "all" ? 1 : 0) +
-    (brandFilter !== "all" ? 1 : 0) +
-    (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
-
-  const clearFilters = () => {
-    setStatusFilter("all");
-    setBrandFilter("all");
-    setDateFrom(undefined);
-    setDateTo(undefined);
-  };
+  }, [leads, search, statusFilter, brandFilter, deviceMap]);
 
   const formatBRL = (n: number | null | undefined) =>
     typeof n === "number"
       ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
       : "—";
+
+  const visibleCols = COLUMNS.filter((c) => visible[c.key]);
 
   return (
     <div className="p-6 space-y-6">
@@ -230,8 +259,8 @@ const AdminCustomers = () => {
 
       {/* Toolbar */}
       <Card className="p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome, email ou telefone..."
@@ -241,123 +270,57 @@ const AdminCustomers = () => {
             />
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="lg:w-44">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <SelectTrigger className="lg:w-44">
+              <SelectValue placeholder="Marca" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as marcas</SelectItem>
+              {brands.map((b) => (
+                <SelectItem key={b} value={b}>
+                  {b}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filtros
-                {activeFiltersCount > 0 && (
-                  <Badge className="ml-1 h-5 px-1.5">{activeFiltersCount}</Badge>
-                )}
+                <Columns3 className="h-4 w-4" />
+                Colunas
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" align="end">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">Filtros avançados</h4>
-                  {activeFiltersCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="h-7 text-xs"
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Limpar
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Marca do aparelho</Label>
-                  <Select value={brandFilter} onValueChange={setBrandFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas as marcas</SelectItem>
-                      {brands.map((b) => (
-                        <SelectItem key={b} value={b}>
-                          {b}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs">De</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !dateFrom && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-3 w-3" />
-                          {dateFrom ? format(dateFrom, "dd/MM/yy") : "—"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dateFrom}
-                          onSelect={setDateFrom}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Até</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !dateTo && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-3 w-3" />
-                          {dateTo ? format(dateTo, "dd/MM/yy") : "—"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dateTo}
-                          onSelect={setDateTo}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Mostrar colunas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {COLUMNS.map((c) => (
+                <DropdownMenuCheckboxItem
+                  key={c.key}
+                  checked={visible[c.key]}
+                  onCheckedChange={(v) =>
+                    setVisible((prev) => ({ ...prev, [c.key]: !!v }))
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {c.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="mt-3 text-xs text-muted-foreground">
@@ -373,20 +336,22 @@ const AdminCustomers = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead>Nome</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Aparelho</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="text-right">Valor Final</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                {visibleCols.map((c) => (
+                  <TableHead
+                    key={c.key}
+                    className={cn(c.key === "value" && "text-right")}
+                  >
+                    {c.label}
+                  </TableHead>
+                ))}
+                <TableHead className="w-[140px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && !isLoading && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={visibleCols.length + 1}
                     className="text-center py-12 text-muted-foreground"
                   >
                     Nenhum cliente encontrado.
@@ -401,56 +366,83 @@ const AdminCustomers = () => {
                 const Icon = meta.icon;
                 const finalValue = finalValueMap.get(lead.customer_email);
 
-                return (
-                  <TableRow
-                    key={lead.id}
-                    onClick={() => setSelectedLead(lead)}
-                    className="cursor-pointer hover:bg-muted/40"
-                  >
-                    <TableCell className="font-medium">
-                      {lead.customer_name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5 text-xs">
-                        <span className="text-muted-foreground">
+                const cell = (key: ColumnKey) => {
+                  switch (key) {
+                    case "name":
+                      return (
+                        <TableCell key={key} className="font-medium">
+                          {lead.customer_name}
+                        </TableCell>
+                      );
+                    case "email":
+                      return (
+                        <TableCell key={key} className="text-sm text-muted-foreground">
                           {lead.customer_email}
-                        </span>
-                        <span className="text-muted-foreground">
+                        </TableCell>
+                      );
+                    case "phone":
+                      return (
+                        <TableCell key={key} className="text-sm text-muted-foreground">
                           {lead.customer_phone}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {dev ? (
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm">
-                            {dev.brand} {dev.model}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn("gap-1 font-normal", meta.className)}
+                        </TableCell>
+                      );
+                    case "device":
+                      return (
+                        <TableCell key={key}>
+                          {dev ? (
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-sm">
+                                {dev.brand} {dev.model}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      );
+                    case "status":
+                      return (
+                        <TableCell key={key}>
+                          <Badge
+                            variant="outline"
+                            className={cn("gap-1 font-normal", meta.className)}
+                          >
+                            <Icon className="h-3 w-3" />
+                            {meta.label}
+                          </Badge>
+                        </TableCell>
+                      );
+                    case "date":
+                      return (
+                        <TableCell key={key} className="text-sm text-muted-foreground">
+                          {format(new Date(lead.created_at), "dd/MM/yy HH:mm", {
+                            locale: ptBR,
+                          })}
+                        </TableCell>
+                      );
+                    case "value":
+                      return (
+                        <TableCell key={key} className="text-right font-medium">
+                          {formatBRL(finalValue)}
+                        </TableCell>
+                      );
+                  }
+                };
+
+                return (
+                  <TableRow key={lead.id} className="hover:bg-muted/40">
+                    {visibleCols.map((c) => cell(c.key))}
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedLead(lead)}
+                        className="gap-1.5"
                       >
-                        <Icon className="h-3 w-3" />
-                        {meta.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(lead.created_at), "dd/MM/yy HH:mm", {
-                        locale: ptBR,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatBRL(finalValue)}
-                    </TableCell>
-                    <TableCell>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                        <Eye className="h-3.5 w-3.5" />
+                        Ver detalhes
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -475,6 +467,7 @@ const AdminCustomers = () => {
                   : null
               }
               finalValue={finalValueMap.get(selectedLead.customer_email)}
+              conditions={conditions}
             />
           )}
         </SheetContent>
@@ -483,19 +476,82 @@ const AdminCustomers = () => {
   );
 };
 
+const CONDITION_ITEM_ID = "__condition__";
+
+type ParsedAnswer = {
+  question: string;
+  answer: string;
+  isCritical: boolean;
+};
+
+function parseResponses(
+  responses: Record<string, any>,
+  conditions: ConditionRow[]
+): ParsedAnswer[] {
+  const result: ParsedAnswer[] = [];
+
+  for (const [key, value] of Object.entries(responses)) {
+    if (value === null || value === undefined) continue;
+
+    if (key === CONDITION_ITEM_ID) {
+      const idx = typeof value === "number" ? value : Number(value);
+      const cond = conditions[idx];
+      if (cond) {
+        result.push({
+          question: "Condição Geral do Aparelho",
+          answer: cond.condition_name,
+          isCritical: cond.is_rejected,
+        });
+      } else {
+        result.push({
+          question: "Condição Geral do Aparelho",
+          answer: String(value),
+          isCritical: false,
+        });
+      }
+      continue;
+    }
+
+    const item = checklistItems.find((i) => i.id === key);
+    if (item) {
+      const idx = typeof value === "number" ? value : Number(value);
+      const opt = item.options[idx];
+      result.push({
+        question: item.title,
+        answer: opt?.label ?? String(value),
+        isCritical: !!opt?.isCritical,
+      });
+    } else {
+      result.push({
+        question: key.replace(/_/g, " "),
+        answer:
+          typeof value === "object" ? JSON.stringify(value) : String(value),
+        isCritical: false,
+      });
+    }
+  }
+
+  return result;
+}
+
 function LeadDetail({
   lead,
   device,
   finalValue,
+  conditions,
 }: {
   lead: LeadRow;
   device: DeviceRow | null;
   finalValue?: number;
+  conditions: ConditionRow[];
 }) {
   const meta = STATUS_META[lead.status] ?? STATUS_META.in_progress;
   const Icon = meta.icon;
   const responses = (lead.assessment_responses ?? {}) as Record<string, any>;
-  const responseEntries = Object.entries(responses);
+  const parsed = useMemo(
+    () => parseResponses(responses, conditions),
+    [responses, conditions]
+  );
 
   return (
     <>
@@ -613,7 +669,12 @@ function LeadDetail({
                 Motivo da rejeição
               </h4>
               <Card className="p-3 border-destructive/30 bg-destructive/10">
-                <p className="text-sm text-destructive">{lead.rejection_reason}</p>
+                <div className="flex items-start gap-2">
+                  <Ban className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">
+                    {lead.rejection_reason}
+                  </p>
+                </div>
               </Card>
             </section>
           </>
@@ -626,26 +687,50 @@ function LeadDetail({
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Respostas do checklist
           </h4>
-          {responseEntries.length === 0 ? (
+          {parsed.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhuma resposta registrada.
             </p>
           ) : (
             <div className="space-y-2">
-              {responseEntries.map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex justify-between gap-3 text-sm py-2 border-b border-border last:border-0"
+              {parsed.map((entry, i) => (
+                <Card
+                  key={i}
+                  className={cn(
+                    "p-3 flex items-start gap-3",
+                    entry.isCritical
+                      ? "border-destructive/30 bg-destructive/5"
+                      : "bg-muted/20"
+                  )}
                 >
-                  <span className="text-muted-foreground capitalize">
-                    {key.replace(/_/g, " ").replace(/__/g, "")}
-                  </span>
-                  <span className="font-medium text-right">
-                    {typeof value === "object"
-                      ? JSON.stringify(value)
-                      : String(value)}
-                  </span>
-                </div>
+                  <div
+                    className={cn(
+                      "h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                      entry.isCritical
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-primary/10 text-primary"
+                    )}
+                  >
+                    {entry.isCritical ? (
+                      <Ban className="h-3.5 w-3.5" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">
+                      {entry.question}
+                    </p>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        entry.isCritical && "text-destructive"
+                      )}
+                    >
+                      {entry.answer}
+                    </p>
+                  </div>
+                </Card>
               ))}
             </div>
           )}

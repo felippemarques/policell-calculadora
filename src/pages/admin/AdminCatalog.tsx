@@ -17,7 +17,7 @@ const AdminCatalog = () => (
         <TabsTrigger value="models">Modelos</TabsTrigger>
         <TabsTrigger value="storages">Armazenamento</TabsTrigger>
         <TabsTrigger value="colors">Cores</TabsTrigger>
-        <TabsTrigger value="defects">Defeitos</TabsTrigger>
+        <TabsTrigger value="defects">Critérios de Avaliação</TabsTrigger>
       </TabsList>
       <TabsContent value="devices" className="mt-4"><DevicesTab /></TabsContent>
       <TabsContent value="brands" className="mt-4">

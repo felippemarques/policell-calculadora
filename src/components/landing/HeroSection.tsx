@@ -19,14 +19,14 @@ const HeroSection = ({ section }: HeroSectionProps) => {
   const alignMap = { top: "flex-start", center: "center", bottom: "flex-end" } as const;
 
   return (
-    <section className="relative overflow-hidden min-h-[480px] flex items-center">
+    <section className="relative overflow-hidden min-h-[600px] flex items-center bg-background">
       {section.image_url ? (
         <img src={section.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
       )}
       <div
-        className="relative w-full h-full min-h-[480px] flex px-4 py-20 md:py-28"
+        className="relative w-full h-full min-h-[600px] flex px-6 py-28 md:py-40"
         style={{
           justifyContent: justifyMap[hAlign as keyof typeof justifyMap] || "center",
           alignItems: alignMap[vAlign as keyof typeof alignMap] || "center",
@@ -34,17 +34,23 @@ const HeroSection = ({ section }: HeroSectionProps) => {
         }}
       >
         <div className="max-w-5xl" style={{ textAlign }}>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] tracking-tight">
             {section.title || "Troque ou venda seu aparelho"}
           </h1>
           {section.content && (
-            <p className="text-lg mt-4 max-w-xl opacity-80" style={{ marginLeft: textAlign === "center" ? "auto" : undefined, marginRight: textAlign === "center" ? "auto" : textAlign === "left" ? "auto" : undefined }}>
+            <p
+              className="text-lg md:text-xl mt-6 max-w-2xl opacity-70 font-normal leading-relaxed"
+              style={{
+                marginLeft: textAlign === "center" ? "auto" : undefined,
+                marginRight: textAlign === "center" ? "auto" : textAlign === "left" ? "auto" : undefined,
+              }}
+            >
               {section.content}
             </p>
           )}
           <Button
             size="lg"
-            className="mt-8"
+            className="mt-10 h-12 px-8 text-base rounded-full shadow-sm hover:shadow-md transition-shadow"
             style={{
               backgroundColor: section.cta_bg_color || undefined,
               color: section.cta_text_color || undefined,

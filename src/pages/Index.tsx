@@ -55,18 +55,18 @@ const Index = () => {
   const hasContact = settings.phone || settings.email;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Configurable Header */}
+    <div className="min-h-screen bg-background antialiased">
+      {/* Configurable Header — Apple-like minimal */}
       <header
-        className={`border-b ${settings.header_fixed === "true" ? "sticky top-0 z-50" : ""}`}
+        className={`border-b border-black/5 backdrop-blur-xl bg-background/80 ${settings.header_fixed === "true" ? "sticky top-0 z-50" : ""}`}
         style={{ backgroundColor: settings.header_bg_color || undefined, color: settings.header_text_color || undefined }}
       >
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {settings.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-8 max-w-[140px] object-contain" />
             ) : (
-              <span className="text-lg font-bold">Pollicell</span>
+              <span className="text-lg font-semibold tracking-tight">Pollicell</span>
             )}
           </div>
           <div className="flex items-center gap-4 text-sm">

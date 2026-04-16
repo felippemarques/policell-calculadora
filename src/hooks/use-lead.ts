@@ -39,7 +39,7 @@ export function useLead() {
   const updateLead = useCallback(
     async (id: string, patch: Record<string, any>) => {
       try {
-        const { error } = await supabase.from("leads").update(patch).eq("id", id);
+        const { error } = await (supabase.from("leads") as any).update(patch).eq("id", id);
         if (error) throw error;
       } catch (err) {
         console.error("Failed to update lead:", err);

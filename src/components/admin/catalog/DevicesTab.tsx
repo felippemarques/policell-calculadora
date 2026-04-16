@@ -403,6 +403,11 @@ export function DevicesTab() {
         </div>
       )}
 
+      {/* Matrix Generator */}
+      {showMatrix && (
+        <DeviceMatrixGenerator onClose={cancel} />
+      )}
+
       {/* New / Edit Form */}
       {(showNew || editingId) && (
         <div className="bg-card border rounded-lg p-5 space-y-4">

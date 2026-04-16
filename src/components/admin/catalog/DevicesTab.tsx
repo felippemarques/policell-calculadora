@@ -194,7 +194,7 @@ export function DevicesTab() {
           <Plus className="mr-2 h-4 w-4" /> Novo Individual
         </Button>
         <Button onClick={startMatrix} disabled={showMatrix || showNew}>
-          <Grid3X3 className="mr-2 h-4 w-4" /> Gerador de Matriz
+          <Grid3X3 className="mr-2 h-4 w-4" /> Cadastrar mais de 1
         </Button>
       </div>
 

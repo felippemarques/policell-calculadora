@@ -180,7 +180,7 @@ export function DeviceMatrixGenerator({ onClose }: DeviceMatrixGeneratorProps) {
         </Button>
         <div>
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5 text-primary" /> Gerador de Matriz de Aparelhos
+            <Grid3X3 className="h-5 w-5 text-primary" /> Cadastrar mais de 1
           </h3>
           <p className="text-xs text-muted-foreground">Selecione os parâmetros para gerar todas as combinações automaticamente.</p>
         </div>

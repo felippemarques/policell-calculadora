@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -15,6 +15,11 @@ import {
   Columns3,
   Ban,
   Check,
+  MessageCircle,
+  FileText,
+  ExternalLink,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -51,9 +56,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { checklistItems } from "@/data/checklist";
+import { toast } from "sonner";
+import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
 
 type LeadRow = {
   id: string;
@@ -91,6 +105,19 @@ type ConditionRow = {
   is_rejected: boolean;
 };
 
+type DamageOption = {
+  id: string;
+  damage_category_id: string;
+  option_name: string;
+  deduction_value: number;
+  is_rejected: boolean;
+};
+
+type DamageCategory = {
+  id: string;
+  name: string;
+};
+
 const STATUS_META: Record<
   string,
   { label: string; icon: any; className: string }
@@ -106,6 +133,12 @@ const STATUS_META: Record<
     className:
       "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200",
   },
+  conversa_iniciada: {
+    label: "Conversa iniciada",
+    icon: MessageCircle,
+    className:
+      "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200",
+  },
   rejected: {
     label: "Rejeitado",
     icon: XCircle,
@@ -117,6 +150,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "Todos os status" },
   { value: "in_progress", label: "Aberto" },
   { value: "completed", label: "Concluído" },
+  { value: "conversa_iniciada", label: "Conversa iniciada" },
   { value: "rejected", label: "Rejeitado" },
 ];
 
@@ -150,11 +184,13 @@ const DEFAULT_VISIBLE: Record<ColumnKey, boolean> = {
 };
 
 const AdminCustomers = () => {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [visible, setVisible] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["admin-leads"],
@@ -203,6 +239,44 @@ const AdminCustomers = () => {
     },
   });
 
+  const { data: damageCategories = [] } = useQuery({
+    queryKey: ["admin-leads-damage-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_categories")
+        .select("id, name")
+        .order("display_order");
+      if (error) throw error;
+      return data as DamageCategory[];
+    },
+  });
+
+  const { data: damageOptions = [] } = useQuery({
+    queryKey: ["admin-leads-damage-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_deductions")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as unknown as DamageOption[];
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-leads"] });
+    },
+    onError: (e: any) => toast.error(`Falha ao atualizar status: ${e.message}`),
+  });
+
   const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
     [devices]
@@ -247,6 +321,68 @@ const AdminCustomers = () => {
       : "—";
 
   const visibleCols = COLUMNS.filter((c) => visible[c.key]);
+
+  // ── Proposal / WhatsApp flow ──
+  const selectedDevice = selectedLead?.device_id
+    ? deviceMap.get(selectedLead.device_id) ?? null
+    : null;
+  const selectedFinalValue = selectedLead
+    ? finalValueMap.get(selectedLead.customer_email)
+    : undefined;
+  const selectedDeviceLabel = selectedDevice
+    ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
+    : "Aparelho não informado";
+  const selectedParsed = useMemo(() => {
+    if (!selectedLead) return [];
+    return parseResponses(
+      (selectedLead.assessment_responses ?? {}) as Record<string, any>,
+      conditions,
+      damageOptions,
+      damageCategories,
+    );
+  }, [selectedLead, conditions, damageOptions, damageCategories]);
+
+  const handleSendProposal = async () => {
+    if (!selectedLead) return;
+
+    const finalValue = selectedFinalValue ?? 0;
+    const basePrice = selectedDevice?.base_price ?? 0;
+
+    // 1) Open the proposal HTML in a new tab
+    openProposalInNewTab({
+      customerName: selectedLead.customer_name,
+      customerEmail: selectedLead.customer_email,
+      customerPhone: selectedLead.customer_phone,
+      deviceLabel: selectedDeviceLabel,
+      basePrice,
+      finalValue,
+      conditions: selectedParsed.map((p) => ({
+        label: p.question,
+        value: p.answer,
+        critical: p.isCritical,
+      })),
+      rejectionReason: selectedLead.rejection_reason,
+      createdAt: selectedLead.created_at,
+    });
+
+    // 2) Open WhatsApp
+    const waUrl = buildWhatsAppLink(
+      selectedLead.customer_phone,
+      selectedLead.customer_name,
+      selectedDeviceLabel,
+      finalValue,
+    );
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+
+    // 3) Update lead status
+    await updateStatusMutation.mutateAsync({
+      id: selectedLead.id,
+      status: "conversa_iniciada",
+    });
+
+    toast.success("Proposta gerada e WhatsApp aberto. Status atualizado.");
+    setProposalDialogOpen(false);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -431,9 +567,16 @@ const AdminCustomers = () => {
                 };
 
                 return (
-                  <TableRow key={lead.id} className="hover:bg-muted/40">
+                  <TableRow
+                    key={lead.id}
+                    className="hover:bg-muted/40 cursor-pointer"
+                    onClick={() => setSelectedLead(lead)}
+                  >
                     {visibleCols.map((c) => cell(c.key))}
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button
                         variant="ghost"
                         size="sm"
@@ -461,22 +604,139 @@ const AdminCustomers = () => {
           {selectedLead && (
             <LeadDetail
               lead={selectedLead}
-              device={
-                selectedLead.device_id
-                  ? deviceMap.get(selectedLead.device_id) ?? null
-                  : null
-              }
-              finalValue={finalValueMap.get(selectedLead.customer_email)}
-              conditions={conditions}
+              device={selectedDevice}
+              finalValue={selectedFinalValue}
+              parsed={selectedParsed}
+              onSendProposal={() => setProposalDialogOpen(true)}
             />
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Proposal Confirmation Dialog */}
+      <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-2">
+              <MessageCircle className="h-6 w-6 text-emerald-700" />
+            </div>
+            <DialogTitle className="text-center">
+              Confirmar envio da proposta
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Revise o resumo abaixo. Ao confirmar, abriremos a proposta em nova
+              aba e o WhatsApp do cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedLead && (
+            <div className="space-y-4 py-2">
+              <Card className="p-4 bg-muted/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Pollicell
+                  </span>
+                </div>
+                <Separator />
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="font-medium">
+                      {selectedLead.customer_name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Telefone</span>
+                    <span className="font-medium">
+                      {selectedLead.customer_phone}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Aparelho</span>
+                    <span className="font-medium text-right max-w-[60%] truncate">
+                      {selectedDeviceLabel}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedParsed.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Condições identificadas
+                      </p>
+                      <ul className="text-xs space-y-1">
+                        {selectedParsed.slice(0, 4).map((p, i) => (
+                          <li
+                            key={i}
+                            className={cn(
+                              "flex justify-between gap-2",
+                              p.isCritical && "text-destructive",
+                            )}
+                          >
+                            <span className="text-muted-foreground truncate">
+                              {p.question}
+                            </span>
+                            <span className="font-medium text-right truncate">
+                              {p.answer}
+                            </span>
+                          </li>
+                        ))}
+                        {selectedParsed.length > 4 && (
+                          <li className="text-muted-foreground italic">
+                            +{selectedParsed.length - 4} mais...
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Valor final
+                  </span>
+                  <span className="text-xl font-bold text-primary">
+                    {formatBRL(selectedFinalValue)}
+                  </span>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setProposalDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendProposal}
+              disabled={updateStatusMutation.isPending}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {updateStatusMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageCircle className="h-4 w-4" />
+              )}
+              Confirmar e enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-const CONDITION_ITEM_ID = "__condition__";
+// ─────────────────────────────────────────────────────────────
+// Parser for the new JSONB schema (conditionId, damageOptionByCategory, rejectionId)
+// with a fallback for the legacy index-based shape.
+// ─────────────────────────────────────────────────────────────
 
 type ParsedAnswer = {
   question: string;
@@ -486,51 +746,69 @@ type ParsedAnswer = {
 
 function parseResponses(
   responses: Record<string, any>,
-  conditions: ConditionRow[]
+  conditions: ConditionRow[],
+  damageOptions: DamageOption[],
+  damageCategories: DamageCategory[],
 ): ParsedAnswer[] {
   const result: ParsedAnswer[] = [];
 
-  for (const [key, value] of Object.entries(responses)) {
-    if (value === null || value === undefined) continue;
-
-    if (key === CONDITION_ITEM_ID) {
-      const idx = typeof value === "number" ? value : Number(value);
-      const cond = conditions[idx];
+  // ─── New schema ───
+  // conditionId / damageOptionByCategory / rejectionId
+  if (
+    responses &&
+    ("conditionId" in responses ||
+      "damageOptionByCategory" in responses ||
+      "rejectionId" in responses)
+  ) {
+    if (responses.conditionId) {
+      const cond = conditions.find((c) => c.id === responses.conditionId);
       if (cond) {
         result.push({
           question: "Condição Geral do Aparelho",
           answer: cond.condition_name,
           isCritical: cond.is_rejected,
         });
-      } else {
+      }
+    }
+
+    const dmg = (responses.damageOptionByCategory ?? {}) as Record<string, string | null>;
+    for (const [catId, optId] of Object.entries(dmg)) {
+      if (!optId) continue;
+      const opt = damageOptions.find((o) => o.id === optId);
+      const cat = damageCategories.find((c) => c.id === catId);
+      if (opt && cat) {
         result.push({
-          question: "Condição Geral do Aparelho",
-          answer: String(value),
-          isCritical: false,
+          question: cat.name,
+          answer: opt.option_name,
+          isCritical: opt.is_rejected,
         });
       }
-      continue;
     }
 
-    const item = checklistItems.find((i) => i.id === key);
-    if (item) {
-      const idx = typeof value === "number" ? value : Number(value);
-      const opt = item.options[idx];
-      result.push({
-        question: item.title,
-        answer: opt?.label ?? String(value),
-        isCritical: !!opt?.isCritical,
-      });
-    } else {
-      result.push({
-        question: key.replace(/_/g, " "),
-        answer:
-          typeof value === "object" ? JSON.stringify(value) : String(value),
-        isCritical: false,
-      });
+    if (responses.rejectionId) {
+      const rej = conditions.find((c) => c.id === responses.rejectionId);
+      if (rej) {
+        result.push({
+          question: "Impedimento de compra",
+          answer: rej.condition_name,
+          isCritical: true,
+        });
+      }
     }
+
+    return result;
   }
 
+  // ─── Legacy schema fallback (index-based) ───
+  for (const [key, value] of Object.entries(responses ?? {})) {
+    if (value === null || value === undefined) continue;
+    result.push({
+      question: key.replace(/_/g, " "),
+      answer:
+        typeof value === "object" ? JSON.stringify(value) : String(value),
+      isCritical: false,
+    });
+  }
   return result;
 }
 
@@ -538,20 +816,23 @@ function LeadDetail({
   lead,
   device,
   finalValue,
-  conditions,
+  parsed,
+  onSendProposal,
 }: {
   lead: LeadRow;
   device: DeviceRow | null;
   finalValue?: number;
-  conditions: ConditionRow[];
+  parsed: ParsedAnswer[];
+  onSendProposal: () => void;
 }) {
   const meta = STATUS_META[lead.status] ?? STATUS_META.in_progress;
   const Icon = meta.icon;
-  const responses = (lead.assessment_responses ?? {}) as Record<string, any>;
-  const parsed = useMemo(
-    () => parseResponses(responses, conditions),
-    [responses, conditions]
-  );
+
+  const canSendProposal =
+    lead.status !== "rejected" &&
+    !!device &&
+    typeof finalValue === "number" &&
+    finalValue > 0;
 
   return (
     <>
@@ -575,6 +856,32 @@ function LeadDetail({
             {meta.label}
           </Badge>
         </div>
+
+        {/* ─── Sales action card ─── */}
+        {canSendProposal && (
+          <Card className="p-4 bg-gradient-to-br from-emerald-50 to-sky-50 border-emerald-200/60">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                <MessageCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-emerald-900">
+                  Pronto para fechar?
+                </p>
+                <p className="text-xs text-emerald-800/80 mt-0.5">
+                  Envie a proposta formatada via WhatsApp em um clique.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={onSendProposal}
+              className="w-full mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Enviar Proposta via WhatsApp
+            </Button>
+          </Card>
+        )}
 
         {/* Contato */}
         <section className="space-y-3">
@@ -682,11 +989,18 @@ function LeadDetail({
 
         <Separator />
 
-        {/* Checklist responses */}
+        {/* Raio-X — Checklist responses */}
         <section className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Respostas do checklist
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Raio-X do aparelho
+            </h4>
+            {parsed.length > 0 && (
+              <span className="text-[10px] text-muted-foreground">
+                {parsed.length} respostas
+              </span>
+            )}
+          </div>
           {parsed.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhuma resposta registrada.
@@ -733,6 +1047,62 @@ function LeadDetail({
                 </Card>
               ))}
             </div>
+          )}
+        </section>
+
+        {/* Quick links */}
+        <section className="pt-2 flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="flex-1 gap-1.5"
+          >
+            <a
+              href={buildWhatsAppLink(
+                lead.customer_phone,
+                lead.customer_name,
+                device
+                  ? `${device.brand} ${device.model} ${device.storage}`.trim()
+                  : "seu aparelho",
+                finalValue ?? 0,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              WhatsApp
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </a>
+          </Button>
+          {canSendProposal && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() =>
+                openProposalInNewTab({
+                  customerName: lead.customer_name,
+                  customerEmail: lead.customer_email,
+                  customerPhone: lead.customer_phone,
+                  deviceLabel: device
+                    ? `${device.brand} ${device.model} ${device.storage}`.trim()
+                    : "Aparelho",
+                  basePrice: device?.base_price ?? 0,
+                  finalValue: finalValue ?? 0,
+                  conditions: parsed.map((p) => ({
+                    label: p.question,
+                    value: p.answer,
+                    critical: p.isCritical,
+                  })),
+                  rejectionReason: lead.rejection_reason,
+                  createdAt: lead.created_at,
+                })
+              }
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Visualizar proposta
+            </Button>
           )}
         </section>
       </div>

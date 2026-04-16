@@ -23,6 +23,7 @@ export function DevicesTab() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [showMatrix, setShowMatrix] = useState(false);
   const emptyDevice = { brand: "Apple", model: "", storage: "", base_price: 0, colors: "" };
   const [form, setForm] = useState<any>(emptyDevice);
 

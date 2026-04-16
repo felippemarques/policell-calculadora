@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDevices } from "@/hooks/use-trade-in-data";
 import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
+import { useLead } from "@/hooks/use-lead";
 import { checklistItems } from "@/data/checklist";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
@@ -34,10 +35,38 @@ export function TradeInWizard() {
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
+  const { leadId, setLeadId, createLead, updateLead, updateAssessment, markRejected } = useLead();
 
   const isLoading = loadingDevices;
 
   const steps = ["Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
+
+  const handleCreateLead = async () => {
+    const id = await createLead({
+      customer_name: data.name,
+      customer_email: data.email,
+      customer_phone: data.phone,
+    });
+    return id;
+  };
+
+  const handleDeviceSelected = async () => {
+    if (leadId && data.deviceId) {
+      await updateLead(leadId, { device_id: data.deviceId });
+    }
+    setStep(2);
+  };
+
+  const handleAnswer = async (itemId: string, optionIndex: number) => {
+    if (!leadId) return;
+    const newResponses = { ...data.checklistAnswers, [itemId]: optionIndex };
+    await updateAssessment(leadId, newResponses);
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!leadId) return;
+    await markRejected(leadId, reason);
+  };
 
   const handleSubmit = async () => {
     if (!devices) return;
@@ -61,7 +90,6 @@ export function TradeInWizard() {
       }
     });
 
-    // Formula: (Base - Fixed) * (1 - Percent/100), min 0
     const afterFixed = Math.max(0, basePrice - totalFixedDiscount);
     const finalValue = Math.max(0, Math.round(afterFixed * (1 - totalPercentDiscount / 100) * 100) / 100);
 
@@ -80,12 +108,17 @@ export function TradeInWizard() {
       finalValue,
     });
 
+    if (leadId) {
+      await updateLead(leadId, { status: "completed" });
+    }
+
     setStep(3);
   };
 
   const handleReset = () => {
     setData({ name: "", email: "", phone: "", deviceId: "", checklistAnswers: initAnswers() });
     setResult(null);
+    setLeadId(null);
     setStep(0);
   };
 
@@ -99,25 +132,27 @@ export function TradeInWizard() {
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
-          <Smartphone className="h-7 w-7 text-primary" />
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-primary/10 mb-5 shadow-sm">
+          <Smartphone className="h-8 w-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Calculadora Trade-in</h2>
-        <p className="text-muted-foreground mt-1">Descubra quanto vale seu aparelho</p>
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+          Calculadora Trade-in
+        </h2>
+        <p className="text-muted-foreground mt-2">Descubra quanto vale seu aparelho</p>
       </div>
 
       {/* Progress bar */}
       {step < 3 && (
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-10">
           {steps.slice(0, 3).map((label, i) => (
             <div key={label} className="flex-1">
               <div
-                className={`h-1.5 rounded-full transition-colors ${
+                className={`h-1 rounded-full transition-colors ${
                   i <= step ? "bg-primary" : "bg-border"
                 }`}
               />
-              <p className={`text-xs mt-1 ${i <= step ? "text-primary font-medium" : "text-muted-foreground"}`}>
+              <p className={`text-xs mt-2 ${i <= step ? "text-primary font-medium" : "text-muted-foreground"}`}>
                 {label}
               </p>
             </div>
@@ -130,6 +165,7 @@ export function TradeInWizard() {
           data={data}
           onChange={(d) => setData({ ...data, ...d })}
           onNext={() => setStep(1)}
+          onCreateLead={handleCreateLead}
         />
       )}
       {step === 1 && (
@@ -137,7 +173,7 @@ export function TradeInWizard() {
           data={data}
           devices={devices || []}
           onChange={(d) => setData({ ...data, ...d })}
-          onNext={() => setStep(2)}
+          onNext={handleDeviceSelected}
           onBack={() => setStep(0)}
         />
       )}
@@ -147,14 +183,13 @@ export function TradeInWizard() {
           onChange={(d) => setData({ ...data, ...d })}
           onSubmit={handleSubmit}
           onBack={() => setStep(1)}
+          onAnswer={handleAnswer}
+          onReject={handleReject}
           isSubmitting={isSubmitting}
         />
       )}
       {step === 3 && result && (
-        <StepResult
-          result={result}
-          onReset={handleReset}
-        />
+        <StepResult result={result} onReset={handleReset} />
       )}
     </div>
   );

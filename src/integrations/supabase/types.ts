@@ -251,6 +251,53 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          assessment_responses: Json
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_id: string | null
+          id: string
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_responses?: Json
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_id?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_responses?: Json
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          device_id?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lp_sections: {
         Row: {
           bg_color: string | null

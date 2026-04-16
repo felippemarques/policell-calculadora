@@ -612,8 +612,8 @@ function LeadDetail({
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Motivo da rejeição
               </h4>
-              <Card className="p-3 border-red-200 bg-red-50">
-                <p className="text-sm text-red-900">{lead.rejection_reason}</p>
+              <Card className="p-3 border-destructive/30 bg-destructive/10">
+                <p className="text-sm text-destructive">{lead.rejection_reason}</p>
               </Card>
             </section>
           </>

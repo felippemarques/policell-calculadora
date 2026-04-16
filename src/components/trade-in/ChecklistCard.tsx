@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Ban } from "lucide-react";
 import type { ChecklistItem } from "@/data/checklist";
 
 interface ChecklistCardProps {
@@ -13,61 +13,85 @@ export function ChecklistCard({ item, selectedIndex, onSelect }: ChecklistCardPr
   const hasCritical = selectedOption?.isCritical;
 
   return (
-    <div
-      className={`rounded-lg border-2 p-5 transition-all ${
-        isAnswered
-          ? hasCritical
-            ? "border-warning-border bg-checked-bg"
-            : "border-checked-border bg-checked-bg"
-          : "border-border bg-card"
-      }`}
-    >
-      <div className="flex items-start justify-between mb-1">
-        <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
-        {isAnswered && (
+    <div className="rounded-3xl border border-black/5 bg-card p-6 md:p-7 shadow-sm transition-all">
+      <div className="flex items-start justify-between mb-1.5 gap-3">
+        <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground">
+          {item.title}
+        </h3>
+        {isAnswered && !hasCritical && (
           <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
         )}
       </div>
-      <p className="text-sm text-muted-foreground mb-4">{item.description}</p>
+      <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{item.description}</p>
 
-      <div className="flex flex-wrap gap-2">
+      {/* Radio cards — Apple-style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label={item.title}>
         {item.options.map((opt, i) => {
           const isSelected = selectedIndex === i;
           const hasDiscount = opt.discountFixed > 0 || opt.discountPercent > 0;
+          const isReject = opt.isCritical;
 
           return (
             <button
               key={i}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
               onClick={() => onSelect(i)}
-              className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all min-w-[100px] text-center ${
-                isSelected
-                  ? "bg-primary text-primary-foreground border-primary shadow-md"
-                  : "bg-card text-foreground border-border hover:border-primary/40"
-              }`}
+              className={`group relative text-left rounded-2xl border p-4 transition-all duration-200
+                ${
+                  isSelected
+                    ? isReject
+                      ? "border-destructive bg-destructive/5 ring-2 ring-destructive/30 shadow-sm"
+                      : "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+                    : "border-black/10 bg-card hover:border-black/20 hover:shadow-sm"
+                }
+              `}
             >
-              <span>{opt.label}</span>
-              {hasDiscount && (
-                <span className="block text-xs mt-0.5 opacity-80">
-                  {opt.discountFixed > 0 && `-R$ ${opt.discountFixed.toFixed(2).replace(".", ",")}`}
-                  {opt.discountPercent > 0 && `-${opt.discountPercent}%`}
-                </span>
-              )}
-              {!hasDiscount && !opt.isCritical && (
-                <span className="block text-xs mt-0.5 opacity-60">—</span>
-              )}
-              {opt.isCritical && (
-                <AlertTriangle className="inline h-3.5 w-3.5 ml-1 -mt-0.5 opacity-80" />
-              )}
+              <div className="flex items-start gap-3">
+                {/* Radio indicator */}
+                <div
+                  className={`mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                    isSelected
+                      ? isReject
+                        ? "border-destructive bg-destructive"
+                        : "border-primary bg-primary"
+                      : "border-black/20 bg-transparent"
+                  }`}
+                >
+                  {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-foreground">{opt.label}</span>
+                    {isReject && <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                  </div>
+                  {hasDiscount && (
+                    <span className="block text-xs mt-1 text-muted-foreground">
+                      {opt.discountFixed > 0 && `−R$ ${opt.discountFixed.toFixed(2).replace(".", ",")}`}
+                      {opt.discountFixed > 0 && opt.discountPercent > 0 && " · "}
+                      {opt.discountPercent > 0 && `−${opt.discountPercent}%`}
+                    </span>
+                  )}
+                  {!hasDiscount && !isReject && (
+                    <span className="block text-xs mt-1 text-muted-foreground/70">Sem dedução</span>
+                  )}
+                  {isReject && !hasDiscount && (
+                    <span className="block text-xs mt-1 text-destructive font-medium">Reprova a avaliação</span>
+                  )}
+                </div>
+              </div>
             </button>
           );
         })}
       </div>
 
       {hasCritical && (
-        <div className="mt-3 flex items-center gap-2 bg-warning-bg border border-warning-border rounded-lg px-4 py-2.5">
-          <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
-          <span className="text-sm text-warning-foreground">
-            Atenção! Essa opção pode invalidar a avaliação.
+        <div className="mt-4 flex items-center gap-2 bg-destructive/5 border border-destructive/20 rounded-2xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <span className="text-sm text-destructive">
+            Esta opção bloqueia a avaliação.
           </span>
         </div>
       )}

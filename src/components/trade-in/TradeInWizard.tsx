@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useDevices } from "@/hooks/use-trade-in-data";
 import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
@@ -8,6 +10,8 @@ import { StepSelectDevice } from "./StepSelectDevice";
 import { StepEvaluationChecklist } from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
 import { Smartphone } from "lucide-react";
+
+const CONDITION_ITEM_ID = "__condition__";
 
 export interface WizardData {
   name: string;
@@ -36,6 +40,19 @@ export function TradeInWizard() {
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, updateLead, updateAssessment, markRejected } = useLead();
+
+  // Pull dynamic conditions for percent-discount calc on submit
+  const { data: conditions = [] } = useQuery({
+    queryKey: ["condition_discounts_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("condition_discounts")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const isLoading = loadingDevices;
 
@@ -89,6 +106,17 @@ export function TradeInWizard() {
         if (opt.isCritical) hasCriticalWarning = true;
       }
     });
+
+    // Apply dynamic condition discount from DB (if selected)
+    const condIdx = data.checklistAnswers[CONDITION_ITEM_ID];
+    if (condIdx !== null && condIdx !== undefined && conditions[condIdx]) {
+      const cond = conditions[condIdx];
+      if (cond.is_rejected) {
+        hasCriticalWarning = true;
+      } else {
+        totalPercentDiscount += Number(cond.discount_percentage) || 0;
+      }
+    }
 
     const afterFixed = Math.max(0, basePrice - totalFixedDiscount);
     const finalValue = Math.max(0, Math.round(afterFixed * (1 - totalPercentDiscount / 100) * 100) / 100);

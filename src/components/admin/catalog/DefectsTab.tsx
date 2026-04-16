@@ -1,12 +1,25 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronDown, ChevronRight, Percent, DollarSign, Ban, ShieldAlert } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronDown, ChevronRight,
+  Percent, DollarSign, Ban, ShieldAlert,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+
+type DamageOption = {
+  id: string;
+  damage_category_id: string;
+  option_name: string;
+  deduction_value: number;
+  is_rejected: boolean;
+  display_order: number;
+};
 
 export function DefectsTab() {
   const qc = useQueryClient();
@@ -17,6 +30,17 @@ export function DefectsTab() {
   const [catForm, setCatForm] = useState({ name: "" });
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+
+  // ── Damage option state (per-category) ──
+  const [newOptionByCat, setNewOptionByCat] = useState<
+    Record<string, { option_name: string; deduction_value: number; is_rejected: boolean }>
+  >({});
+  const [editingOptId, setEditingOptId] = useState<string | null>(null);
+  const [editOptForm, setEditOptForm] = useState({
+    option_name: "",
+    deduction_value: 0,
+    is_rejected: false,
+  });
 
   // ── Condition (normal) state ──
   const [showNewCondition, setShowNewCondition] = useState(false);
@@ -34,7 +58,10 @@ export function DefectsTab() {
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ["admin-damage-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("damage_categories").select("*").order("display_order");
+      const { data, error } = await supabase
+        .from("damage_categories")
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return data;
     },
@@ -43,16 +70,22 @@ export function DefectsTab() {
   const { data: deductions = [] } = useQuery({
     queryKey: ["admin-damage-deductions"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("damage_deductions").select("*");
+      const { data, error } = await supabase
+        .from("damage_deductions")
+        .select("*")
+        .order("display_order");
       if (error) throw error;
-      return data;
+      return (data || []) as unknown as DamageOption[];
     },
   });
 
   const { data: conditions = [] } = useQuery({
     queryKey: ["admin-condition-discounts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("condition_discounts").select("*").order("display_order");
+      const { data, error } = await supabase
+        .from("condition_discounts")
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return data;
     },
@@ -78,7 +111,13 @@ export function DefectsTab() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { invalidateAll(); setEditingCatId(null); setShowNewCat(false); setNewCatName(""); toast.success("Salvo!"); },
+    onSuccess: () => {
+      invalidateAll();
+      setEditingCatId(null);
+      setShowNewCat(false);
+      setNewCatName("");
+      toast.success("Salvo!");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -88,23 +127,67 @@ export function DefectsTab() {
       const { error } = await supabase.from("damage_categories").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidateAll(); toast.success("Removido!"); },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Removido!");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
-  // ── Deduction inline save ──
-  const saveDeductionMutation = useMutation({
-    mutationFn: async ({ catId, value }: { catId: string; value: number }) => {
-      const existing = deductions.find((d) => d.damage_category_id === catId);
-      if (existing) {
-        const { error } = await supabase.from("damage_deductions").update({ deduction_value: value }).eq("id", existing.id);
+  // ── Damage option mutations ──
+  const saveOptionMutation = useMutation({
+    mutationFn: async (data: {
+      id?: string;
+      damage_category_id: string;
+      option_name: string;
+      deduction_value: number;
+      is_rejected: boolean;
+    }) => {
+      if (data.id) {
+        const { error } = await supabase
+          .from("damage_deductions")
+          .update({
+            option_name: data.option_name,
+            deduction_value: data.deduction_value,
+            is_rejected: data.is_rejected,
+          } as any)
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("damage_deductions").insert({ damage_category_id: catId, deduction_value: value });
+        const catOptions = deductions.filter((d) => d.damage_category_id === data.damage_category_id);
+        const maxOrder =
+          catOptions.length > 0 ? Math.max(...catOptions.map((o) => o.display_order)) + 1 : 0;
+        const { error } = await supabase.from("damage_deductions").insert({
+          damage_category_id: data.damage_category_id,
+          option_name: data.option_name,
+          deduction_value: data.deduction_value,
+          is_rejected: data.is_rejected,
+          display_order: maxOrder,
+        } as any);
         if (error) throw error;
       }
     },
-    onSuccess: () => { invalidateAll(); toast.success("Dedução salva!"); },
+    onSuccess: (_d, vars) => {
+      invalidateAll();
+      setEditingOptId(null);
+      setNewOptionByCat((prev) => ({
+        ...prev,
+        [vars.damage_category_id]: { option_name: "", deduction_value: 0, is_rejected: false },
+      }));
+      toast.success("Opção salva!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteOptionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("damage_deductions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Opção removida!");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -112,14 +195,18 @@ export function DefectsTab() {
   const saveCondMutation = useMutation({
     mutationFn: async (data: { id?: string; condition_name: string; discount_percentage: number }) => {
       if (data.id) {
-        const { error } = await supabase.from("condition_discounts").update({
-          condition_name: data.condition_name,
-          discount_percentage: data.discount_percentage,
-          is_rejected: false,
-        }).eq("id", data.id);
+        const { error } = await supabase
+          .from("condition_discounts")
+          .update({
+            condition_name: data.condition_name,
+            discount_percentage: data.discount_percentage,
+            is_rejected: false,
+          })
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const maxOrder = conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
+        const maxOrder =
+          conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
         const { error } = await supabase.from("condition_discounts").insert({
           condition_name: data.condition_name,
           discount_percentage: data.discount_percentage,
@@ -143,14 +230,18 @@ export function DefectsTab() {
   const saveRejectionMutation = useMutation({
     mutationFn: async (data: { id?: string; condition_name: string }) => {
       if (data.id) {
-        const { error } = await supabase.from("condition_discounts").update({
-          condition_name: data.condition_name,
-          discount_percentage: 100,
-          is_rejected: true,
-        }).eq("id", data.id);
+        const { error } = await supabase
+          .from("condition_discounts")
+          .update({
+            condition_name: data.condition_name,
+            discount_percentage: 100,
+            is_rejected: true,
+          })
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const maxOrder = conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
+        const maxOrder =
+          conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
         const { error } = await supabase.from("condition_discounts").insert({
           condition_name: data.condition_name,
           discount_percentage: 100,
@@ -176,14 +267,35 @@ export function DefectsTab() {
       const { error } = await supabase.from("condition_discounts").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidateAll(); toast.success("Removido!"); },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Removido!");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const getDeduction = (catId: string) => deductions.find((d) => d.damage_category_id === catId);
+  const getOptionsForCat = (catId: string) =>
+    deductions.filter((d) => d.damage_category_id === catId);
+
+  const getNewOptionDraft = (catId: string) =>
+    newOptionByCat[catId] || { option_name: "", deduction_value: 0, is_rejected: false };
+
+  const updateNewOptionDraft = (
+    catId: string,
+    patch: Partial<{ option_name: string; deduction_value: number; is_rejected: boolean }>,
+  ) => {
+    setNewOptionByCat((prev) => ({
+      ...prev,
+      [catId]: { ...getNewOptionDraft(catId), ...patch },
+    }));
+  };
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   return (
@@ -197,7 +309,9 @@ export function DefectsTab() {
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Percent className="h-5 w-5 text-primary" /> Condições do Aparelho
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Descontos percentuais aplicados ao preço base conforme a condição geral.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Descontos percentuais aplicados ao preço base conforme a condição geral.
+            </p>
           </div>
           <Button size="sm" onClick={() => { setShowNewCondition(true); setEditingCondId(null); }}>
             <Plus className="h-4 w-4 mr-1" /> Nova Condição
@@ -210,18 +324,39 @@ export function DefectsTab() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm">Nome</Label>
-                <Input value={condForm.condition_name} onChange={(e) => setCondForm({ ...condForm, condition_name: e.target.value })} placeholder="Ex: EXCELENTE" className="mt-1" autoFocus />
+                <Input
+                  value={condForm.condition_name}
+                  onChange={(e) => setCondForm({ ...condForm, condition_name: e.target.value })}
+                  placeholder="Ex: EXCELENTE"
+                  className="mt-1"
+                  autoFocus
+                />
               </div>
               <div>
                 <Label className="text-sm">Desconto (%)</Label>
-                <Input type="number" min={0} step={0.1} value={condForm.discount_percentage} onChange={(e) => setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })} className="mt-1" />
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={condForm.discount_percentage}
+                  onChange={(e) =>
+                    setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })
+                  }
+                  className="mt-1"
+                />
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => saveCondMutation.mutate(condForm)} disabled={!condForm.condition_name || saveCondMutation.isPending}>
+              <Button
+                size="sm"
+                onClick={() => saveCondMutation.mutate(condForm)}
+                disabled={!condForm.condition_name || saveCondMutation.isPending}
+              >
                 <Check className="h-3.5 w-3.5 mr-1" /> Salvar
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowNewCondition(false)}>Cancelar</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowNewCondition(false)}>
+                Cancelar
+              </Button>
             </div>
           </div>
         )}
@@ -229,27 +364,80 @@ export function DefectsTab() {
         {/* Conditions list */}
         <div className="border rounded-lg overflow-hidden divide-y">
           {normalConditions.length === 0 && (
-            <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma condição cadastrada.</p>
+            <p className="text-center text-muted-foreground py-6 text-sm">
+              Nenhuma condição cadastrada.
+            </p>
           )}
           {normalConditions.map((cond) => {
             const isEditing = editingCondId === cond.id;
             return (
-              <div key={cond.id} className="flex items-center gap-4 px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
+              <div
+                key={cond.id}
+                className="flex items-center gap-4 px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
+              >
                 {isEditing ? (
                   <>
-                    <Input value={editCondForm.condition_name} onChange={(e) => setEditCondForm({ ...editCondForm, condition_name: e.target.value })} className="h-8 text-sm flex-1" autoFocus />
-                    <Input type="number" min={0} step={0.1} value={editCondForm.discount_percentage} onChange={(e) => setEditCondForm({ ...editCondForm, discount_percentage: Number(e.target.value) })} className="h-8 text-sm w-24" />
-                    <Button variant="ghost" size="sm" onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}><Check className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}><X className="h-3.5 w-3.5" /></Button>
+                    <Input
+                      value={editCondForm.condition_name}
+                      onChange={(e) =>
+                        setEditCondForm({ ...editCondForm, condition_name: e.target.value })
+                      }
+                      className="h-8 text-sm flex-1"
+                      autoFocus
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={editCondForm.discount_percentage}
+                      onChange={(e) =>
+                        setEditCondForm({
+                          ...editCondForm,
+                          discount_percentage: Number(e.target.value),
+                        })
+                      }
+                      className="h-8 text-sm w-24"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </>
                 ) : (
                   <>
                     <span className="font-medium text-foreground flex-1">{cond.condition_name}</span>
-                    <Badge variant="secondary" className="text-xs"><Percent className="h-3 w-3 mr-1" />{cond.discount_percentage}%</Badge>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingCondId(cond.id); setEditCondForm({ condition_name: cond.condition_name, discount_percentage: cond.discount_percentage }); }}>
+                    <Badge variant="secondary" className="text-xs">
+                      <Percent className="h-3 w-3 mr-1" />
+                      {cond.discount_percentage}%
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingCondId(cond.id);
+                        setEditCondForm({
+                          condition_name: cond.condition_name,
+                          discount_percentage: cond.discount_percentage,
+                        });
+                      }}
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { if (confirm(`Remover "${cond.condition_name}"?`)) deleteCondMutation.mutate(cond.id); }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Remover "${cond.condition_name}"?`))
+                          deleteCondMutation.mutate(cond.id);
+                      }}
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>
@@ -261,7 +449,348 @@ export function DefectsTab() {
       </section>
 
       {/* ═══════════════════════════════════════════════
-          SEÇÃO 2: Motivos de Rejeição (Hard Stops)
+          SEÇÃO 2: Categorias de Defeitos (1:N opções)
+         ═══════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-amber-500" /> Categorias de Defeitos
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Cada categoria pode ter várias opções de resposta. Cada opção define uma dedução em
+              R$ ou inviabiliza a compra.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setShowNewCat(true)} disabled={showNewCat}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Categoria
+          </Button>
+        </div>
+
+        {/* New category form */}
+        {showNewCat && (
+          <div className="bg-card border rounded-lg p-4 flex items-end gap-3">
+            <div className="flex-1">
+              <Label>Nome da categoria</Label>
+              <Input
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="Ex: Bateria, Tela, Carcaça"
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <Button
+              onClick={() => saveCatMutation.mutate({ name: newCatName })}
+              disabled={!newCatName || saveCatMutation.isPending}
+            >
+              <Check className="mr-1 h-4 w-4" /> Criar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNewCat(false);
+                setNewCatName("");
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Categories accordion */}
+        <div className="border rounded-lg overflow-hidden divide-y">
+          {categories.length === 0 && (
+            <p className="text-center text-muted-foreground py-6 text-sm">
+              Nenhuma categoria cadastrada.
+            </p>
+          )}
+          {categories.map((cat) => {
+            const options = getOptionsForCat(cat.id);
+            const isExpanded = expandedCat === cat.id;
+            const isEditing = editingCatId === cat.id;
+            const draft = getNewOptionDraft(cat.id);
+
+            return (
+              <div key={cat.id} className="bg-card">
+                {/* Header row */}
+                <div
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+
+                  {isEditing ? (
+                    <Input
+                      value={catForm.name}
+                      onChange={(e) => setCatForm({ name: e.target.value })}
+                      className="h-8 text-sm flex-1"
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                  ) : (
+                    <span className="font-medium text-foreground flex-1">{cat.name}</span>
+                  )}
+
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">
+                    {options.length} {options.length === 1 ? "opção" : "opções"}
+                  </Badge>
+
+                  <div
+                    className="flex items-center gap-1 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {isEditing ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => saveCatMutation.mutate({ id: cat.id, name: catForm.name })}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingCatId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCatForm({ name: cat.name });
+                            setEditingCatId(cat.id);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (
+                              confirm(`Remover "${cat.name}" e todas as suas opções?`)
+                            )
+                              deleteCatMutation.mutate(cat.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expanded panel */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-2 ml-7 border-t border-dashed space-y-4">
+                    {/* Options list */}
+                    <div className="space-y-2">
+                      {options.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic py-2">
+                          Nenhuma opção cadastrada. Adicione opções abaixo.
+                        </p>
+                      )}
+                      {options.map((opt) => {
+                        const isOptEditing = editingOptId === opt.id;
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
+                              opt.is_rejected
+                                ? "bg-destructive/5 border-destructive/20"
+                                : "bg-muted/30 border-transparent"
+                            }`}
+                          >
+                            {isOptEditing ? (
+                              <>
+                                <Input
+                                  value={editOptForm.option_name}
+                                  onChange={(e) =>
+                                    setEditOptForm({ ...editOptForm, option_name: e.target.value })
+                                  }
+                                  className="h-8 text-sm flex-1"
+                                  placeholder="Nome da opção"
+                                  autoFocus
+                                />
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={editOptForm.deduction_value}
+                                  onChange={(e) =>
+                                    setEditOptForm({
+                                      ...editOptForm,
+                                      deduction_value: Number(e.target.value),
+                                    })
+                                  }
+                                  className="h-8 text-sm w-24"
+                                  disabled={editOptForm.is_rejected}
+                                />
+                                <div className="flex items-center gap-1.5 px-2">
+                                  <Switch
+                                    checked={editOptForm.is_rejected}
+                                    onCheckedChange={(v) =>
+                                      setEditOptForm({ ...editOptForm, is_rejected: v })
+                                    }
+                                  />
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                    Inviabiliza
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    saveOptionMutation.mutate({
+                                      id: opt.id,
+                                      damage_category_id: cat.id,
+                                      ...editOptForm,
+                                    })
+                                  }
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingOptId(null)}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                {opt.is_rejected ? (
+                                  <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                                ) : (
+                                  <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                )}
+                                <span className="text-sm font-medium text-foreground flex-1">
+                                  {opt.option_name}
+                                </span>
+                                {opt.is_rejected ? (
+                                  <Badge variant="destructive" className="text-xs">
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Inviabiliza
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    R${" "}
+                                    {opt.deduction_value?.toLocaleString("pt-BR", {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingOptId(opt.id);
+                                    setEditOptForm({
+                                      option_name: opt.option_name,
+                                      deduction_value: Number(opt.deduction_value) || 0,
+                                      is_rejected: opt.is_rejected,
+                                    });
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    if (confirm(`Remover opção "${opt.option_name}"?`))
+                                      deleteOptionMutation.mutate(opt.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* New option inline form */}
+                    <div className="bg-background border border-dashed rounded-md p-3 space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Adicionar nova opção
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nome da opção</Label>
+                          <Input
+                            value={draft.option_name}
+                            onChange={(e) =>
+                              updateNewOptionDraft(cat.id, { option_name: e.target.value })
+                            }
+                            placeholder="Ex: 91-100%, Trinco leve..."
+                            className="mt-1 h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={draft.deduction_value}
+                            onChange={(e) =>
+                              updateNewOptionDraft(cat.id, {
+                                deduction_value: Number(e.target.value),
+                              })
+                            }
+                            disabled={draft.is_rejected}
+                            className="mt-1 h-9 text-sm"
+                          />
+                        </div>
+                        <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                            Inviabiliza compra
+                          </Label>
+                          <Switch
+                            checked={draft.is_rejected}
+                            onCheckedChange={(v) =>
+                              updateNewOptionDraft(cat.id, { is_rejected: v })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          saveOptionMutation.mutate({
+                            damage_category_id: cat.id,
+                            option_name: draft.option_name.trim(),
+                            deduction_value: draft.is_rejected ? 0 : draft.deduction_value,
+                            is_rejected: draft.is_rejected,
+                          })
+                        }
+                        disabled={!draft.option_name.trim() || saveOptionMutation.isPending}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar opção
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          SEÇÃO 3: Motivos de Rejeição (Hard Stops globais)
          ═══════════════════════════════════════════════ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -271,10 +800,16 @@ export function DefectsTab() {
               <span className="text-xs font-normal text-muted-foreground">(Não comprar se...)</span>
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Condições que bloqueiam imediatamente a compra. Ao selecionar uma destas opções, o cliente é informado que o aparelho não pode ser adquirido.
+              Condições gerais que bloqueiam imediatamente a compra. Ao selecionar uma destas
+              opções, o cliente é informado que o aparelho não pode ser adquirido.
             </p>
           </div>
-          <Button size="sm" variant="destructive" onClick={() => setShowNewRejection(true)} disabled={showNewRejection}>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setShowNewRejection(true)}
+            disabled={showNewRejection}
+          >
             <Plus className="h-4 w-4 mr-1" /> Novo Motivo
           </Button>
         </div>
@@ -297,14 +832,30 @@ export function DefectsTab() {
                 }}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Será salvo automaticamente como rejeição (100% de bloqueio).
+                Salvo automaticamente como rejeição (100% de bloqueio).
               </p>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" variant="destructive" onClick={() => saveRejectionMutation.mutate({ condition_name: rejectionName.trim() })} disabled={!rejectionName.trim() || saveRejectionMutation.isPending}>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() =>
+                  saveRejectionMutation.mutate({ condition_name: rejectionName.trim() })
+                }
+                disabled={!rejectionName.trim() || saveRejectionMutation.isPending}
+              >
                 <Check className="h-3.5 w-3.5 mr-1" /> Salvar
               </Button>
-              <Button size="sm" variant="outline" onClick={() => { setShowNewRejection(false); setRejectionName(""); }}>Cancelar</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowNewRejection(false);
+                  setRejectionName("");
+                }}
+              >
+                Cancelar
+              </Button>
             </div>
           </div>
         )}
@@ -312,146 +863,72 @@ export function DefectsTab() {
         {/* Rejection list */}
         <div className="border border-destructive/20 rounded-lg overflow-hidden divide-y divide-destructive/10">
           {rejectionReasons.length === 0 && (
-            <p className="text-center text-muted-foreground py-6 text-sm">Nenhum motivo de rejeição cadastrado.</p>
+            <p className="text-center text-muted-foreground py-6 text-sm">
+              Nenhum motivo de rejeição cadastrado.
+            </p>
           )}
           {rejectionReasons.map((rej) => {
             const isEditing = editingRejId === rej.id;
             return (
-              <div key={rej.id} className="flex items-center gap-3 px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors">
+              <div
+                key={rej.id}
+                className="flex items-center gap-3 px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors"
+              >
                 <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
                 {isEditing ? (
                   <>
-                    <Input value={editRejName} onChange={(e) => setEditRejName(e.target.value)} className="h-8 text-sm flex-1" autoFocus />
-                    <Button variant="ghost" size="sm" onClick={() => saveRejectionMutation.mutate({ id: rej.id, condition_name: editRejName.trim() })} disabled={!editRejName.trim()}><Check className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}><X className="h-3.5 w-3.5" /></Button>
+                    <Input
+                      value={editRejName}
+                      onChange={(e) => setEditRejName(e.target.value)}
+                      className="h-8 text-sm flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        saveRejectionMutation.mutate({
+                          id: rej.id,
+                          condition_name: editRejName.trim(),
+                        })
+                      }
+                      disabled={!editRejName.trim()}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </>
                 ) : (
                   <>
                     <span className="font-medium text-foreground flex-1">{rej.condition_name}</span>
-                    <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Hard Stop</Badge>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingRejId(rej.id); setEditRejName(rej.condition_name); }}>
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Hard Stop
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingRejId(rej.id);
+                        setEditRejName(rej.condition_name);
+                      }}
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { if (confirm(`Remover "${rej.condition_name}"?`)) deleteCondMutation.mutate(rej.id); }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm(`Remover "${rej.condition_name}"?`))
+                          deleteCondMutation.mutate(rej.id);
+                      }}
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          SEÇÃO 3: Categorias de Defeitos (deduções fixas)
-         ═══════════════════════════════════════════════ */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-amber-500" /> Categorias de Defeitos
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Deduções fixas em R$ subtraídas do valor quando o defeito é identificado. Clique para expandir.</p>
-          </div>
-          <Button size="sm" onClick={() => setShowNewCat(true)} disabled={showNewCat}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Categoria
-          </Button>
-        </div>
-
-        {/* New category form */}
-        {showNewCat && (
-          <div className="bg-card border rounded-lg p-4 flex items-end gap-3">
-            <div className="flex-1">
-              <Label>Nome da categoria</Label>
-              <Input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="Ex: Display" className="mt-1" autoFocus />
-            </div>
-            <Button onClick={() => saveCatMutation.mutate({ name: newCatName })} disabled={!newCatName || saveCatMutation.isPending}>
-              <Check className="mr-1 h-4 w-4" /> Criar
-            </Button>
-            <Button variant="outline" onClick={() => { setShowNewCat(false); setNewCatName(""); }}><X className="h-4 w-4" /></Button>
-          </div>
-        )}
-
-        {/* Categories accordion */}
-        <div className="border rounded-lg overflow-hidden divide-y">
-          {categories.length === 0 && (
-            <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma categoria cadastrada.</p>
-          )}
-          {categories.map((cat) => {
-            const ded = getDeduction(cat.id);
-            const isExpanded = expandedCat === cat.id;
-            const isEditing = editingCatId === cat.id;
-
-            return (
-              <div key={cat.id} className="bg-card">
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
-                >
-                  {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-
-                  {isEditing ? (
-                    <Input
-                      value={catForm.name}
-                      onChange={(e) => setCatForm({ name: e.target.value })}
-                      className="h-8 text-sm flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className="font-medium text-foreground flex-1">{cat.name}</span>
-                  )}
-
-                  <Badge variant="secondary" className="text-xs flex-shrink-0">
-                    <DollarSign className="h-3 w-3 mr-0.5" />
-                    R$ {ded?.deduction_value?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}
-                  </Badge>
-
-                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {isEditing ? (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => saveCatMutation.mutate({ id: cat.id, name: catForm.name })}><Check className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingCatId(null)}><X className="h-3.5 w-3.5" /></Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => { setCatForm({ name: cat.name }); setEditingCatId(cat.id); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
-                          if (confirm(`Remover "${cat.name}" e suas deduções?`)) deleteCatMutation.mutate(cat.id);
-                        }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-1 ml-7 border-t border-dashed space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Valor da dedução fixa (R$)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={1}
-                          className="mt-1"
-                          defaultValue={ded?.deduction_value || 0}
-                          onBlur={(e) => {
-                            const val = Number(e.target.value);
-                            if (ded?.deduction_value !== val) {
-                              saveDeductionMutation.mutate({ catId: cat.id, value: val });
-                            }
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Subtraído diretamente do valor final quando este defeito é marcado.</p>
-                      </div>
-                    </div>
-                  </div>
                 )}
               </div>
             );

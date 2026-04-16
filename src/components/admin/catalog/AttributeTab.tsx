@@ -37,10 +37,11 @@ interface AttributeTabProps {
   defaultFormatRule?: FormatRule;
 }
 
-export function AttributeTab({ field, label, description }: AttributeTabProps) {
+export function AttributeTab({ field, label, description, defaultFormatRule = "capitalize" }: AttributeTabProps) {
   const queryClient = useQueryClient();
   const [editingValue, setEditingValue] = useState<string | null>(null);
   const [newValue, setNewValue] = useState("");
+  const [editRule, setEditRule] = useState<FormatRule>(defaultFormatRule);
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],

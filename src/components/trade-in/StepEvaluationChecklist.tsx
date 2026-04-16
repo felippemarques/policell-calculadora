@@ -1,8 +1,20 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ClipboardCheck, ArrowLeft, Send, Ban, RotateCcw, Sparkles } from "lucide-react";
+import {
+  ClipboardCheck,
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  Ban,
+  RotateCcw,
+  Sparkles,
+  Wrench,
+  ShieldAlert,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,36 +25,56 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { checklistItems } from "@/data/checklist";
-import { ChecklistCard } from "./ChecklistCard";
-import type { WizardData } from "./TradeInWizard";
+import {
+  ChecklistAnswers,
+  ConditionRow,
+  DamageOption,
+  DamageCategory,
+  formatBRL,
+} from "@/lib/trade-in-pricing";
 
 interface Props {
-  data: WizardData;
-  onChange: (data: Partial<WizardData>) => void;
+  answers: ChecklistAnswers;
+  onAnswersChange: (next: ChecklistAnswers) => void;
   onSubmit: () => void;
   onBack: () => void;
-  onAnswer: (itemId: string, optionIndex: number) => void;
+  onSubScreenChange?: (screen: SubScreen) => void;
   onReject: (reason: string) => void;
   onResetAll?: () => void;
   isSubmitting: boolean;
+  basePrice: number;
 }
 
-const CONDITION_ITEM_ID = "__condition__";
+export type SubScreen = "condition" | "damages" | "rejection";
+
+const SUB_SCREENS: { key: SubScreen; label: string; icon: typeof Sparkles }[] = [
+  { key: "condition", label: "Estado Geral", icon: Sparkles },
+  { key: "damages", label: "Defeitos", icon: Wrench },
+  { key: "rejection", label: "Impedimentos", icon: ShieldAlert },
+];
 
 export function StepEvaluationChecklist({
-  data,
-  onChange,
+  answers,
+  onAnswersChange,
   onSubmit,
   onBack,
-  onAnswer,
+  onSubScreenChange,
   onReject,
   onResetAll,
   isSubmitting,
 }: Props) {
-  const answers = data.checklistAnswers;
+  const [subScreen, setSubScreen] = useState<SubScreen>("condition");
+  const [rejectionModal, setRejectionModal] = useState<{
+    open: boolean;
+    title: string;
+    label: string;
+  }>({ open: false, title: "", label: "" });
 
-  // Dynamic conditions from DB
+  useEffect(() => {
+    onSubScreenChange?.(subScreen);
+  }, [subScreen, onSubScreenChange]);
+
+  // ── Data ──
   const { data: conditions = [] } = useQuery({
     queryKey: ["condition_discounts_public"],
     queryFn: async () => {
@@ -51,107 +83,86 @@ export function StepEvaluationChecklist({
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return data;
+      return (data || []) as ConditionRow[];
     },
   });
 
-  // Build virtual checklist item from conditions
-  const conditionItem = useMemo(() => {
-    if (conditions.length === 0) return null;
-    return {
-      id: CONDITION_ITEM_ID,
-      title: "Condição Geral do Aparelho",
-      description: "Selecione a condição que melhor descreve o estado geral do seu aparelho.",
-      required: true,
-      options: conditions.map((c) => ({
-        label: c.condition_name,
-        discountFixed: 0,
-        discountPercent: c.is_rejected ? 0 : c.discount_percentage,
-        isCritical: c.is_rejected,
-      })),
+  const { data: damageCategories = [] } = useQuery({
+    queryKey: ["damage_categories_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_categories")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as DamageCategory[];
+    },
+  });
+
+  const { data: damageOptions = [] } = useQuery({
+    queryKey: ["damage_deductions_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_deductions")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as unknown as DamageOption[];
+    },
+  });
+
+  const normalConditions = useMemo(() => conditions.filter((c) => !c.is_rejected), [conditions]);
+  const rejectionReasons = useMemo(() => conditions.filter((c) => c.is_rejected), [conditions]);
+
+  // ── Selection helpers ──
+  const selectCondition = (id: string) => {
+    onAnswersChange({ ...answers, conditionId: id });
+  };
+
+  const selectDamageOption = (catId: string, optId: string) => {
+    const opt = damageOptions.find((o) => o.id === optId);
+    const next: ChecklistAnswers = {
+      ...answers,
+      damageOptionByCategory: { ...answers.damageOptionByCategory, [catId]: optId },
     };
-  }, [conditions]);
+    onAnswersChange(next);
 
-  const requiredItems = checklistItems.filter((i) => i.required);
-  const optionalItems = checklistItems.filter((i) => !i.required);
-
-  const totalCount = checklistItems.length + (conditionItem ? 1 : 0);
-  const answeredCount = Object.entries(answers).filter(
-    ([, v]) => v !== null && v !== undefined,
-  ).length;
-
-  const conditionAnswered =
-    !conditionItem || (answers[CONDITION_ITEM_ID] !== null && answers[CONDITION_ITEM_ID] !== undefined);
-  const requiredAnswered =
-    requiredItems.every((item) => answers[item.id] !== null && answers[item.id] !== undefined) &&
-    conditionAnswered;
-
-  // Detect any current rejection across all answers (DB conditions OR hardcoded items)
-  const isRejected = useMemo(() => {
-    // Check condition rejection
-    if (conditionItem) {
-      const idx = answers[CONDITION_ITEM_ID];
-      if (idx !== null && idx !== undefined && conditionItem.options[idx]?.isCritical) {
-        return true;
-      }
-    }
-    // Check hardcoded items
-    for (const item of checklistItems) {
-      const idx = answers[item.id];
-      if (idx !== null && idx !== undefined && item.options[idx]?.isCritical) {
-        return true;
-      }
-    }
-    return false;
-  }, [answers, conditionItem]);
-
-  const [rejectionModal, setRejectionModal] = useState<{
-    open: boolean;
-    itemTitle: string;
-    optionLabel: string;
-  }>({ open: false, itemTitle: "", optionLabel: "" });
-
-  const setAnswer = (itemId: string, optionIndex: number) => {
-    let item: { id: string; title: string; options: { label: string; isCritical: boolean }[] } | undefined;
-
-    if (itemId === CONDITION_ITEM_ID) {
-      item = conditionItem ?? undefined;
-    } else {
-      item = checklistItems.find((i) => i.id === itemId);
-    }
-    if (!item) return;
-
-    const option = item.options[optionIndex];
-    const newAnswers = { ...answers, [itemId]: optionIndex };
-    onChange({ checklistAnswers: newAnswers });
-    onAnswer(itemId, optionIndex);
-
-    if (option?.isCritical) {
-      const reason = `${item.title}: ${option.label}`;
+    if (opt?.is_rejected) {
+      const cat = damageCategories.find((c) => c.id === catId);
+      const reason = `${cat?.name ?? "Defeito"}: ${opt.option_name}`;
       onReject(reason);
-      setRejectionModal({ open: true, itemTitle: item.title, optionLabel: option.label });
+      setRejectionModal({ open: true, title: cat?.name ?? "Defeito", label: opt.option_name });
     }
   };
 
-  const handleClearRejection = () => {
-    // Clear ALL critical answers so user can re-answer
-    const newAnswers = { ...answers };
-
-    if (conditionItem) {
-      const idx = newAnswers[CONDITION_ITEM_ID];
-      if (idx !== null && idx !== undefined && conditionItem.options[idx]?.isCritical) {
-        newAnswers[CONDITION_ITEM_ID] = null;
-      }
+  const selectRejection = (id: string) => {
+    const rej = conditions.find((c) => c.id === id);
+    const next: ChecklistAnswers = { ...answers, rejectionId: id };
+    onAnswersChange(next);
+    if (rej) {
+      onReject(rej.condition_name);
+      setRejectionModal({ open: true, title: "Impedimento", label: rej.condition_name });
     }
-    Object.keys(newAnswers).forEach((id) => {
-      if (id === CONDITION_ITEM_ID) return;
-      const item = checklistItems.find((i) => i.id === id);
-      const idx = newAnswers[id];
-      if (item && idx !== null && idx !== undefined && item.options[idx]?.isCritical) {
-        newAnswers[id] = null;
-      }
-    });
-    onChange({ checklistAnswers: newAnswers });
+  };
+
+  // ── Validation per sub-screen ──
+  const conditionAnswered = !!answers.conditionId;
+  const allDamageCategoriesAnswered = damageCategories.every(
+    (c) => !!answers.damageOptionByCategory[c.id],
+  );
+
+  // Clear rejection on revisar
+  const handleClearRejection = () => {
+    const next: ChecklistAnswers = { ...answers };
+    // Remove rejection field
+    next.rejectionId = null;
+    // Remove any rejected damage option from B
+    next.damageOptionByCategory = { ...answers.damageOptionByCategory };
+    for (const [catId, optId] of Object.entries(next.damageOptionByCategory)) {
+      const opt = damageOptions.find((o) => o.id === optId);
+      if (opt?.is_rejected) next.damageOptionByCategory[catId] = null;
+    }
+    onAnswersChange(next);
     setRejectionModal({ ...rejectionModal, open: false });
   };
 
@@ -160,97 +171,242 @@ export function StepEvaluationChecklist({
     onResetAll?.();
   };
 
+  // ── Sub-screen navigation ──
+  const goNext = () => {
+    if (subScreen === "condition") setSubScreen("damages");
+    else if (subScreen === "damages") setSubScreen("rejection");
+  };
+
+  const goPrev = () => {
+    if (subScreen === "rejection") setSubScreen("damages");
+    else if (subScreen === "damages") setSubScreen("condition");
+    else onBack();
+  };
+
+  const currentIdx = SUB_SCREENS.findIndex((s) => s.key === subScreen);
+
   return (
     <>
       <div className="animate-fade-in space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header + sub-step indicator */}
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Checklist de Avaliação
+              Avaliação do Aparelho
             </h2>
           </div>
-          <span className="text-xs font-semibold bg-foreground text-background px-3 py-1 rounded-full">
-            {answeredCount}/{totalCount}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {SUB_SCREENS.map((s, i) => {
+              const Icon = s.icon;
+              const isActive = i === currentIdx;
+              const isDone = i < currentIdx;
+              return (
+                <div key={s.key} className="flex items-center gap-1.5 flex-1">
+                  <div
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all flex-1 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : isDone
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {isDone ? (
+                      <Check className="h-3 w-3 flex-shrink-0" />
+                    ) : (
+                      <Icon className="h-3 w-3 flex-shrink-0" />
+                    )}
+                    <span className="truncate">{s.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Dynamic condition (from DB) */}
-        {conditionItem && (
-          <>
-            <p className="text-xs font-semibold text-primary uppercase tracking-widest flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3" /> Condição Geral
-            </p>
-            <ChecklistCard
-              item={conditionItem as any}
-              selectedIndex={answers[CONDITION_ITEM_ID] ?? null}
-              onSelect={(i) => setAnswer(CONDITION_ITEM_ID, i)}
-            />
-          </>
-        )}
-
-        <p className="text-xs font-semibold text-destructive uppercase tracking-widest mt-2">
-          ✱ Obrigatórios
-        </p>
-        <div className="space-y-4">
-          {requiredItems.map((item) => (
-            <ChecklistCard
-              key={item.id}
-              item={item}
-              selectedIndex={answers[item.id] ?? null}
-              onSelect={(i) => setAnswer(item.id, i)}
-            />
-          ))}
-        </div>
-
-        {optionalItems.length > 0 && (
-          <>
-            <hr className="border-border" />
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-              Opcionais
-            </p>
-            <div className="space-y-4">
-              {optionalItems.map((item) => (
-                <ChecklistCard
-                  key={item.id}
-                  item={item}
-                  selectedIndex={answers[item.id] ?? null}
-                  onSelect={(i) => setAnswer(item.id, i)}
-                />
-              ))}
+        {/* ───── TELA A: Condição Geral ───── */}
+        {subScreen === "condition" && (
+          <div className="space-y-4 animate-fade-in">
+            <div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3" /> Estado Geral
+              </p>
+              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
+                Como está a condição geral do aparelho?
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Selecione a opção que melhor descreve o estado do seu aparelho.
+              </p>
             </div>
-          </>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {normalConditions.map((cond) => {
+                const isSelected = answers.conditionId === cond.id;
+                return (
+                  <OptionCard
+                    key={cond.id}
+                    selected={isSelected}
+                    onClick={() => selectCondition(cond.id)}
+                    label={cond.condition_name}
+                    badge={
+                      cond.discount_percentage > 0
+                        ? `−${cond.discount_percentage}%`
+                        : "Sem desconto"
+                    }
+                  />
+                );
+              })}
+            </div>
+            {normalConditions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhuma condição cadastrada.
+              </p>
+            )}
+          </div>
         )}
 
+        {/* ───── TELA B: Categorias de Defeitos (dinâmicas) ───── */}
+        {subScreen === "damages" && (
+          <div className="space-y-5 animate-fade-in">
+            <div>
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest flex items-center gap-1.5">
+                <Wrench className="h-3 w-3" /> Defeitos Específicos
+              </p>
+              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
+                Há algum defeito específico no aparelho?
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Para cada categoria, selecione a opção que descreve o estado.
+              </p>
+            </div>
+
+            {damageCategories.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhuma categoria cadastrada.
+              </p>
+            )}
+
+            {damageCategories.map((cat) => {
+              const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
+              const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
+              if (opts.length === 0) return null;
+              return (
+                <div
+                  key={cat.id}
+                  className="rounded-3xl border border-black/5 bg-card p-5 md:p-6 shadow-sm"
+                >
+                  <h4 className="text-base font-semibold text-foreground mb-3">{cat.name}</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {opts.map((opt) => {
+                      const isSelected = selectedId === opt.id;
+                      return (
+                        <OptionCard
+                          key={opt.id}
+                          selected={isSelected}
+                          onClick={() => selectDamageOption(cat.id, opt.id)}
+                          label={opt.option_name}
+                          isReject={opt.is_rejected}
+                          badge={
+                            opt.is_rejected
+                              ? "Inviabiliza"
+                              : Number(opt.deduction_value) > 0
+                                ? `−${formatBRL(Number(opt.deduction_value))}`
+                                : "Sem dedução"
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ───── TELA C: Motivos de Rejeição ───── */}
+        {subScreen === "rejection" && (
+          <div className="space-y-4 animate-fade-in">
+            <div>
+              <p className="text-xs font-semibold text-destructive uppercase tracking-widest flex items-center gap-1.5">
+                <ShieldAlert className="h-3 w-3" /> Impedimentos
+              </p>
+              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
+                Algum desses problemas se aplica ao aparelho?
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Se nenhum se aplica, basta avançar para finalizar a avaliação.
+              </p>
+            </div>
+
+            <div className="rounded-3xl bg-destructive/5 border border-destructive/15 p-5 space-y-2.5">
+              {rejectionReasons.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Nenhum impedimento cadastrado.
+                </p>
+              )}
+              {rejectionReasons.map((rej) => {
+                const isSelected = answers.rejectionId === rej.id;
+                return (
+                  <button
+                    key={rej.id}
+                    type="button"
+                    onClick={() => selectRejection(rej.id)}
+                    className={`w-full text-left rounded-2xl border p-4 transition-all flex items-center gap-3 ${
+                      isSelected
+                        ? "border-destructive bg-destructive/10 ring-2 ring-destructive/30"
+                        : "border-destructive/20 bg-card hover:border-destructive/40"
+                    }`}
+                  >
+                    <Ban
+                      className={`h-4 w-4 flex-shrink-0 ${
+                        isSelected ? "text-destructive" : "text-destructive/70"
+                      }`}
+                    />
+                    <span className="text-sm font-medium text-foreground flex-1">
+                      {rej.condition_name}
+                    </span>
+                    {isSelected && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        Selecionado
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ───── Footer navigation ───── */}
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" onClick={onBack} className="flex-1 h-12 rounded-full">
+          <Button variant="outline" onClick={goPrev} className="flex-1 h-12 rounded-full">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
           </Button>
-          {/* Hide calc button when rejected */}
-          {!isRejected && (
+          {subScreen !== "rejection" ? (
+            <Button
+              onClick={goNext}
+              disabled={
+                (subScreen === "condition" && !conditionAnswered) ||
+                (subScreen === "damages" && damageCategories.length > 0 && !allDamageCategoriesAnswered)
+              }
+              className="flex-1 h-12 rounded-full shadow-sm"
+            >
+              Próximo <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
             <Button
               onClick={onSubmit}
-              disabled={isSubmitting || !requiredAnswered}
+              disabled={isSubmitting}
               className="flex-1 h-12 rounded-full shadow-sm"
             >
               {isSubmitting ? "Calculando..." : "Calcular"} <Send className="ml-2 h-4 w-4" />
             </Button>
           )}
         </div>
-
-        {isRejected && (
-          <div className="rounded-2xl bg-destructive/5 border border-destructive/20 p-4 text-center">
-            <p className="text-sm text-destructive font-medium">
-              Avaliação bloqueada por uma condição crítica.
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Revise sua resposta ou recomece a avaliação.
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Hard-stop rejection modal (AlertDialog) */}
+      {/* Hard-stop rejection modal */}
       <AlertDialog
         open={rejectionModal.open}
         onOpenChange={(open) =>
@@ -267,11 +423,9 @@ export function StepEvaluationChecklist({
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center pt-2 text-base space-y-2">
               <span className="block">
-                Sua resposta em <strong className="text-foreground">{rejectionModal.itemTitle}</strong>:
+                Sua resposta em <strong className="text-foreground">{rejectionModal.title}</strong>:
               </span>
-              <span className="block text-foreground font-medium">
-                "{rejectionModal.optionLabel}"
-              </span>
+              <span className="block text-foreground font-medium">"{rejectionModal.label}"</span>
               <span className="block text-sm pt-2">
                 Infelizmente não podemos prosseguir com a compra do aparelho nestas condições.
               </span>
@@ -293,5 +447,62 @@ export function StepEvaluationChecklist({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// ── Small reusable option card ──
+function OptionCard({
+  selected,
+  onClick,
+  label,
+  badge,
+  isReject,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  badge?: string;
+  isReject?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onClick}
+      className={`text-left rounded-2xl border p-4 transition-all duration-200 ${
+        selected
+          ? isReject
+            ? "border-destructive bg-destructive/5 ring-2 ring-destructive/30 shadow-sm"
+            : "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+          : "border-black/10 bg-card hover:border-black/20 hover:shadow-sm"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`mt-0.5 h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+            selected
+              ? isReject
+                ? "border-destructive bg-destructive"
+                : "border-primary bg-primary"
+              : "border-black/20 bg-transparent"
+          }`}
+        >
+          {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="font-medium text-sm text-foreground block">{label}</span>
+          {badge && (
+            <span
+              className={`block text-xs mt-1 ${
+                isReject ? "text-destructive font-medium" : "text-muted-foreground"
+              }`}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }

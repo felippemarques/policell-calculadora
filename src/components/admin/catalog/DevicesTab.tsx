@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3 } from "lucide-react";
+import { DeviceMatrixGenerator } from "./DeviceMatrixGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ export function DevicesTab() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [showMatrix, setShowMatrix] = useState(false);
   const emptyDevice = { brand: "Apple", model: "", storage: "", base_price: 0, colors: "" };
   const [form, setForm] = useState<any>(emptyDevice);
 
@@ -166,8 +168,9 @@ export function DevicesTab() {
   };
 
   const startEdit = (device: any) => { setForm({ ...device }); setEditingId(device.id); setShowNew(false); };
-  const startNew = () => { setForm(emptyDevice); setShowNew(true); setEditingId(null); };
-  const cancel = () => { setEditingId(null); setShowNew(false); setForm(emptyDevice); };
+  const startNew = () => { setForm(emptyDevice); setShowNew(true); setEditingId(null); setShowMatrix(false); };
+  const startMatrix = () => { setShowMatrix(true); setShowNew(false); setEditingId(null); };
+  const cancel = () => { setEditingId(null); setShowNew(false); setShowMatrix(false); setForm(emptyDevice); };
 
   const clearFilters = () => {
     setSearch(""); setFilterBrand("all"); setFilterModel("all");
@@ -187,8 +190,11 @@ export function DevicesTab() {
         <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className={hasActiveFilters ? "border-primary text-primary" : ""}>
           <Filter className="mr-2 h-4 w-4" /> Filtros {hasActiveFilters && "•"}
         </Button>
-        <Button onClick={startNew} disabled={showNew}>
-          <Plus className="mr-2 h-4 w-4" /> Novo
+        <Button variant="outline" onClick={startNew} disabled={showNew || showMatrix}>
+          <Plus className="mr-2 h-4 w-4" /> Novo Individual
+        </Button>
+        <Button onClick={startMatrix} disabled={showMatrix || showNew}>
+          <Grid3X3 className="mr-2 h-4 w-4" /> Gerador de Matriz
         </Button>
       </div>
 
@@ -395,6 +401,11 @@ export function DevicesTab() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Matrix Generator */}
+      {showMatrix && (
+        <DeviceMatrixGenerator onClose={cancel} />
       )}
 
       {/* New / Edit Form */}

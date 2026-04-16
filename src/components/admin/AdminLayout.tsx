@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Smartphone,
-  SlidersHorizontal,
+  
   ClipboardList,
   Layers,
   Video,

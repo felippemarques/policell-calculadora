@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3 } from "lucide-react";
+import { DeviceMatrixGenerator } from "./DeviceMatrixGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

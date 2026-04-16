@@ -1,28 +1,34 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronDown, ChevronRight, Percent, DollarSign, Ban } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronDown, ChevronRight, Percent, DollarSign, Ban, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export function DefectsTab() {
   const qc = useQueryClient();
 
-  // ── State ──
+  // ── Categories state ──
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [catForm, setCatForm] = useState({ name: "" });
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
+  // ── Condition (normal) state ──
   const [showNewCondition, setShowNewCondition] = useState(false);
-  const [condForm, setCondForm] = useState({ condition_name: "", discount_percentage: 0, is_rejected: false });
+  const [condForm, setCondForm] = useState({ condition_name: "", discount_percentage: 0 });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
-  const [editCondForm, setEditCondForm] = useState({ condition_name: "", discount_percentage: 0, is_rejected: false });
+  const [editCondForm, setEditCondForm] = useState({ condition_name: "", discount_percentage: 0 });
+
+  // ── Rejection reason state ──
+  const [showNewRejection, setShowNewRejection] = useState(false);
+  const [rejectionName, setRejectionName] = useState("");
+  const [editingRejId, setEditingRejId] = useState<string | null>(null);
+  const [editRejName, setEditRejName] = useState("");
 
   // ── Queries ──
   const { data: categories = [], isLoading } = useQuery({
@@ -51,6 +57,9 @@ export function DefectsTab() {
       return data;
     },
   });
+
+  const normalConditions = conditions.filter((c) => !c.is_rejected);
+  const rejectionReasons = conditions.filter((c) => c.is_rejected);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["admin-damage-categories"] });
@@ -83,7 +92,7 @@ export function DefectsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // ── Deduction mutation (inline save on blur) ──
+  // ── Deduction inline save ──
   const saveDeductionMutation = useMutation({
     mutationFn: async ({ catId, value }: { catId: string; value: number }) => {
       const existing = deductions.find((d) => d.damage_category_id === catId);
@@ -99,14 +108,14 @@ export function DefectsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // ── Condition mutations ──
+  // ── Condition (normal) mutations ──
   const saveCondMutation = useMutation({
-    mutationFn: async (data: { id?: string; condition_name: string; discount_percentage: number; is_rejected: boolean }) => {
+    mutationFn: async (data: { id?: string; condition_name: string; discount_percentage: number }) => {
       if (data.id) {
         const { error } = await supabase.from("condition_discounts").update({
           condition_name: data.condition_name,
           discount_percentage: data.discount_percentage,
-          is_rejected: data.is_rejected,
+          is_rejected: false,
         }).eq("id", data.id);
         if (error) throw error;
       } else {
@@ -114,7 +123,7 @@ export function DefectsTab() {
         const { error } = await supabase.from("condition_discounts").insert({
           condition_name: data.condition_name,
           discount_percentage: data.discount_percentage,
-          is_rejected: data.is_rejected,
+          is_rejected: false,
           display_order: maxOrder,
         });
         if (error) throw error;
@@ -124,7 +133,39 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewCondition(false);
       setEditingCondId(null);
-      setCondForm({ condition_name: "", discount_percentage: 0, is_rejected: false });
+      setCondForm({ condition_name: "", discount_percentage: 0 });
+      toast.success("Salvo!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // ── Rejection mutations ──
+  const saveRejectionMutation = useMutation({
+    mutationFn: async (data: { id?: string; condition_name: string }) => {
+      if (data.id) {
+        const { error } = await supabase.from("condition_discounts").update({
+          condition_name: data.condition_name,
+          discount_percentage: 100,
+          is_rejected: true,
+        }).eq("id", data.id);
+        if (error) throw error;
+      } else {
+        const maxOrder = conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
+        const { error } = await supabase.from("condition_discounts").insert({
+          condition_name: data.condition_name,
+          discount_percentage: 100,
+          is_rejected: true,
+          display_order: maxOrder,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidateAll();
+      setShowNewRejection(false);
+      setRejectionName("");
+      setEditingRejId(null);
+      setEditRejName("");
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -146,9 +187,9 @@ export function DefectsTab() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* ═══════════════════════════════════════════════
-          SEÇÃO 1: Condições do Aparelho (percentuais)
+          SEÇÃO 1: Condições do Aparelho (% normais)
          ═══════════════════════════════════════════════ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -166,7 +207,7 @@ export function DefectsTab() {
         {/* New condition form */}
         {showNewCondition && (
           <div className="bg-card border rounded-lg p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm">Nome</Label>
                 <Input value={condForm.condition_name} onChange={(e) => setCondForm({ ...condForm, condition_name: e.target.value })} placeholder="Ex: EXCELENTE" className="mt-1" autoFocus />
@@ -174,12 +215,6 @@ export function DefectsTab() {
               <div>
                 <Label className="text-sm">Desconto (%)</Label>
                 <Input type="number" min={0} step={0.1} value={condForm.discount_percentage} onChange={(e) => setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })} className="mt-1" />
-              </div>
-              <div className="flex items-end gap-3">
-                <div className="flex items-center gap-2 pb-1">
-                  <Switch checked={condForm.is_rejected} onCheckedChange={(v) => setCondForm({ ...condForm, is_rejected: v })} />
-                  <Label className="text-sm text-destructive">Rejeitar</Label>
-                </div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -193,10 +228,10 @@ export function DefectsTab() {
 
         {/* Conditions list */}
         <div className="border rounded-lg overflow-hidden divide-y">
-          {conditions.length === 0 && (
+          {normalConditions.length === 0 && (
             <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma condição cadastrada.</p>
           )}
-          {conditions.map((cond) => {
+          {normalConditions.map((cond) => {
             const isEditing = editingCondId === cond.id;
             return (
               <div key={cond.id} className="flex items-center gap-4 px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
@@ -204,22 +239,14 @@ export function DefectsTab() {
                   <>
                     <Input value={editCondForm.condition_name} onChange={(e) => setEditCondForm({ ...editCondForm, condition_name: e.target.value })} className="h-8 text-sm flex-1" autoFocus />
                     <Input type="number" min={0} step={0.1} value={editCondForm.discount_percentage} onChange={(e) => setEditCondForm({ ...editCondForm, discount_percentage: Number(e.target.value) })} className="h-8 text-sm w-24" />
-                    <div className="flex items-center gap-1.5">
-                      <Switch checked={editCondForm.is_rejected} onCheckedChange={(v) => setEditCondForm({ ...editCondForm, is_rejected: v })} />
-                      <span className="text-xs text-muted-foreground">Rejeitar</span>
-                    </div>
                     <Button variant="ghost" size="sm" onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}><Check className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}><X className="h-3.5 w-3.5" /></Button>
                   </>
                 ) : (
                   <>
                     <span className="font-medium text-foreground flex-1">{cond.condition_name}</span>
-                    {cond.is_rejected ? (
-                      <Badge variant="destructive" className="text-xs"><Ban className="h-3 w-3 mr-1" />Rejeitado</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs"><Percent className="h-3 w-3 mr-1" />{cond.discount_percentage}%</Badge>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingCondId(cond.id); setEditCondForm({ condition_name: cond.condition_name, discount_percentage: cond.discount_percentage, is_rejected: cond.is_rejected }); }}>
+                    <Badge variant="secondary" className="text-xs"><Percent className="h-3 w-3 mr-1" />{cond.discount_percentage}%</Badge>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingCondId(cond.id); setEditCondForm({ condition_name: cond.condition_name, discount_percentage: cond.discount_percentage }); }}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { if (confirm(`Remover "${cond.condition_name}"?`)) deleteCondMutation.mutate(cond.id); }}>
@@ -234,7 +261,90 @@ export function DefectsTab() {
       </section>
 
       {/* ═══════════════════════════════════════════════
-          SEÇÃO 2: Categorias de Defeitos (deduções fixas)
+          SEÇÃO 2: Motivos de Rejeição (Hard Stops)
+         ═══════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-destructive" /> Motivos de Rejeição
+              <span className="text-xs font-normal text-muted-foreground">(Não comprar se...)</span>
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Condições que bloqueiam imediatamente a compra. Ao selecionar uma destas opções, o cliente é informado que o aparelho não pode ser adquirido.
+            </p>
+          </div>
+          <Button size="sm" variant="destructive" onClick={() => setShowNewRejection(true)} disabled={showNewRejection}>
+            <Plus className="h-4 w-4 mr-1" /> Novo Motivo
+          </Button>
+        </div>
+
+        {/* New rejection form */}
+        {showNewRejection && (
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
+            <div>
+              <Label className="text-sm">Nome do motivo</Label>
+              <Input
+                value={rejectionName}
+                onChange={(e) => setRejectionName(e.target.value)}
+                placeholder='Ex: "Não estiver ligando", "Estiver bloqueado"'
+                className="mt-1"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && rejectionName.trim()) {
+                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim() });
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Será salvo automaticamente como rejeição (100% de bloqueio).
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={() => saveRejectionMutation.mutate({ condition_name: rejectionName.trim() })} disabled={!rejectionName.trim() || saveRejectionMutation.isPending}>
+                <Check className="h-3.5 w-3.5 mr-1" /> Salvar
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setShowNewRejection(false); setRejectionName(""); }}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Rejection list */}
+        <div className="border border-destructive/20 rounded-lg overflow-hidden divide-y divide-destructive/10">
+          {rejectionReasons.length === 0 && (
+            <p className="text-center text-muted-foreground py-6 text-sm">Nenhum motivo de rejeição cadastrado.</p>
+          )}
+          {rejectionReasons.map((rej) => {
+            const isEditing = editingRejId === rej.id;
+            return (
+              <div key={rej.id} className="flex items-center gap-3 px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors">
+                <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
+                {isEditing ? (
+                  <>
+                    <Input value={editRejName} onChange={(e) => setEditRejName(e.target.value)} className="h-8 text-sm flex-1" autoFocus />
+                    <Button variant="ghost" size="sm" onClick={() => saveRejectionMutation.mutate({ id: rej.id, condition_name: editRejName.trim() })} disabled={!editRejName.trim()}><Check className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}><X className="h-3.5 w-3.5" /></Button>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium text-foreground flex-1">{rej.condition_name}</span>
+                    <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Hard Stop</Badge>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingRejId(rej.id); setEditRejName(rej.condition_name); }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { if (confirm(`Remover "${rej.condition_name}"?`)) deleteCondMutation.mutate(rej.id); }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          SEÇÃO 3: Categorias de Defeitos (deduções fixas)
          ═══════════════════════════════════════════════ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -275,7 +385,6 @@ export function DefectsTab() {
 
             return (
               <div key={cat.id} className="bg-card">
-                {/* Row header */}
                 <div
                   className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
@@ -321,7 +430,6 @@ export function DefectsTab() {
                   </div>
                 </div>
 
-                {/* Expanded detail */}
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-1 ml-7 border-t border-dashed space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">

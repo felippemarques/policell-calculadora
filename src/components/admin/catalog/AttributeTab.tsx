@@ -131,31 +131,48 @@ export function AttributeTab({ field, label, description, defaultFormatRule = "c
           {uniqueValues.map(({ value, count }) => {
             const isEditing = editingValue === value;
             return (
-              <div key={value} className="bg-card border rounded-lg p-4 flex items-center gap-4">
+              <div key={value} className="bg-card border rounded-lg p-4 flex items-center gap-4 flex-wrap">
                 <Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[180px]">
                   {isEditing ? (
-                    <Input
-                      value={newValue}
-                      onChange={(e) => setNewValue(e.target.value)}
-                      className="text-sm"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newValue) renameMutation.mutate({ oldValue: value, newVal: newValue });
-                        if (e.key === "Escape") setEditingValue(null);
-                      }}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        value={newValue}
+                        onChange={(e) => setNewValue(e.target.value)}
+                        className="text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newValue) renameMutation.mutate({ oldValue: value, newVal: newValue, rule: editRule });
+                          if (e.key === "Escape") setEditingValue(null);
+                        }}
+                      />
+                      {newValue.trim() && (
+                        <p className="text-xs text-muted-foreground">
+                          Preview: <span className="font-medium text-foreground">{applyFormatRule(newValue.trim(), editRule)}</span>
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <h4 className="font-medium text-foreground">{value}</h4>
                   )}
                 </div>
+                {isEditing && (
+                  <Select value={editRule} onValueChange={(v) => setEditRule(v as FormatRule)}>
+                    <SelectTrigger className="h-8 text-xs w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(FORMAT_LABELS) as FormatRule[]).map((r) => (
+                        <SelectItem key={r} value={r}>{FORMAT_LABELS[r]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded flex-shrink-0">
                   {count} aparelho(s)
                 </span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {isEditing ? (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => renameMutation.mutate({ oldValue: value, newVal: newValue })} disabled={!newValue || renameMutation.isPending}>
+                      <Button variant="ghost" size="sm" onClick={() => renameMutation.mutate({ oldValue: value, newVal: newValue, rule: editRule })} disabled={!newValue || renameMutation.isPending}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setEditingValue(null)}>
@@ -164,7 +181,7 @@ export function AttributeTab({ field, label, description, defaultFormatRule = "c
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => { setEditingValue(value); setNewValue(value); }}>
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingValue(value); setNewValue(value); setEditRule(defaultFormatRule); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       {field === "colors" && (

@@ -1214,6 +1214,14 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
 
       <SectionCard icon={<Image className="h-4 w-4" />} title="Imagem de Fundo" description="Imagem de fundo do banner hero. Recomendado: 1920×800px, JPG, máx. 500KB.">
         <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem de fundo" recommendedSize="1920×800px" />
+        {form.image_url && (
+          <HeroBackgroundDragger
+            imageUrl={form.image_url}
+            bgPosX={bgPosX}
+            bgPosY={bgPosY}
+            onChange={(x, y) => setLayoutFields({ bgPosX: x, bgPosY: y })}
+          />
+        )}
       </SectionCard>
 
       <SectionCard icon={<LayoutGrid className="h-4 w-4" />} title="Posição do Conteúdo" description="Ajuste onde o título, subtítulo e botão aparecem sobre o banner.">

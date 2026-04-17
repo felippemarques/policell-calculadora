@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import type { SanityResult } from "@/lib/trade-in-sanity";
 
 interface Props {
-  result: { finalValue: number; couponCode: string };
+  result: { finalValue: number; couponCode: string } | null;
   onReset: () => void;
+  sanity?: SanityResult;
 }
 
 /**
@@ -39,8 +41,12 @@ function buildWhatsAppUrl(raw: string | undefined, message: string): string | nu
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function StepResult({ result, onReset }: Props) {
+export function StepResult({ result, onReset, sanity }: Props) {
   const [copied, setCopied] = useState(false);
+
+  // Sanity guard: if anything is inconsistent (or there's no saved result), show the
+  // inconsistency banner and force the user to restart instead of trusting stale numbers.
+  const inconsistent = (sanity && !sanity.ok) || !result;
 
   const { data: settingsRaw } = useQuery({
     queryKey: ["lp-settings-public"],

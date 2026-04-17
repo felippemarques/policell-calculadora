@@ -68,6 +68,15 @@ const AdminLayout = () => {
           {user && (
             <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>
           )}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ver Landing Page
+          </a>
           <NavLink
             to="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground transition-colors"

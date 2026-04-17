@@ -67,8 +67,8 @@ const availableIcons: Record<string, { label: string; icon: React.ReactNode }> =
 const iconComponentMap: Record<string, React.ReactNode> = Object.fromEntries(
   Object.entries(availableIcons).map(([key, { icon }]) => {
     // Clone the icon element with larger size for previews
-    const el = icon as React.ReactElement;
-    return [key, <el.type key={key} className="h-6 w-6" />];
+    const el = icon as React.ReactElement<any>;
+    return [key, React.cloneElement(el, { key, className: "h-6 w-6" })];
   })
 );
 

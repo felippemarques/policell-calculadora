@@ -21,6 +21,8 @@ import {
   emptyAnswers,
   formatBRL,
 } from "@/lib/trade-in-pricing";
+import { validateTradeInState } from "@/lib/trade-in-sanity";
+import { toast } from "sonner";
 
 export interface WizardData {
   name: string;
@@ -241,8 +243,34 @@ export function TradeInWizard() {
     await markRejected(leadId, reason);
   };
 
+  // Live sanity check — recomputed on every state change so the price footer
+  // and the result screen always reflect catalog truth.
+  const sanity = useMemo(
+    () =>
+      validateTradeInState({
+        device: selectedDevice,
+        brandId: selectedDevice?.brand_id ?? null,
+        answers: data.answers,
+        conditions,
+        damageOptions,
+        damageCategories,
+      }),
+    [selectedDevice, data.answers, conditions, damageOptions, damageCategories],
+  );
+
   const handleSubmit = async () => {
     if (!selectedDevice) return;
+
+    // Last line of defense: refuse to persist if data is inconsistent.
+    if (!sanity.ok) {
+      toast.error(
+        sanity.reason ??
+          "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
+      );
+      // Move to the result screen so the user sees the inconsistency banner + reset CTA
+      setStep(3);
+      return;
+    }
 
     // Build legacy "damages" string array for evaluations table
     const damageStrings: string[] = [];
@@ -362,9 +390,13 @@ export function TradeInWizard() {
               selectedBrandId={selectedDevice?.brand_id ?? null}
             />
           )}
-          {step === 3 && result && (
+          {step === 3 && (
             <div className="animate-fade-in">
-              <StepResult result={result} onReset={handleReset} />
+              <StepResult
+                result={result}
+                onReset={handleReset}
+                sanity={sanity}
+              />
             </div>
           )}
         </div>

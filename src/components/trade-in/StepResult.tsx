@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import type { SanityResult } from "@/lib/trade-in-sanity";
 
 interface Props {
-  result: { finalValue: number; couponCode: string };
+  result: { finalValue: number; couponCode: string } | null;
   onReset: () => void;
+  sanity?: SanityResult;
 }
 
 /**
@@ -39,8 +41,12 @@ function buildWhatsAppUrl(raw: string | undefined, message: string): string | nu
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function StepResult({ result, onReset }: Props) {
+export function StepResult({ result, onReset, sanity }: Props) {
   const [copied, setCopied] = useState(false);
+
+  // Sanity guard: if anything is inconsistent (or there's no saved result), show the
+  // inconsistency banner and force the user to restart instead of trusting stale numbers.
+  const inconsistent = (sanity && !sanity.ok) || !result;
 
   const { data: settingsRaw } = useQuery({
     queryKey: ["lp-settings-public"],
@@ -57,6 +63,7 @@ export function StepResult({ result, onReset }: Props) {
   });
 
   const copyToClipboard = async () => {
+    if (!result) return;
     await navigator.clipboard.writeText(result.couponCode);
     setCopied(true);
     toast.success("Cupom copiado!");
@@ -66,6 +73,7 @@ export function StepResult({ result, onReset }: Props) {
   const storeUrl = "https://pollicell.com.br"; // TODO: configurar
 
   const handleSpecialist = () => {
+    if (!result) return;
     const message = `Olá! Acabei de fazer minha avaliação e gostaria de falar com um especialista. Meu cupom: ${result.couponCode} (valor estimado: R$ ${result.finalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}).`;
     const url = buildWhatsAppUrl(settings.whatsapp || settings.phone, message);
     if (!url) {
@@ -74,6 +82,34 @@ export function StepResult({ result, onReset }: Props) {
     }
     window.open(url, "_blank", "noopener,noreferrer");
   };
+
+  // ── Inconsistency screen: blocks the result UI and forces a fresh start ──
+  if (inconsistent) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/15 mx-auto">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-foreground">
+                Detectamos uma mudança na sua seleção
+              </p>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                {sanity?.reason ??
+                  "Por favor, reinicie a avaliação para garantir o preço correto."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button className="w-full" size="lg" onClick={onReset}>
+          <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar Avaliação
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

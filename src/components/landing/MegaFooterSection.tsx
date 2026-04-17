@@ -41,8 +41,8 @@ const MegaFooterSection = ({ section, settings }: MegaFooterSectionProps) => {
 
   return (
     <section style={{ backgroundColor: bgColor, color: textColor }} className="border-t border-black/5">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
           <div>
             {settings.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-8 max-w-[140px] object-contain mb-5" />

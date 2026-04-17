@@ -20,7 +20,7 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
       {section.image_url && (
         <img src={section.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
       )}
-      <div className="relative max-w-5xl mx-auto px-4 py-10 md:py-14 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+      <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-14 flex flex-col md:flex-row items-center gap-5 md:gap-10">
         <div className="flex-1 text-center md:text-left space-y-2">
           {section.title && (
             <p className="text-sm md:text-base opacity-80">{section.title}</p>

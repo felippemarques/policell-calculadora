@@ -76,14 +76,14 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
 
   return (
     <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
-      <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-        <div className="text-center mb-16 max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">{section.title || "Nunca foi tão fácil"}</h2>
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-32">
+        <div className="text-center mb-10 md:mb-16 max-w-2xl mx-auto">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight leading-tight">{section.title || "Nunca foi tão fácil"}</h2>
         </div>
 
         {videoUrl && (
-          <div className="mb-16">
-            <div className="aspect-video rounded-3xl overflow-hidden shadow-sm border border-black/5">
+          <div className="mb-10 md:mb-16">
+            <div className="aspect-video rounded-2xl md:rounded-3xl overflow-hidden shadow-sm border border-black/5">
               <iframe
                 src={getEmbedUrl(videoUrl)}
                 title="Vídeo"
@@ -95,11 +95,11 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {cards.map((card: any, i: number) => (
             <div
               key={i}
-              className="bg-card rounded-3xl p-8 shadow-sm border border-black/5 text-center space-y-4 hover:shadow-md transition-shadow duration-300"
+              className="bg-card rounded-3xl p-6 md:p-8 shadow-sm border border-black/5 text-center space-y-4 hover:shadow-md transition-shadow duration-300"
             >
               <div
                 className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center"
@@ -107,7 +107,7 @@ const BenefitsSection = ({ section }: BenefitsSectionProps) => {
               >
                 {iconMap[card.icon] || <span className="font-bold">{i + 1}</span>}
               </div>
-              <h3 className="font-semibold text-lg tracking-tight">{card.title}</h3>
+              <h3 className="font-semibold text-base md:text-lg tracking-tight">{card.title}</h3>
               <p className="text-sm opacity-60 leading-relaxed">{card.description}</p>
             </div>
           ))}

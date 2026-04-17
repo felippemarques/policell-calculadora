@@ -153,28 +153,30 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
               label={`Trocar modelo (${selectedModel})`}
               onClick={() => setPhase("model")}
             />
-            <div className="flex flex-wrap gap-2.5 justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {storages.map((d) => {
                 const isSel = data.deviceId === d.id;
                 return (
                   <button
                     key={d.id}
                     onClick={() => handleStoragePick(d.id)}
-                    className={`group rounded-2xl px-5 py-3.5 border transition-all duration-200 text-left
+                    className={`group w-full rounded-2xl px-5 py-3.5 border transition-all duration-200 text-left
                       ${
                         isSel
                           ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
                           : "border-border bg-card hover:border-primary/40 hover:ring-2 hover:ring-primary/15"
                       }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-semibold text-foreground">
-                        {d.storage}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
-                      {isSel && <Check className="h-4 w-4 text-primary ml-1" />}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col">
+                        <span className="text-base font-semibold text-foreground">
+                          {d.storage}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      {isSel && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
                     </div>
                   </button>
                 );
@@ -182,12 +184,12 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
             </div>
 
             {selectedDevice && (
-              <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/15 p-4 flex items-center justify-between animate-fade-in-fast">
+              <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/15 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast">
                 <div>
                   <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">
                     Selecionado
                   </p>
-                  <p className="text-base font-semibold text-foreground">
+                  <p className="text-sm md:text-base font-semibold text-foreground">
                     {selectedDevice.brand} {selectedDevice.model} · {selectedDevice.storage}
                   </p>
                 </div>
@@ -201,14 +203,14 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
       </div>
 
       {/* Navigation */}
-      <div className="flex gap-3 pt-2">
-        <Button variant="outline" onClick={onBack} className="flex-1 h-12 rounded-full">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+        <Button variant="outline" onClick={onBack} className="w-full sm:flex-1 h-12 rounded-full">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
         </Button>
         <Button
           onClick={onNext}
           disabled={!isValid}
-          className="flex-1 h-12 rounded-full shadow-sm hover:shadow-md transition-shadow"
+          className="w-full sm:flex-1 h-12 rounded-full shadow-sm hover:shadow-md transition-shadow"
         >
           Próximo <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
@@ -220,7 +222,7 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
 /* ---------- subcomponents ---------- */
 
 function PhaseGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{children}</div>;
+  return <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">{children}</div>;
 }
 
 function SelectionCard({

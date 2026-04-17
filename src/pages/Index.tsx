@@ -55,13 +55,13 @@ const Index = () => {
   const hasContact = settings.phone || settings.email;
 
   return (
-    <div className="min-h-screen bg-background antialiased">
+    <div className="min-h-screen bg-background antialiased overflow-x-hidden">
       {/* Configurable Header — Apple-like minimal */}
       <header
         className={`border-b border-black/5 backdrop-blur-xl bg-background/80 ${settings.header_fixed === "true" ? "sticky top-0 z-50" : ""}`}
         style={{ backgroundColor: settings.header_bg_color || undefined, color: settings.header_text_color || undefined }}
       >
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {settings.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-8 max-w-[140px] object-contain" />

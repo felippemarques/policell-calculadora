@@ -61,8 +61,8 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
 
   return (
     <section style={{ backgroundColor: section.bg_color, color: section.text_color }}>
-      <div className="max-w-6xl mx-auto px-4 py-16">
-        <div className="text-center mb-12">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+        <div className="text-center mb-8 md:mb-12">
           <h2 className="text-2xl md:text-3xl font-bold">{section.title || "O que nossos clientes dizem"}</h2>
         </div>
 
@@ -71,14 +71,14 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
             <>
               <button
                 onClick={prev}
-                className="absolute -left-2 md:-left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                className="absolute left-0 md:-left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
                 style={{ color: section.text_color }}
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={next}
-                className="absolute -right-2 md:-right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                className="absolute right-0 md:-right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
                 style={{ color: section.text_color }}
               >
                 <ChevronRight className="h-5 w-5" />
@@ -86,11 +86,11 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
             </>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5 px-2 md:px-4">
             {visibleItems.map((t: any, i: number) => (
               <div
                 key={`${currentIndex}-${i}`}
-                className="rounded-xl border bg-background/50 backdrop-blur-sm p-6 flex flex-col justify-between space-y-3 transition-all duration-300"
+                className="rounded-xl border bg-background/50 backdrop-blur-sm p-5 md:p-6 flex flex-col justify-between space-y-3 transition-all duration-300"
               >
                 <div>
                   {/* 5 estrelas douradas */}

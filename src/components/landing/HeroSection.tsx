@@ -7,22 +7,24 @@ interface HeroSectionProps {
   section: any;
 }
 
+// Mobile-first: small screens are always centered (vert. + horiz.) for legibility.
+// On md+ we honor the admin's choice from the layout JSON.
 const vAlignClass = {
-  top: "items-start",
-  center: "items-center",
-  bottom: "items-end",
+  top: "md:items-start",
+  center: "md:items-center",
+  bottom: "md:items-end",
 } as const;
 
 const hAlignClass = {
-  left: "justify-start",
-  center: "justify-center",
-  right: "justify-end",
+  left: "md:justify-start",
+  center: "md:justify-center",
+  right: "md:justify-end",
 } as const;
 
 const textAlignClass = {
-  left: "text-left",
-  center: "text-center",
-  right: "text-right",
+  left: "md:text-left md:items-start",
+  center: "md:text-center md:items-center",
+  right: "md:text-right md:items-end",
 } as const;
 
 const HeroSection = ({ section }: HeroSectionProps) => {
@@ -41,7 +43,7 @@ const HeroSection = ({ section }: HeroSectionProps) => {
   const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
   return (
-    <section className="relative overflow-hidden min-h-[600px] flex bg-background">
+    <section className="relative overflow-x-hidden min-h-[500px] md:min-h-[600px] flex bg-background">
       {section.image_url ? (
         <div
           className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"
@@ -57,29 +59,30 @@ const HeroSection = ({ section }: HeroSectionProps) => {
 
       <div
         className={cn(
-          "relative w-full flex px-6 py-28 md:py-40",
-          vAlignClass[vAlign] || "items-center",
-          hAlignClass[hAlign] || "justify-center",
+          "relative w-full flex px-4 md:px-6 py-16 md:py-40",
+          // Mobile defaults: centered
+          "items-center justify-center",
+          vAlignClass[vAlign],
+          hAlignClass[hAlign],
         )}
         style={{ color: section.text_color || undefined }}
       >
         <div
           className={cn(
-            "w-full max-w-2xl flex flex-col gap-6",
-            textAlignClass[textAlign] || "text-center",
-            textAlign === "center" && "items-center",
-            textAlign === "left" && "items-start",
-            textAlign === "right" && "items-end",
+            "w-full max-w-2xl flex flex-col gap-5 md:gap-6",
+            // Mobile defaults: centered
+            "text-center items-center",
+            textAlignClass[textAlign],
           )}
         >
           {section.title && (
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.1] tracking-tight">
               {section.title}
             </h1>
           )}
 
           {section.content && (
-            <p className="text-lg md:text-xl opacity-70 font-normal leading-relaxed">
+            <p className="text-base md:text-xl opacity-70 font-normal leading-relaxed">
               {section.content}
             </p>
           )}

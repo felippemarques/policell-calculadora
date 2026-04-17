@@ -33,7 +33,10 @@ type DamageCategory = {
   is_required: boolean;
   parent_id: string | null;
   display_order: number;
+  brand_ids: string[];
 };
+
+type Brand = { id: string; name: string };
 
 const BUCKET = "lp-images";
 const STORAGE_FOLDER = "damage-categories";
@@ -49,6 +52,7 @@ export function DefectsTab() {
     help_text: "",
     help_image_url: "",
     is_required: true,
+    brand_ids: [] as string[],
   });
   const [showNewCatForParent, setShowNewCatForParent] = useState<string | "__root__" | null>(null);
   const [newCat, setNewCat] = useState({
@@ -56,6 +60,7 @@ export function DefectsTab() {
     help_text: "",
     help_image_url: "",
     is_required: true,
+    brand_ids: [] as string[],
   });
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 

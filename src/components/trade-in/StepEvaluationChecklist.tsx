@@ -403,79 +403,96 @@ export function StepEvaluationChecklist({
               </p>
             )}
 
-            {damageCategories.map((cat) => {
-              const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
-              const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
-              if (opts.length === 0) return null;
-              const isMissing = missingIds.has(cat.id);
-              const isRequired = cat.is_required !== false;
-              return (
-                <div
-                  key={cat.id}
-                  ref={(el) => {
-                    cardRefs.current[cat.id] = el;
-                  }}
-                  className={`rounded-3xl border bg-card p-5 md:p-6 shadow-sm transition-all ${
-                    isMissing
-                      ? "border-destructive ring-2 ring-destructive/40 bg-destructive/5"
-                      : "border-black/5"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h4 className="text-base font-semibold text-foreground flex items-center gap-2">
-                      {cat.name}
-                      {isRequired && (
-                        <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
-                          *
+            {(() => {
+              const renderCategory = (cat: DamageCategory, depth: number): JSX.Element | null => {
+                const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
+                const subs = subcategoriesByParent[cat.id] || [];
+                if (opts.length === 0 && subs.length === 0) return null;
+
+                const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
+                const isMissing = missingIds.has(cat.id);
+                const isRequired = cat.is_required !== false;
+                const hasMedia = !!(cat.help_image_url || (cat.help_text && cat.help_text.trim()));
+
+                return (
+                  <div
+                    key={cat.id}
+                    ref={(el) => {
+                      cardRefs.current[cat.id] = el;
+                    }}
+                    style={depth > 0 ? { marginLeft: `${Math.min(depth, 2) * 12}px` } : undefined}
+                    className={`rounded-3xl border p-5 md:p-6 shadow-sm transition-all ${
+                      depth > 0 ? "bg-muted/30 border-dashed" : "bg-card border-black/5"
+                    } ${
+                      isMissing
+                        ? "!border-destructive ring-2 ring-destructive/40 !bg-destructive/5"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h4 className="text-base font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                        {depth > 0 && (
+                          <span className="text-xs font-medium text-primary uppercase tracking-wider">
+                            ↳ Sub-pergunta
+                          </span>
+                        )}
+                        <span>{cat.name}</span>
+                        {isRequired && opts.length > 0 && (
+                          <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
+                            *
+                          </span>
+                        )}
+                        {hasMedia && <HelpExampleButton category={cat} />}
+                      </h4>
+                      {isMissing && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive whitespace-nowrap">
+                          Obrigatório
                         </span>
                       )}
-                      <HelpIcon text={cat.help_text} />
-                    </h4>
-                    {isMissing && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive">
-                        Obrigatório
-                      </span>
+                    </div>
+
+                    {opts.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {opts.map((opt) => {
+                          const isSelected = selectedId === opt.id;
+                          return (
+                            <OptionCard
+                              key={opt.id}
+                              selected={isSelected}
+                              onClick={() => {
+                                if (isMissing) {
+                                  const next = new Set(missingIds);
+                                  next.delete(cat.id);
+                                  setMissingIds(next);
+                                }
+                                selectDamageOption(cat.id, opt.id);
+                              }}
+                              label={opt.option_name}
+                              isReject={opt.is_rejected}
+                              badge={
+                                opt.is_rejected
+                                  ? "Inviabiliza"
+                                  : Number(opt.deduction_value) > 0
+                                    ? `−${formatBRL(Number(opt.deduction_value))}`
+                                    : "Sem dedução"
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {subs.length > 0 && (
+                      <div className="mt-4 space-y-3">
+                        {subs.map((sub) => renderCategory(sub, depth + 1))}
+                      </div>
                     )}
                   </div>
-                  {cat.help_image_url && (
-                    <img
-                      src={cat.help_image_url}
-                      alt={cat.name}
-                      loading="lazy"
-                      className="mb-3 max-h-44 w-full sm:w-auto rounded-2xl border border-black/5 bg-muted/20 object-contain"
-                    />
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {opts.map((opt) => {
-                      const isSelected = selectedId === opt.id;
-                      return (
-                        <OptionCard
-                          key={opt.id}
-                          selected={isSelected}
-                          onClick={() => {
-                            if (isMissing) {
-                              const next = new Set(missingIds);
-                              next.delete(cat.id);
-                              setMissingIds(next);
-                            }
-                            selectDamageOption(cat.id, opt.id);
-                          }}
-                          label={opt.option_name}
-                          isReject={opt.is_rejected}
-                          badge={
-                            opt.is_rejected
-                              ? "Inviabiliza"
-                              : Number(opt.deduction_value) > 0
-                                ? `−${formatBRL(Number(opt.deduction_value))}`
-                                : "Sem dedução"
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              };
+
+              return rootCategories.map((cat) => renderCategory(cat, 0));
+            })()}
           </div>
         )}
 

@@ -144,23 +144,29 @@ export type Database = {
       }
       colors: {
         Row: {
+          brand_ids: string[]
           created_at: string
           display_order: number
           format_rule: string
+          hex_code: string | null
           id: string
           name: string
         }
         Insert: {
+          brand_ids?: string[]
           created_at?: string
           display_order?: number
           format_rule?: string
+          hex_code?: string | null
           id?: string
           name: string
         }
         Update: {
+          brand_ids?: string[]
           created_at?: string
           display_order?: number
           format_rule?: string
+          hex_code?: string | null
           id?: string
           name?: string
         }

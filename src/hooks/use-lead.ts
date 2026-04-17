@@ -14,20 +14,15 @@ export function useLead() {
   const createLead = useCallback(async (input: LeadInput): Promise<string | null> => {
     setCreating(true);
     try {
-      const { data, error } = await supabase
-        .from("leads")
-        .insert({
-          customer_name: input.customer_name,
-          customer_email: input.customer_email,
-          customer_phone: input.customer_phone,
-          assessment_responses: {},
-          status: "in_progress",
-        })
-        .select("id")
-        .single();
+      const { data, error } = await supabase.rpc("create_lead", {
+        _name: input.customer_name,
+        _email: input.customer_email,
+        _phone: input.customer_phone,
+      });
       if (error) throw error;
-      setLeadId(data.id);
-      return data.id;
+      const newId = data as unknown as string;
+      setLeadId(newId);
+      return newId;
     } catch (err) {
       console.error("Failed to create lead:", err);
       return null;
@@ -63,28 +58,30 @@ export function useLead() {
    * Either reuse an existing lead matching the email (and patch with new
    * name/phone) or insert a fresh one. Returns the lead id either way.
    */
+  /**
+   * Either reuse an existing lead matching the email (and patch with new
+   * name/phone) or insert a fresh one. Returns the lead id either way.
+   * Uses a SECURITY DEFINER RPC so anonymous visitors don't need SELECT
+   * access to the leads table.
+   */
   const upsertLeadByEmail = useCallback(
     async (input: LeadInput): Promise<string | null> => {
-      const existing = await findLeadByEmail(input.customer_email);
-      if (existing) {
-        try {
-          const { error } = await (supabase.from("leads") as any)
-            .update({
-              customer_name: input.customer_name || undefined,
-              customer_phone: input.customer_phone || undefined,
-              status: "in_progress",
-            })
-            .eq("id", existing);
-          if (error) throw error;
-        } catch (err) {
-          console.error("Failed to refresh existing lead:", err);
-        }
-        setLeadId(existing);
-        return existing;
+      try {
+        const { data, error } = await supabase.rpc("upsert_lead_by_email", {
+          _name: input.customer_name,
+          _email: input.customer_email,
+          _phone: input.customer_phone,
+        });
+        if (error) throw error;
+        const id = data as unknown as string;
+        setLeadId(id);
+        return id;
+      } catch (err) {
+        console.error("Failed to upsert lead by email:", err);
+        return null;
       }
-      return createLead(input);
     },
-    [findLeadByEmail, createLead],
+    [],
   );
 
   const updateLead = useCallback(

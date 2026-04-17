@@ -3,6 +3,7 @@ import { DevicesTab } from "@/components/admin/catalog/DevicesTab";
 import { DefectsTab } from "@/components/admin/catalog/DefectsTab";
 import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
 import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
+import { ColorsTab } from "@/components/admin/catalog/ColorsTab";
 
 const AdminCatalog = () => (
   <div className="p-6 space-y-6">
@@ -30,7 +31,7 @@ const AdminCatalog = () => (
         <AuxCrudTab table="storages" label="Armazenamento" fieldName="capacity" fieldLabel="Capacidade" defaultFormatRule="uppercase" />
       </TabsContent>
       <TabsContent value="colors" className="mt-4">
-        <AuxCrudTab table="colors" label="Cores" fieldName="name" fieldLabel="Nome da Cor" defaultFormatRule="capitalize" />
+        <ColorsTab />
       </TabsContent>
       <TabsContent value="defects" className="mt-4"><DefectsTab /></TabsContent>
     </Tabs>

@@ -159,10 +159,57 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
+  const requiredDamageCategories = useMemo(
+    () => damageCategories.filter((c) => c.is_required !== false),
+    [damageCategories],
+  );
   const conditionAnswered = !!answers.conditionId;
-  const allDamageCategoriesAnswered = damageCategories.every(
+  const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(
     (c) => !!answers.damageOptionByCategory[c.id],
   );
+
+  const scrollToFirstMissing = (ids: string[]) => {
+    const first = ids[0];
+    if (!first) return;
+    const el = cardRefs.current[first];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  const handleNextClick = () => {
+    if (subScreen === "condition") {
+      const requireCondition =
+        normalConditions.length > 0 && normalConditions.some((c) => c.is_required !== false);
+      if (requireCondition && !conditionAnswered) {
+        setMissingIds(new Set(["__condition__"]));
+        toast.error("Selecione a condição geral do aparelho para continuar.");
+        scrollToFirstMissing(["__condition__"]);
+        return;
+      }
+      setMissingIds(new Set());
+      setSubScreen("damages");
+      return;
+    }
+    if (subScreen === "damages") {
+      const missing = requiredDamageCategories
+        .filter((c) => !answers.damageOptionByCategory[c.id])
+        .map((c) => c.id);
+      if (missing.length > 0) {
+        setMissingIds(new Set(missing));
+        toast.error(
+          missing.length === 1
+            ? "Falta responder uma categoria obrigatória."
+            : `Faltam ${missing.length} categorias obrigatórias.`,
+        );
+        scrollToFirstMissing(missing);
+        return;
+      }
+      setMissingIds(new Set());
+      setSubScreen("rejection");
+    }
+  };
+
 
   // Clear rejection on revisar
   const handleClearRejection = () => {
@@ -245,31 +292,56 @@ export function StepEvaluationChecklist({
               <p className="text-xs font-semibold text-primary uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3" /> Estado Geral
               </p>
-              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
+              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2 flex items-center gap-2">
                 Como está a condição geral do aparelho?
+                <ConditionsHelp conditions={normalConditions} />
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Selecione a opção que melhor descreve o estado do seu aparelho.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {normalConditions.map((cond) => {
-                const isSelected = answers.conditionId === cond.id;
-                return (
-                  <OptionCard
-                    key={cond.id}
-                    selected={isSelected}
-                    onClick={() => selectCondition(cond.id)}
-                    label={cond.condition_name}
-                    badge={
-                      cond.discount_percentage > 0
-                        ? `−${cond.discount_percentage}%`
-                        : "Sem desconto"
-                    }
-                  />
-                );
-              })}
+            <div
+              ref={(el) => {
+                cardRefs.current["__condition__"] = el;
+              }}
+              className={`rounded-3xl p-1 transition-all ${
+                missingIds.has("__condition__")
+                  ? "ring-2 ring-destructive bg-destructive/5"
+                  : ""
+              }`}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
+                {normalConditions.map((cond) => {
+                  const isSelected = answers.conditionId === cond.id;
+                  return (
+                    <OptionCard
+                      key={cond.id}
+                      selected={isSelected}
+                      onClick={() => {
+                        if (missingIds.has("__condition__")) {
+                          const next = new Set(missingIds);
+                          next.delete("__condition__");
+                          setMissingIds(next);
+                        }
+                        selectCondition(cond.id);
+                      }}
+                      label={cond.condition_name}
+                      help={cond.help_text}
+                      badge={
+                        cond.discount_percentage > 0
+                          ? `−${cond.discount_percentage}%`
+                          : "Sem desconto"
+                      }
+                    />
+                  );
+                })}
+              </div>
+              {missingIds.has("__condition__") && (
+                <p className="text-xs text-destructive font-medium px-3 pb-2 pt-1">
+                  Selecione uma opção para continuar.
+                </p>
+              )}
             </div>
             {normalConditions.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-6">

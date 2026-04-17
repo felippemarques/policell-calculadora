@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Smartphone,
@@ -94,10 +95,18 @@ const STEPS: TourStep[] = [
 
 export function AdminTour() {
   const navigate = useNavigate();
-  const { needsTour, currentStep, setStep, complete, loading } =
+  const { needsTour, currentStep, setStep, complete, skip, loading } =
     useAdminOnboarding();
+  const [dismissed, setDismissed] = useState(false);
 
-  if (loading || !needsTour) return null;
+  // Reabre o tour automaticamente quando outro componente disparar restart
+  useEffect(() => {
+    const handler = () => setDismissed(false);
+    window.addEventListener("admin-onboarding:restart", handler);
+    return () => window.removeEventListener("admin-onboarding:restart", handler);
+  }, []);
+
+  if (loading || !needsTour || dismissed) return null;
 
   const stepIndex = Math.min(Math.max(currentStep - 1, 0), STEPS.length - 1);
   const step = STEPS[stepIndex];
@@ -129,8 +138,14 @@ export function AdminTour() {
     }
   };
 
-  const handleFinish = async () => {
-    await complete();
+  // X → apenas fecha nesta sessão; volta a aparecer na próxima visita
+  const handleClose = () => {
+    setDismissed(true);
+  };
+
+  // "Não quero ver mais" → marca como skipped permanentemente
+  const handleNeverShow = async () => {
+    await skip();
   };
 
   return (
@@ -144,13 +159,13 @@ export function AdminTour() {
         <div
           className={`relative bg-gradient-to-br ${step.accent} px-7 sm:px-9 pt-7 pb-16`}
         >
-          {/* skip button */}
+          {/* close button (apenas oculta nesta sessão) */}
           <button
             type="button"
-            onClick={handleFinish}
+            onClick={handleClose}
             className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white/90 hover:text-white transition-colors backdrop-blur-sm"
-            aria-label="Pular tour"
-            title="Pular tour"
+            aria-label="Fechar tour"
+            title="Fechar (volta a aparecer depois)"
           >
             <X className="h-4 w-4" />
           </button>
@@ -220,44 +235,56 @@ export function AdminTour() {
         </div>
 
         {/* ── Footer com ações ── */}
-        <div className="border-t border-border/60 bg-muted/30 px-7 sm:px-9 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            disabled={isFirst}
-            className="sm:w-auto w-full text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Voltar
-          </Button>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            {!isLast && (
-              <Button
-                variant="outline"
-                onClick={handleNext}
-                className="sm:w-auto w-full"
-              >
-                Próximo
-                <ArrowRight className="h-4 w-4 ml-1.5" />
-              </Button>
-            )}
+        <div className="border-t border-border/60 bg-muted/30 px-7 sm:px-9 py-4 space-y-3">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <Button
-              onClick={handleGo}
-              className="sm:w-auto w-full shadow-md hover:shadow-lg transition-shadow"
+              variant="ghost"
+              onClick={handleBack}
+              disabled={isFirst}
+              className="sm:w-auto w-full text-muted-foreground hover:text-foreground"
             >
-              {isLast ? (
-                <>
-                  {step.cta}
-                  <PartyPopper className="h-4 w-4 ml-1.5" />
-                </>
-              ) : (
-                <>
-                  {step.cta}
-                  <ArrowRight className="h-4 w-4 ml-1.5" />
-                </>
-              )}
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Voltar
             </Button>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              {!isLast && (
+                <Button
+                  variant="outline"
+                  onClick={handleNext}
+                  className="sm:w-auto w-full"
+                >
+                  Próximo
+                  <ArrowRight className="h-4 w-4 ml-1.5" />
+                </Button>
+              )}
+              <Button
+                onClick={handleGo}
+                className="sm:w-auto w-full shadow-md hover:shadow-lg transition-shadow"
+              >
+                {isLast ? (
+                  <>
+                    {step.cta}
+                    <PartyPopper className="h-4 w-4 ml-1.5" />
+                  </>
+                ) : (
+                  <>
+                    {step.cta}
+                    <ArrowRight className="h-4 w-4 ml-1.5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleNeverShow}
+              className="text-xs text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+            >
+              Não quero ver o tour novamente
+            </button>
           </div>
         </div>
       </DialogContent>

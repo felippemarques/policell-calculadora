@@ -104,13 +104,6 @@ export function useAdminOnboarding() {
 
   const restart = useCallback(async () => {
     if (!user) return;
-    setState((s) => ({
-      ...s,
-      needsTour: true,
-      completed: false,
-      skipped: false,
-      currentStep: 1,
-    }));
     await supabase
       .from("admin_onboarding")
       .update({
@@ -120,7 +113,22 @@ export function useAdminOnboarding() {
         completed_at: null,
       })
       .eq("user_id", user.id);
+    // Notifica todas as instâncias do hook para recarregarem
+    window.dispatchEvent(new CustomEvent("admin-onboarding:restart"));
+    setState({
+      loading: false,
+      needsTour: true,
+      completed: false,
+      skipped: false,
+      currentStep: 1,
+    });
   }, [user]);
+
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener("admin-onboarding:restart", handler);
+    return () => window.removeEventListener("admin-onboarding:restart", handler);
+  }, [load]);
 
   return { ...state, setStep, complete, skip, restart, reload: load };
 }

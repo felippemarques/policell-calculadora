@@ -17,6 +17,7 @@ import AdminCatalog from "./pages/admin/AdminCatalog";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminEvaluations from "./pages/admin/AdminEvaluations";
 import AdminHeader from "./pages/admin/AdminHeader";
+import AdminUsers from "./pages/admin/AdminUsers";
 import { RequireAdmin } from "./components/admin/RequireAdmin";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="clientes" element={<AdminCustomers />} />
               <Route path="avaliacoes" element={<AdminEvaluations />} />
               <Route path="header" element={<AdminHeader />} />
+              <Route path="administradores" element={<AdminUsers />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

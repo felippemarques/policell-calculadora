@@ -415,6 +415,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           layout: string
+          link_url: string | null
           section_type: string
           text_color: string | null
           title: string | null
@@ -434,6 +435,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           layout?: string
+          link_url?: string | null
           section_type?: string
           text_color?: string | null
           title?: string | null
@@ -453,6 +455,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           layout?: string
+          link_url?: string | null
           section_type?: string
           text_color?: string | null
           title?: string | null

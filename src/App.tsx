@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Calculadora from "./pages/Calculadora";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSections from "./pages/admin/AdminSections";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/calculadora" element={<Calculadora />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/redefinir-senha" element={<AdminResetPassword />} />
             <Route
               path="/admin"
               element={

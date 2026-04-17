@@ -255,3 +255,86 @@ A API externa valida com a mesma `secret` (compartilhada via env var).
 - **Validar** = decodificar Base64URL → split `.` → recomputar FNV-1a → comparar `hash6` → conferir `cents` contra `final_value` no banco
 - **Hash atual** = FNV-1a (suficiente para anti-adulteração casual; para autenticação real usar HMAC-SHA256 em edge function)
 - **Lookup no banco**: `SELECT * FROM evaluations WHERE coupon_code = $1`
+
+---
+
+## 8. Dashboard Metrics API (para ERP externo)
+
+Endpoint REST que retorna **todas** as métricas do funil de Trade-in em uma única
+chamada. Usado pelo painel admin (via JWT) **e** por integrações externas (via `x-api-key`).
+
+### 8.1. URL
+
+```
+GET https://<PROJECT_REF>.supabase.co/functions/v1/get-dashboard-metrics
+```
+
+### 8.2. Autenticação (uma das duas)
+
+| Modo               | Header                                      | Quando usar                       |
+|--------------------|---------------------------------------------|-----------------------------------|
+| API key (ERP)      | `x-api-key: <DASHBOARD_API_KEY>`            | Integrações server-to-server      |
+| JWT + role admin   | `Authorization: Bearer <supabase_jwt>`      | Frontend admin (já é o padrão)    |
+
+A `DASHBOARD_API_KEY` é um secret guardado no Supabase. Compartilhe **apenas
+server-side** com o ERP — nunca exponha em frontend.
+
+### 8.3. Query params (todos opcionais)
+
+| Param      | Tipo       | Descrição                                          |
+|------------|------------|----------------------------------------------------|
+| `from`     | ISO date   | Lower bound em `created_at` (inclusive)            |
+| `to`       | ISO date   | Upper bound em `created_at` (inclusive)            |
+| `brand_id` | uuid       | Filtra dispositivos por `brands.id`                |
+
+### 8.4. Response (JSON)
+
+```json
+{
+  "range": { "from": "2025-01-01T00:00:00Z", "to": null, "brand_id": null },
+  "totals": {
+    "leads": 120,            // só preencheu contato
+    "incomplete": 45,        // escolheu device, abandonou antes do cupom
+    "rejected": 12,          // hard stop por defeito crítico
+    "completed": 38,         // cupom emitido
+    "total": 215,
+    "abandonment_rate": 0.7674,  // (leads + incomplete) / total
+    "total_value_brl": 48200.50  // soma de evaluations.final_value
+  },
+  "top_devices": [
+    {
+      "device_id": "8f3c...",
+      "model": "iPhone 13",
+      "brand": "Apple",
+      "count": 12,
+      "total_value": 18420.00
+    }
+  ]
+}
+```
+
+### 8.5. Códigos HTTP
+
+| Status | Significado                                     |
+|--------|-------------------------------------------------|
+| 200    | OK                                              |
+| 401    | Sem `x-api-key` válido nem JWT de admin         |
+| 500    | Erro de banco — body traz `{ error: "..." }`    |
+
+### 8.6. Exemplo `curl`
+
+```bash
+curl -s "https://<PROJECT_REF>.supabase.co/functions/v1/get-dashboard-metrics?from=2025-01-01&brand_id=<uuid>" \
+  -H "x-api-key: $DASHBOARD_API_KEY"
+```
+
+### 8.7. Onde está o código
+
+- Edge function: [`supabase/functions/get-dashboard-metrics/index.ts`](../supabase/functions/get-dashboard-metrics/index.ts)
+- Hook React (frontend): [`src/hooks/use-dashboard-metrics.ts`](../src/hooks/use-dashboard-metrics.ts)
+- Classificação do funil: a função usa diretamente `leads.status` + `leads.device_id`
+  (sem nova tabela). Os estados são:
+  - `in_progress` AND `device_id IS NULL` → **lead** (só contato)
+  - `in_progress` AND `device_id IS NOT NULL` → **incomplete** (escolheu device)
+  - `rejected` → **rejected**
+  - `completed` ou `conversa_iniciada` → **completed**

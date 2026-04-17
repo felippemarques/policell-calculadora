@@ -41,6 +41,10 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const bgPosX = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
   const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
+  const rawLink: string | undefined = section.link_url?.trim() || undefined;
+  const isExternalLink = !!rawLink && /^https?:\/\//i.test(rawLink);
+  const isClickable = !!rawLink && !previewMode;
+
   return (
     <section
       className={cn(
@@ -48,6 +52,23 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
         previewMode ? "h-full min-h-0" : "min-h-[500px] md:min-h-[600px]",
       )}
     >
+      {isClickable && (
+        isExternalLink ? (
+          <a
+            href={rawLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={section.title || "Abrir link do banner"}
+            className="absolute inset-0 z-10"
+          />
+        ) : (
+          <Link
+            to={rawLink!}
+            aria-label={section.title || "Abrir link do banner"}
+            className="absolute inset-0 z-10"
+          />
+        )
+      )}
       {section.image_url ? (
         <div
           className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"
@@ -64,7 +85,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
 
       <div
         className={cn(
-          "relative flex w-full px-4 md:px-6",
+          "relative z-20 flex w-full px-4 md:px-6 pointer-events-none",
           previewMode ? "h-full py-6 md:py-8" : "py-16 md:py-40",
           vAlignClass[vAlign],
           hAlignClass[hAlign],
@@ -73,7 +94,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
       >
         <div
           className={cn(
-            "flex w-full max-w-2xl flex-col gap-4 md:gap-6",
+            "pointer-events-auto flex w-full max-w-2xl flex-col gap-4 md:gap-6",
             textAlignClass[textAlign],
           )}
         >

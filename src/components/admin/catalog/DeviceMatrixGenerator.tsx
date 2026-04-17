@@ -210,6 +210,10 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
 
   const activeRows = rows.filter((r) => r.active);
 
+  // Track how many rows were skipped on the last save (already existed in DB)
+  const [lastSkipped, setLastSkipped] = useState(0);
+  const [lastInserted, setLastInserted] = useState(0);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (isEditMode) {
@@ -247,9 +251,48 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           if (error) throw error;
         }
       } else {
-        // Create mode - simple insert
+        // Create mode — dedupe locally + skip combinations already in DB
         if (activeRows.length === 0) throw new Error("Nenhuma linha ativa para salvar.");
-        const inserts = activeRows.map((r) => ({
+
+        const norm = (s: string) => s.trim().toLowerCase();
+        const keyOf = (r: { brand: string; model: string; storage: string; color: string }) =>
+          `${norm(r.brand)}|${norm(r.model)}|${norm(r.storage)}|${norm(r.color)}`;
+
+        // 1. Dedupe within the lot (keeps first occurrence)
+        const seen = new Set<string>();
+        const uniqueRows = activeRows.filter((r) => {
+          const k = keyOf(r);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+
+        // 2. Check what's already in the DB for this brand+model
+        const { data: existing, error: fetchErr } = await supabase
+          .from("devices")
+          .select("brand, model, storage, colors")
+          .eq("brand", brandName)
+          .eq("model", modelName);
+        if (fetchErr) throw fetchErr;
+
+        const existingKeys = new Set(
+          (existing ?? []).map((d) =>
+            keyOf({ brand: d.brand, model: d.model, storage: d.storage, color: d.colors ?? "" }),
+          ),
+        );
+
+        const toCreate = uniqueRows.filter((r) => !existingKeys.has(keyOf(r)));
+        const skipped = uniqueRows.length - toCreate.length;
+
+        setLastSkipped(skipped);
+        setLastInserted(toCreate.length);
+
+        if (toCreate.length === 0) {
+          // Nothing new to insert — that's fine, just inform.
+          return;
+        }
+
+        const inserts = toCreate.map((r) => ({
           brand: r.brand,
           model: r.model,
           storage: r.storage,
@@ -272,11 +315,26 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
         if (toDelete > 0) parts.push(`${toDelete} removido(s)`);
         toast.success(parts.join(", ") || "Salvo!");
       } else {
-        toast.success(`${activeRows.length} aparelho(s) criado(s) com sucesso!`);
+        const parts: string[] = [];
+        if (lastInserted > 0) parts.push(`${lastInserted} criado(s)`);
+        if (lastSkipped > 0) parts.push(`${lastSkipped} já existia(m)`);
+        if (lastInserted === 0 && lastSkipped > 0) {
+          toast.info(`Nenhuma novidade — todas as ${lastSkipped} combinações já estavam cadastradas.`);
+        } else {
+          toast.success(parts.join(", ") || "Salvo!");
+        }
       }
       onClose();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      // Friendly message for residual unique-constraint races
+      const msg = String(e?.message || "");
+      if (msg.includes("duplicate key") || msg.includes("unique constraint")) {
+        toast.error("Algumas combinações já existem no catálogo. Recarregue e tente novamente.");
+      } else {
+        toast.error(msg || "Erro ao salvar.");
+      }
+    },
   });
 
   const canGenerate = selectedBrand && selectedModel && selectedStorages.length > 0 && selectedColors.length > 0;

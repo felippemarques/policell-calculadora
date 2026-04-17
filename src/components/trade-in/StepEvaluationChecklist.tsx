@@ -704,6 +704,53 @@ function HelpIcon({ text }: { text?: string | null }) {
   );
 }
 
+// ── "Ver Exemplo" button → opens dialog with help image + text ──
+function HelpExampleButton({ category }: { category: DamageCategory }) {
+  const [open, setOpen] = useState(false);
+  const hasImage = !!category.help_image_url;
+  const hasText = !!(category.help_text && category.help_text.trim());
+  if (!hasImage && !hasText) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+        aria-label="Ver exemplo"
+      >
+        {hasImage ? <ImageIcon className="h-3 w-3" /> : <Info className="h-3 w-3" />}
+        Ver exemplo
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-3xl max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg tracking-tight">{category.name}</DialogTitle>
+            {hasText && (
+              <DialogDescription className="text-sm text-muted-foreground pt-1 whitespace-pre-line">
+                {category.help_text}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {hasImage && (
+            <div className="rounded-2xl overflow-hidden border border-black/5 bg-muted/20">
+              <img
+                src={category.help_image_url!}
+                alt={`Exemplo: ${category.name}`}
+                loading="lazy"
+                className="w-full h-auto max-h-[60vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // Aggregates help text from all conditions into a single tooltip on the screen heading
 function ConditionsHelp({ conditions }: { conditions: ConditionRow[] }) {
   const withHelp = conditions.filter((c) => c.help_text && c.help_text.trim());

@@ -5,29 +5,28 @@ import { cn } from "@/lib/utils";
 
 interface HeroSectionProps {
   section: any;
+  previewMode?: boolean;
 }
 
-// Mobile-first: small screens are always centered (vert. + horiz.) for legibility.
-// On md+ we honor the admin's choice from the layout JSON.
 const vAlignClass = {
-  top: "md:items-start",
-  center: "md:items-center",
-  bottom: "md:items-end",
+  top: "items-start",
+  center: "items-center",
+  bottom: "items-end",
 } as const;
 
 const hAlignClass = {
-  left: "md:justify-start",
-  center: "md:justify-center",
-  right: "md:justify-end",
+  left: "justify-start",
+  center: "justify-center",
+  right: "justify-end",
 } as const;
 
 const textAlignClass = {
-  left: "md:text-left md:items-start",
-  center: "md:text-center md:items-center",
-  right: "md:text-right md:items-end",
+  left: "text-left items-start",
+  center: "text-center items-center",
+  right: "text-right items-end",
 } as const;
 
-const HeroSection = ({ section }: HeroSectionProps) => {
+const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const layoutData = (() => {
     try {
       return section.layout ? JSON.parse(section.layout) : {};
@@ -43,13 +42,19 @@ const HeroSection = ({ section }: HeroSectionProps) => {
   const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
   return (
-    <section className="relative flex w-full items-center min-h-[500px] md:min-h-[600px] overflow-hidden bg-background bg-cover bg-no-repeat">
+    <section
+      className={cn(
+        "relative flex w-full items-center overflow-hidden bg-background bg-cover bg-no-repeat",
+        previewMode ? "h-full min-h-0" : "min-h-[500px] md:min-h-[600px]",
+      )}
+    >
       {section.image_url ? (
         <div
           className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"
           style={{
             backgroundImage: `url(${section.image_url})`,
             backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+            backgroundSize: "cover",
           }}
           aria-hidden
         />
@@ -59,9 +64,8 @@ const HeroSection = ({ section }: HeroSectionProps) => {
 
       <div
         className={cn(
-          "relative w-full flex px-4 md:px-6 py-16 md:py-40",
-          // Mobile defaults: centered
-          "items-center justify-center",
+          "relative flex w-full px-4 md:px-6",
+          previewMode ? "h-full py-6 md:py-8" : "py-16 md:py-40",
           vAlignClass[vAlign],
           hAlignClass[hAlign],
         )}
@@ -69,20 +73,24 @@ const HeroSection = ({ section }: HeroSectionProps) => {
       >
         <div
           className={cn(
-            "w-full max-w-2xl flex flex-col gap-5 md:gap-6",
-            // Mobile defaults: centered
-            "text-center items-center",
+            "flex w-full max-w-2xl flex-col gap-4 md:gap-6",
             textAlignClass[textAlign],
           )}
         >
           {section.title && (
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.1] tracking-tight">
+            <h1 className={cn(
+              "font-semibold leading-[1.1] tracking-tight",
+              previewMode ? "text-2xl sm:text-3xl md:text-4xl" : "text-3xl md:text-5xl lg:text-6xl xl:text-7xl",
+            )}>
               {section.title}
             </h1>
           )}
 
           {section.content && (
-            <p className="text-base md:text-xl opacity-70 font-normal leading-relaxed">
+            <p className={cn(
+              "font-normal leading-relaxed opacity-70",
+              previewMode ? "text-sm md:text-base" : "text-base md:text-xl",
+            )}>
               {section.content}
             </p>
           )}
@@ -90,7 +98,10 @@ const HeroSection = ({ section }: HeroSectionProps) => {
           {section.cta_text && (
             <Button
               size="lg"
-              className="mt-4 h-12 px-8 text-base rounded-full shadow-sm hover:shadow-md transition-shadow"
+              className={cn(
+                "rounded-full shadow-sm transition-shadow hover:shadow-md",
+                previewMode ? "mt-2 h-10 px-5 text-sm" : "mt-4 h-12 px-8 text-base",
+              )}
               style={{
                 backgroundColor: section.cta_bg_color || undefined,
                 color: section.cta_text_color || undefined,

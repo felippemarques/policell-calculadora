@@ -9,7 +9,10 @@ import {
   ChevronLeft,
   PanelTop,
   ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
+import { AdminTour } from "@/components/admin/AdminTour";
+import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
@@ -23,6 +26,7 @@ const navItems = [
 const AdminLayout = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const { restart } = useAdminOnboarding();
 
   const handleSignOut = async () => {
     await signOut();
@@ -31,6 +35,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <AdminTour />
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-border">
@@ -69,6 +74,13 @@ const AdminLayout = () => {
             <ChevronLeft className="h-4 w-4" />
             Voltar ao Site
           </NavLink>
+          <button
+            onClick={() => restart()}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground transition-colors"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Refazer tour
+          </button>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"

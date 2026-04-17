@@ -1,71 +1,94 @@
 
-## Análise do que já existe
+## Diagnóstico
 
-Confirmado lendo o código:
-- **`useLead.createLead`** já faz INSERT em `leads` no Step 0 (nome/email/telefone) com `status: 'in_progress'`
-- **`updateLead`** já salva `device_id` no Step 1
-- **`updateAssessment`** já faz UPDATE silencioso no JSONB `assessment_responses` a cada resposta + a cada transição de sub-tela
-- **`markRejected`** já marca `status: 'rejected'` + `rejection_reason`
-- **`handleSubmit`** já marca `status: 'completed'` + cria `evaluation` com `coupon_code`
+Ao clicar em **Começar avaliação**, o frontend chama:
 
-Ou seja: a granularidade dos status já existe no banco. Não preciso de RPC complexa nem nova tabela. **Basta ler `leads.status` e fazer LEFT JOIN com `evaluations`** para classificar:
-
-| Status do funil          | Regra                                            |
-|--------------------------|--------------------------------------------------|
-| Lead (só contato)        | `leads.status='in_progress'` AND `device_id IS NULL` |
-| Proposta incompleta      | `leads.status='in_progress'` AND `device_id IS NOT NULL` |
-| Rejeitado (hard stop)    | `leads.status='rejected'`                        |
-| Cliente completo (cupom) | `leads.status='completed'` (tem evaluation+cupom)|
-
-## Plano simplificado (sem complicar)
-
-### 1. Migration mínima
-- Adicionar `brand_id uuid` em `devices` + backfill por nome (mantém `brand` text por compat)
-- Índices em `leads(status, created_at)` e `evaluations(created_at, device_id)`
-- **Nada de RPC.** Queries diretas via supabase-js bastam — RLS já permite admin ler tudo.
-
-### 2. Edge Function única: `get-dashboard-metrics` (REST para ERP)
-Um endpoint só, que recebe `?from=&to=&brand_id=` e retorna tudo:
-```json
-{
-  "totals": {
-    "leads": 120,            // só contato
-    "incomplete": 45,        // device escolhido, sem cupom
-    "rejected": 12,
-    "completed": 38,         // cliente completo
-    "abandonment_rate": 0.55,// (leads+incomplete) / total
-    "total_value_brl": 48200 // soma final_value dos completed
-  },
-  "top_devices": [ { "device_id", "model", "brand", "count", "total_value" } ]
-}
+```ts
+supabase.from("leads").insert({...}).select("id").single()
 ```
-- Auth via header `x-api-key` (novo secret `DASHBOARD_API_KEY`) — para o ERP externo
-- Frontend chama a mesma function via `supabase.functions.invoke` (sem precisar da key, JWT do admin)
 
-### 3. Frontend (mínimo)
-- **`AdminDashboard.tsx`**: 4 cards (Leads / Incompletos / Rejeitados / Completos + valor) + filtros simples (DateRange + Select de marca) + ranking top 5 modelos (lista, sem gráfico pesado)
-- **`AdminCustomers.tsx`**: adicionar filtro por status do funil (chips: Todos / Só contato / Incompleto / Rejeitado / Completo) na listagem que já existe
-- **Export**: 1 botão "Exportar CSV" no Dashboard (sem XLSX, sem dropdown — CSV puro abre em Excel/ERP, zero dependência)
+A migração de segurança recente removeu o `SELECT` público da tabela `leads` (agora só admin pode ler). O `INSERT` funciona, mas o `.select("id").single()` que vem em seguida **retorna 0 linhas pelo RLS**, fazendo `.single()` lançar erro → toast "Não foi possível salvar seus dados".
 
-### 4. Documentação
-Adicionar seção em `docs/coupon-format.md` com o contrato do endpoint `/get-dashboard-metrics` (params, response, exemplo curl com `x-api-key`).
+Mesmo padrão usado em `upsertLeadByEmail` (`findLeadByEmail` faz `SELECT` por email — também bloqueado para anônimos).
 
-## O que **descartei** do plano anterior
-- ❌ 3 edge functions separadas → **1 só**
-- ❌ RPC + Edge wrapper → **só Edge**
-- ❌ XLSX com dynamic import → **só CSV**
-- ❌ Recharts → **lista simples top 5** (já temos `chart.tsx` se quiser depois)
-- ❌ Hooks separados (`use-dashboard-metrics`, `use-top-devices`, `use-leads-list`) → **1 hook só**, `useDashboardMetrics`
-- ❌ Lógica nova de "abandono" → **já é `status='in_progress'`**, sem janela de tempo
+`evaluations` não tem esse problema (só faz `.insert()` puro, sem `.select()`).
+
+## Correção
+
+**1 migration + 0 mudanças em código de UI.**
+
+Adicionar uma policy de RLS que permite ao **autor do INSERT** ler de volta a linha que acabou de criar, sem expor a tabela inteira para anônimos:
+
+```sql
+-- Permite RETURNING após INSERT/UPDATE para o cliente que está
+-- criando/atualizando o lead, mantendo a tabela privada para listagem.
+-- Truque: usar uma policy SELECT que casa pelo id contido no statement
+-- não funciona; em vez disso, devolvemos o id via uma RPC SECURITY DEFINER.
+```
+
+Como o RLS do Postgres não distingue "ler a linha que acabei de inserir" de "ler qualquer linha", a forma correta e segura é trocar o caminho que precisa de retorno por uma **RPC `SECURITY DEFINER`**:
+
+### Passo 1 — migration
+
+Criar duas funções no banco (rodam com privilégios elevados, mas com lógica controlada):
+
+```sql
+create or replace function public.create_lead(
+  _name text, _email text, _phone text
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare new_id uuid;
+begin
+  insert into public.leads (customer_name, customer_email, customer_phone,
+                            assessment_responses, status)
+  values (_name, _email, _phone, '{}'::jsonb, 'in_progress')
+  returning id into new_id;
+  return new_id;
+end $$;
+
+create or replace function public.upsert_lead_by_email(
+  _name text, _email text, _phone text
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare existing_id uuid;
+begin
+  select id into existing_id from public.leads
+   where customer_email = _email
+   order by created_at desc limit 1;
+
+  if existing_id is not null then
+    update public.leads
+       set customer_name = coalesce(nullif(_name,''), customer_name),
+           customer_phone = coalesce(nullif(_phone,''), customer_phone),
+           status = 'in_progress'
+     where id = existing_id;
+    return existing_id;
+  end if;
+
+  return public.create_lead(_name, _email, _phone);
+end $$;
+
+grant execute on function public.create_lead(text,text,text) to anon, authenticated;
+grant execute on function public.upsert_lead_by_email(text,text,text) to anon, authenticated;
+```
+
+Isso preserva a segurança (anônimos continuam **sem SELECT** na tabela) mas permite o fluxo público da calculadora.
+
+### Passo 2 — `src/hooks/use-lead.ts`
+
+- `createLead`: trocar `insert().select().single()` por `supabase.rpc("create_lead", {...})`.
+- `upsertLeadByEmail`: trocar a busca + update/insert por `supabase.rpc("upsert_lead_by_email", {...})` e remover `findLeadByEmail` da lógica pública (mantém o helper só para uso interno autenticado, ou remove).
+- `updateLead` / `updateAssessment` / `markRejected` continuam usando `.update().eq("id", id)` — funciona porque a policy `Anyone can update leads by id` permite UPDATE público, e essas chamadas não fazem `.select()` depois.
+
+### Passo 3 — verificação
+
+`npm run build` para garantir que os types regenerados das RPCs compilam, e teste manual da calculadora anônima.
+
+## Por que não simplesmente reabrir SELECT público
+
+Reabrir `SELECT` em `leads` quebra a auditoria de segurança feita anteriormente: qualquer pessoa conseguiria listar todos os leads (nome, email, telefone). A RPC `SECURITY DEFINER` resolve só o caso específico de "devolver o id recém-criado" sem vazar nada além disso.
 
 ## Arquivos afetados
-- **Novo**: `supabase/functions/get-dashboard-metrics/index.ts`
-- **Novo**: `src/hooks/use-dashboard-metrics.ts`
-- **Novo**: `src/components/admin/dashboard/DashboardFilters.tsx`
-- **Novo**: `src/lib/export-csv.ts` (pequeno helper)
-- **Refatorado**: `src/pages/admin/AdminDashboard.tsx`
-- **Refatorado**: `src/pages/admin/AdminCustomers.tsx` (adiciona filtro status)
-- **Migration**: add `brand_id` em devices + índices
-- **Atualizado**: `docs/coupon-format.md` (seção API métricas)
 
-Resultado: 1 endpoint REST limpo pro ERP, dashboard funcional, e nada de over-engineering. Quer que eu execute?
+- **novo**: `supabase/migrations/<timestamp>_lead_rpcs.sql`
+- **editado**: `src/hooks/use-lead.ts`

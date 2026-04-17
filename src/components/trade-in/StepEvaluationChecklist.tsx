@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,9 +12,17 @@ import {
   Wrench,
   ShieldAlert,
   Check,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +77,11 @@ export function StepEvaluationChecklist({
     title: string;
     label: string;
   }>({ open: false, title: "", label: "" });
+
+  // Validation: which required ids (condition or damage category) are missing
+  const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
+  // Refs to scroll to the first missing card
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     onSubScreenChange?.(subScreen);
@@ -146,10 +159,57 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
+  const requiredDamageCategories = useMemo(
+    () => damageCategories.filter((c) => c.is_required !== false),
+    [damageCategories],
+  );
   const conditionAnswered = !!answers.conditionId;
-  const allDamageCategoriesAnswered = damageCategories.every(
+  const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(
     (c) => !!answers.damageOptionByCategory[c.id],
   );
+
+  const scrollToFirstMissing = (ids: string[]) => {
+    const first = ids[0];
+    if (!first) return;
+    const el = cardRefs.current[first];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  const handleNextClick = () => {
+    if (subScreen === "condition") {
+      const requireCondition =
+        normalConditions.length > 0 && normalConditions.some((c) => c.is_required !== false);
+      if (requireCondition && !conditionAnswered) {
+        setMissingIds(new Set(["__condition__"]));
+        toast.error("Selecione a condição geral do aparelho para continuar.");
+        scrollToFirstMissing(["__condition__"]);
+        return;
+      }
+      setMissingIds(new Set());
+      setSubScreen("damages");
+      return;
+    }
+    if (subScreen === "damages") {
+      const missing = requiredDamageCategories
+        .filter((c) => !answers.damageOptionByCategory[c.id])
+        .map((c) => c.id);
+      if (missing.length > 0) {
+        setMissingIds(new Set(missing));
+        toast.error(
+          missing.length === 1
+            ? "Falta responder uma categoria obrigatória."
+            : `Faltam ${missing.length} categorias obrigatórias.`,
+        );
+        scrollToFirstMissing(missing);
+        return;
+      }
+      setMissingIds(new Set());
+      setSubScreen("rejection");
+    }
+  };
+
 
   // Clear rejection on revisar
   const handleClearRejection = () => {
@@ -232,31 +292,56 @@ export function StepEvaluationChecklist({
               <p className="text-xs font-semibold text-primary uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3" /> Estado Geral
               </p>
-              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
+              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2 flex items-center gap-2">
                 Como está a condição geral do aparelho?
+                <ConditionsHelp conditions={normalConditions} />
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Selecione a opção que melhor descreve o estado do seu aparelho.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {normalConditions.map((cond) => {
-                const isSelected = answers.conditionId === cond.id;
-                return (
-                  <OptionCard
-                    key={cond.id}
-                    selected={isSelected}
-                    onClick={() => selectCondition(cond.id)}
-                    label={cond.condition_name}
-                    badge={
-                      cond.discount_percentage > 0
-                        ? `−${cond.discount_percentage}%`
-                        : "Sem desconto"
-                    }
-                  />
-                );
-              })}
+            <div
+              ref={(el) => {
+                cardRefs.current["__condition__"] = el;
+              }}
+              className={`rounded-3xl p-1 transition-all ${
+                missingIds.has("__condition__")
+                  ? "ring-2 ring-destructive bg-destructive/5"
+                  : ""
+              }`}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
+                {normalConditions.map((cond) => {
+                  const isSelected = answers.conditionId === cond.id;
+                  return (
+                    <OptionCard
+                      key={cond.id}
+                      selected={isSelected}
+                      onClick={() => {
+                        if (missingIds.has("__condition__")) {
+                          const next = new Set(missingIds);
+                          next.delete("__condition__");
+                          setMissingIds(next);
+                        }
+                        selectCondition(cond.id);
+                      }}
+                      label={cond.condition_name}
+                      help={cond.help_text}
+                      badge={
+                        cond.discount_percentage > 0
+                          ? `−${cond.discount_percentage}%`
+                          : "Sem desconto"
+                      }
+                    />
+                  );
+                })}
+              </div>
+              {missingIds.has("__condition__") && (
+                <p className="text-xs text-destructive font-medium px-3 pb-2 pt-1">
+                  Selecione uma opção para continuar.
+                </p>
+              )}
             </div>
             {normalConditions.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-6">
@@ -291,12 +376,36 @@ export function StepEvaluationChecklist({
               const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
               const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
               if (opts.length === 0) return null;
+              const isMissing = missingIds.has(cat.id);
+              const isRequired = cat.is_required !== false;
               return (
                 <div
                   key={cat.id}
-                  className="rounded-3xl border border-black/5 bg-card p-5 md:p-6 shadow-sm"
+                  ref={(el) => {
+                    cardRefs.current[cat.id] = el;
+                  }}
+                  className={`rounded-3xl border bg-card p-5 md:p-6 shadow-sm transition-all ${
+                    isMissing
+                      ? "border-destructive ring-2 ring-destructive/40 bg-destructive/5"
+                      : "border-black/5"
+                  }`}
                 >
-                  <h4 className="text-base font-semibold text-foreground mb-3">{cat.name}</h4>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h4 className="text-base font-semibold text-foreground flex items-center gap-2">
+                      {cat.name}
+                      {isRequired && (
+                        <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
+                          *
+                        </span>
+                      )}
+                      <HelpIcon text={cat.help_text} />
+                    </h4>
+                    {isMissing && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                        Obrigatório
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {opts.map((opt) => {
                       const isSelected = selectedId === opt.id;
@@ -304,7 +413,14 @@ export function StepEvaluationChecklist({
                         <OptionCard
                           key={opt.id}
                           selected={isSelected}
-                          onClick={() => selectDamageOption(cat.id, opt.id)}
+                          onClick={() => {
+                            if (isMissing) {
+                              const next = new Set(missingIds);
+                              next.delete(cat.id);
+                              setMissingIds(next);
+                            }
+                            selectDamageOption(cat.id, opt.id);
+                          }}
                           label={opt.option_name}
                           isReject={opt.is_rejected}
                           badge={
@@ -385,11 +501,7 @@ export function StepEvaluationChecklist({
           </Button>
           {subScreen !== "rejection" ? (
             <Button
-              onClick={goNext}
-              disabled={
-                (subScreen === "condition" && !conditionAnswered) ||
-                (subScreen === "damages" && damageCategories.length > 0 && !allDamageCategoriesAnswered)
-              }
+              onClick={handleNextClick}
               className="flex-1 h-12 rounded-full shadow-sm"
             >
               Próximo <ArrowRight className="ml-2 h-4 w-4" />
@@ -457,12 +569,14 @@ function OptionCard({
   label,
   badge,
   isReject,
+  help,
 }: {
   selected: boolean;
   onClick: () => void;
   label: string;
   badge?: string;
   isReject?: boolean;
+  help?: string | null;
 }) {
   return (
     <button
@@ -491,7 +605,10 @@ function OptionCard({
           {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
         </div>
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-sm text-foreground block">{label}</span>
+          <span className="font-medium text-sm text-foreground flex items-center gap-1.5">
+            {label}
+            <HelpIcon text={help} />
+          </span>
           {badge && (
             <span
               className={`block text-xs mt-1 ${
@@ -504,5 +621,57 @@ function OptionCard({
         </div>
       </div>
     </button>
+  );
+}
+
+// ── Inline "?" tooltip with help text ──
+function HelpIcon({ text }: { text?: string | null }) {
+  if (!text || !text.trim()) return null;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Ajuda"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// Aggregates help text from all conditions into a single tooltip on the screen heading
+function ConditionsHelp({ conditions }: { conditions: ConditionRow[] }) {
+  const withHelp = conditions.filter((c) => c.help_text && c.help_text.trim());
+  if (withHelp.length === 0) return null;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Ajuda sobre as condições"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed space-y-1.5">
+          {withHelp.map((c) => (
+            <div key={c.id}>
+              <strong className="font-semibold">{c.condition_name}:</strong> {c.help_text}
+            </div>
+          ))}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

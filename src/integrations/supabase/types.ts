@@ -132,22 +132,28 @@ export type Database = {
           condition_name: string
           discount_percentage: number
           display_order: number
+          help_text: string | null
           id: string
           is_rejected: boolean
+          is_required: boolean
         }
         Insert: {
           condition_name: string
           discount_percentage: number
           display_order?: number
+          help_text?: string | null
           id?: string
           is_rejected?: boolean
+          is_required?: boolean
         }
         Update: {
           condition_name?: string
           discount_percentage?: number
           display_order?: number
+          help_text?: string | null
           id?: string
           is_rejected?: boolean
+          is_required?: boolean
         }
         Relationships: []
       }
@@ -155,19 +161,25 @@ export type Database = {
         Row: {
           created_at: string
           display_order: number
+          help_text: string | null
           id: string
+          is_required: boolean
           name: string
         }
         Insert: {
           created_at?: string
           display_order?: number
+          help_text?: string | null
           id?: string
+          is_required?: boolean
           name: string
         }
         Update: {
           created_at?: string
           display_order?: number
+          help_text?: string | null
           id?: string
+          is_required?: boolean
           name?: string
         }
         Relationships: []

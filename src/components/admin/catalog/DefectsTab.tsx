@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type DamageOption = {
@@ -27,9 +29,9 @@ export function DefectsTab() {
   // ── Categories state ──
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
-  const [catForm, setCatForm] = useState({ name: "" });
+  const [catForm, setCatForm] = useState({ name: "", help_text: "", is_required: true });
   const [showNewCat, setShowNewCat] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
+  const [newCat, setNewCat] = useState({ name: "", help_text: "", is_required: true });
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
@@ -44,9 +46,19 @@ export function DefectsTab() {
 
   // ── Condition (normal) state ──
   const [showNewCondition, setShowNewCondition] = useState(false);
-  const [condForm, setCondForm] = useState({ condition_name: "", discount_percentage: 0 });
+  const [condForm, setCondForm] = useState({
+    condition_name: "",
+    discount_percentage: 0,
+    help_text: "",
+    is_required: true,
+  });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
-  const [editCondForm, setEditCondForm] = useState({ condition_name: "", discount_percentage: 0 });
+  const [editCondForm, setEditCondForm] = useState({
+    condition_name: "",
+    discount_percentage: 0,
+    help_text: "",
+    is_required: true,
+  });
 
   // ── Rejection reason state ──
   const [showNewRejection, setShowNewRejection] = useState(false);
@@ -102,12 +114,20 @@ export function DefectsTab() {
 
   // ── Category mutations ──
   const saveCatMutation = useMutation({
-    mutationFn: async ({ id, name }: { id?: string; name: string }) => {
-      if (id) {
-        const { error } = await supabase.from("damage_categories").update({ name }).eq("id", id);
+    mutationFn: async (data: { id?: string; name: string; help_text: string; is_required: boolean }) => {
+      const payload = {
+        name: data.name,
+        help_text: data.help_text?.trim() || null,
+        is_required: data.is_required,
+      };
+      if (data.id) {
+        const { error } = await supabase
+          .from("damage_categories")
+          .update(payload as any)
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("damage_categories").insert({ name });
+        const { error } = await supabase.from("damage_categories").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -115,7 +135,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCat(false);
-      setNewCatName("");
+      setNewCat({ name: "", help_text: "", is_required: true });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -193,26 +213,32 @@ export function DefectsTab() {
 
   // ── Condition (normal) mutations ──
   const saveCondMutation = useMutation({
-    mutationFn: async (data: { id?: string; condition_name: string; discount_percentage: number }) => {
+    mutationFn: async (data: {
+      id?: string;
+      condition_name: string;
+      discount_percentage: number;
+      help_text: string;
+      is_required: boolean;
+    }) => {
+      const payload = {
+        condition_name: data.condition_name,
+        discount_percentage: data.discount_percentage,
+        is_rejected: false,
+        help_text: data.help_text?.trim() || null,
+        is_required: data.is_required,
+      };
       if (data.id) {
         const { error } = await supabase
           .from("condition_discounts")
-          .update({
-            condition_name: data.condition_name,
-            discount_percentage: data.discount_percentage,
-            is_rejected: false,
-          })
+          .update(payload as any)
           .eq("id", data.id);
         if (error) throw error;
       } else {
         const maxOrder =
           conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
-        const { error } = await supabase.from("condition_discounts").insert({
-          condition_name: data.condition_name,
-          discount_percentage: data.discount_percentage,
-          is_rejected: false,
-          display_order: maxOrder,
-        });
+        const { error } = await supabase
+          .from("condition_discounts")
+          .insert({ ...payload, display_order: maxOrder } as any);
         if (error) throw error;
       }
     },
@@ -220,7 +246,7 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewCondition(false);
       setEditingCondId(null);
-      setCondForm({ condition_name: "", discount_percentage: 0 });
+      setCondForm({ condition_name: "", discount_percentage: 0, help_text: "", is_required: true });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -346,6 +372,26 @@ export function DefectsTab() {
                 />
               </div>
             </div>
+            <div>
+              <Label className="text-sm">Texto de ajuda (opcional)</Label>
+              <Textarea
+                value={condForm.help_text}
+                onChange={(e) => setCondForm({ ...condForm, help_text: e.target.value })}
+                placeholder="Ex: Sem riscos visíveis, todas as funções operando perfeitamente."
+                className="mt-1 text-sm"
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Exibido como tooltip "?" para o cliente entender o que essa condição significa.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+              <Checkbox
+                checked={condForm.is_required}
+                onCheckedChange={(v) => setCondForm({ ...condForm, is_required: v === true })}
+              />
+              <span>Obrigatório (cliente precisa escolher uma condição para avançar)</span>
+            </label>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -373,45 +419,81 @@ export function DefectsTab() {
             return (
               <div
                 key={cond.id}
-                className="flex items-center gap-4 px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
+                className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
               >
                 {isEditing ? (
-                  <>
-                    <Input
-                      value={editCondForm.condition_name}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editCondForm.condition_name}
+                        onChange={(e) =>
+                          setEditCondForm({ ...editCondForm, condition_name: e.target.value })
+                        }
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={editCondForm.discount_percentage}
+                        onChange={(e) =>
+                          setEditCondForm({
+                            ...editCondForm,
+                            discount_percentage: Number(e.target.value),
+                          })
+                        }
+                        className="h-8 text-sm w-24"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={editCondForm.help_text}
                       onChange={(e) =>
-                        setEditCondForm({ ...editCondForm, condition_name: e.target.value })
+                        setEditCondForm({ ...editCondForm, help_text: e.target.value })
                       }
-                      className="h-8 text-sm flex-1"
-                      autoFocus
+                      placeholder="Texto de ajuda (opcional)"
+                      className="text-sm"
+                      rows={2}
                     />
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={editCondForm.discount_percentage}
-                      onChange={(e) =>
-                        setEditCondForm({
-                          ...editCondForm,
-                          discount_percentage: Number(e.target.value),
-                        })
-                      }
-                      className="h-8 text-sm w-24"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+                      <Checkbox
+                        checked={editCondForm.is_required}
+                        onCheckedChange={(v) =>
+                          setEditCondForm({ ...editCondForm, is_required: v === true })
+                        }
+                      />
+                      <span>Obrigatório</span>
+                    </label>
+                  </div>
                 ) : (
-                  <>
-                    <span className="font-medium text-foreground flex-1">{cond.condition_name}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{cond.condition_name}</span>
+                        {cond.is_required === false ? (
+                          <Badge variant="outline" className="text-[10px]">opcional</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                            obrigatório
+                          </Badge>
+                        )}
+                      </div>
+                      {cond.help_text && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {cond.help_text}
+                        </p>
+                      )}
+                    </div>
                     <Badge variant="secondary" className="text-xs">
                       <Percent className="h-3 w-3 mr-1" />
                       {cond.discount_percentage}%
@@ -424,6 +506,8 @@ export function DefectsTab() {
                         setEditCondForm({
                           condition_name: cond.condition_name,
                           discount_percentage: cond.discount_percentage,
+                          help_text: (cond as any).help_text ?? "",
+                          is_required: (cond as any).is_required !== false,
                         });
                       }}
                     >
@@ -440,7 +524,7 @@ export function DefectsTab() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             );
@@ -469,32 +553,54 @@ export function DefectsTab() {
 
         {/* New category form */}
         {showNewCat && (
-          <div className="bg-card border rounded-lg p-4 flex items-end gap-3">
-            <div className="flex-1">
+          <div className="bg-card border rounded-lg p-4 space-y-3">
+            <div>
               <Label>Nome da categoria</Label>
               <Input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
+                value={newCat.name}
+                onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
                 placeholder="Ex: Bateria, Tela, Carcaça"
                 className="mt-1"
                 autoFocus
               />
             </div>
-            <Button
-              onClick={() => saveCatMutation.mutate({ name: newCatName })}
-              disabled={!newCatName || saveCatMutation.isPending}
-            >
-              <Check className="mr-1 h-4 w-4" /> Criar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNewCat(false);
-                setNewCatName("");
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div>
+              <Label className="text-sm">Texto de ajuda (opcional)</Label>
+              <Textarea
+                value={newCat.help_text}
+                onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
+                placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
+                className="mt-1 text-sm"
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Exibido como tooltip "?" ao lado do nome da categoria no formulário do cliente.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+              <Checkbox
+                checked={newCat.is_required}
+                onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
+              />
+              <span>Obrigatório (cliente precisa responder antes de avançar)</span>
+            </label>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => saveCatMutation.mutate(newCat)}
+                disabled={!newCat.name || saveCatMutation.isPending}
+              >
+                <Check className="mr-1 h-4 w-4" /> Criar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowNewCat(false);
+                  setNewCat({ name: "", help_text: "", is_required: true });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -528,13 +634,29 @@ export function DefectsTab() {
                   {isEditing ? (
                     <Input
                       value={catForm.name}
-                      onChange={(e) => setCatForm({ name: e.target.value })}
+                      onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
                       className="h-8 text-sm flex-1"
                       onClick={(e) => e.stopPropagation()}
                       autoFocus
                     />
                   ) : (
-                    <span className="font-medium text-foreground flex-1">{cat.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{cat.name}</span>
+                        {(cat as any).is_required === false ? (
+                          <Badge variant="outline" className="text-[10px]">opcional</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                            obrigatório
+                          </Badge>
+                        )}
+                      </div>
+                      {(cat as any).help_text && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {(cat as any).help_text}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -550,7 +672,7 @@ export function DefectsTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => saveCatMutation.mutate({ id: cat.id, name: catForm.name })}
+                          onClick={() => saveCatMutation.mutate({ id: cat.id, ...catForm })}
                         >
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -563,9 +685,15 @@ export function DefectsTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setCatForm({ name: cat.name });
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCatForm({
+                              name: cat.name,
+                              help_text: (cat as any).help_text ?? "",
+                              is_required: (cat as any).is_required !== false,
+                            });
                             setEditingCatId(cat.id);
+                            setExpandedCat(cat.id);
                           }}
                         >
                           <Pencil className="h-3.5 w-3.5" />

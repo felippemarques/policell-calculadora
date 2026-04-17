@@ -235,44 +235,56 @@ export function AdminTour() {
         </div>
 
         {/* ── Footer com ações ── */}
-        <div className="border-t border-border/60 bg-muted/30 px-7 sm:px-9 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            disabled={isFirst}
-            className="sm:w-auto w-full text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Voltar
-          </Button>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            {!isLast && (
-              <Button
-                variant="outline"
-                onClick={handleNext}
-                className="sm:w-auto w-full"
-              >
-                Próximo
-                <ArrowRight className="h-4 w-4 ml-1.5" />
-              </Button>
-            )}
+        <div className="border-t border-border/60 bg-muted/30 px-7 sm:px-9 py-4 space-y-3">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <Button
-              onClick={handleGo}
-              className="sm:w-auto w-full shadow-md hover:shadow-lg transition-shadow"
+              variant="ghost"
+              onClick={handleBack}
+              disabled={isFirst}
+              className="sm:w-auto w-full text-muted-foreground hover:text-foreground"
             >
-              {isLast ? (
-                <>
-                  {step.cta}
-                  <PartyPopper className="h-4 w-4 ml-1.5" />
-                </>
-              ) : (
-                <>
-                  {step.cta}
-                  <ArrowRight className="h-4 w-4 ml-1.5" />
-                </>
-              )}
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Voltar
             </Button>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              {!isLast && (
+                <Button
+                  variant="outline"
+                  onClick={handleNext}
+                  className="sm:w-auto w-full"
+                >
+                  Próximo
+                  <ArrowRight className="h-4 w-4 ml-1.5" />
+                </Button>
+              )}
+              <Button
+                onClick={handleGo}
+                className="sm:w-auto w-full shadow-md hover:shadow-lg transition-shadow"
+              >
+                {isLast ? (
+                  <>
+                    {step.cta}
+                    <PartyPopper className="h-4 w-4 ml-1.5" />
+                  </>
+                ) : (
+                  <>
+                    {step.cta}
+                    <ArrowRight className="h-4 w-4 ml-1.5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleNeverShow}
+              className="text-xs text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors"
+            >
+              Não quero ver o tour novamente
+            </button>
           </div>
         </div>
       </DialogContent>

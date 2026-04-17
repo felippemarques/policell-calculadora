@@ -383,13 +383,10 @@ export function DevicesTab() {
                     <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
                     <td className="px-3 py-1.5">
                       {c.fieldKey === "base_price" ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          value={Number(c.rawTo)}
-                          onChange={(e) => updatePendingChange(i, Math.max(0, Number(e.target.value)))}
-                          className="h-7 w-28 text-xs font-medium text-primary"
+                        <CurrencyInput
+                          value={Number(c.rawTo) || 0}
+                          onValueChange={(v) => updatePendingChange(i, v)}
+                          className="h-7 w-32 text-xs font-medium text-primary"
                         />
                       ) : (
                         <Input
@@ -444,7 +441,7 @@ export function DevicesTab() {
             </div>
             <div>
               <Label>Preço Base (R$)</Label>
-              <Input type="number" min={0} step={0.01} value={form.base_price} onChange={(e) => setForm({ ...form, base_price: Number(e.target.value) })} className="mt-1" />
+              <CurrencyInput value={Number(form.base_price) || 0} onValueChange={(v) => setForm({ ...form, base_price: v })} className="mt-1" />
             </div>
             <div className="md:col-span-2">
               <Label>Cores (separadas por vírgula)</Label>

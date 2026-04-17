@@ -32,6 +32,7 @@ type DamageCategory = {
   help_image_url: string | null;
   is_required: boolean;
   parent_id: string | null;
+  parent_option_id: string | null;
   display_order: number;
   brand_ids: string[];
 };

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Check, X, Grid3X3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -434,13 +435,9 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           <div className="bg-card border rounded-lg p-4 flex items-end gap-3 flex-wrap">
             <div>
               <Label className="text-xs">Preço global (R$)</Label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={globalPrice}
-                onChange={(e) => setGlobalPrice(e.target.value)}
-                placeholder="Ex: 1500.00"
+              <CurrencyInput
+                value={Number(globalPrice) || 0}
+                onValueChange={(v) => setGlobalPrice(v ? String(v) : "")}
                 className="mt-1 w-44"
               />
             </div>
@@ -479,12 +476,9 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
                     </TableCell>
                     <TableCell>{r.color}</TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={r.base_price}
-                        onChange={(e) => updateRowPrice(r.key, Math.max(0, Number(e.target.value)))}
+                      <CurrencyInput
+                        value={Number(r.base_price) || 0}
+                        onValueChange={(v) => updateRowPrice(r.key, v)}
                         className="h-8 text-sm"
                         disabled={!r.active}
                       />

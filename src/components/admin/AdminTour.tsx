@@ -94,10 +94,18 @@ const STEPS: TourStep[] = [
 
 export function AdminTour() {
   const navigate = useNavigate();
-  const { needsTour, currentStep, setStep, complete, loading } =
+  const { needsTour, currentStep, setStep, complete, skip, loading } =
     useAdminOnboarding();
+  const [dismissed, setDismissed] = useState(false);
 
-  if (loading || !needsTour) return null;
+  // Reabre o tour automaticamente quando outro componente disparar restart
+  useEffect(() => {
+    const handler = () => setDismissed(false);
+    window.addEventListener("admin-onboarding:restart", handler);
+    return () => window.removeEventListener("admin-onboarding:restart", handler);
+  }, []);
+
+  if (loading || !needsTour || dismissed) return null;
 
   const stepIndex = Math.min(Math.max(currentStep - 1, 0), STEPS.length - 1);
   const step = STEPS[stepIndex];
@@ -129,8 +137,14 @@ export function AdminTour() {
     }
   };
 
-  const handleFinish = async () => {
-    await complete();
+  // X → apenas fecha nesta sessão; volta a aparecer na próxima visita
+  const handleClose = () => {
+    setDismissed(true);
+  };
+
+  // "Não quero ver mais" → marca como skipped permanentemente
+  const handleNeverShow = async () => {
+    await skip();
   };
 
   return (

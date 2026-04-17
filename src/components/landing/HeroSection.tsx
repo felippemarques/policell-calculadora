@@ -43,7 +43,7 @@ const HeroSection = ({ section }: HeroSectionProps) => {
   const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
   return (
-    <section className="relative overflow-x-hidden min-h-[500px] md:min-h-[600px] flex bg-background">
+    <section className="relative flex w-full min-h-[500px] md:min-h-[600px] overflow-hidden bg-background bg-cover bg-no-repeat">
       {section.image_url ? (
         <div
           className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"

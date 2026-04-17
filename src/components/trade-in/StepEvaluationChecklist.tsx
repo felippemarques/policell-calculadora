@@ -127,6 +127,18 @@ export function StepEvaluationChecklist({
     },
   });
 
+  const { data: damageOptions = [] } = useQuery({
+    queryKey: ["damage_deductions_public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("damage_deductions")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as unknown as DamageOption[];
+    },
+  });
+
   // ── Filter categories by selected device's brand ──
   // Rules:
   //  - Root categories (parent_id null AND parent_option_id null): visible if brand_ids empty (global) OR contains selectedBrandId
@@ -144,7 +156,7 @@ export function StepEvaluationChecklist({
       }
     }
 
-    // Walk up parent chain to find root (following parent_id, then parent_option_id → option's category)
+    // Walk up parent chain to find root, following both parent_id and parent_option_id
     const findRootId = (id: string): string | null => {
       let cur = damageCategoriesAll.find((x) => x.id === id);
       const visited = new Set<string>();
@@ -158,10 +170,7 @@ export function StepEvaluationChecklist({
           continue;
         }
         if (cur.parent_option_id) {
-          // option → category that owns it → its root
-          // We need the option's owning category; look it up via damageOptions list captured below
-          // Defer: we use the local closure of damageOptionsRef set after this function is defined
-          const triggerOpt = damageOptionsForRoot.find((o) => o.id === cur!.parent_option_id);
+          const triggerOpt = damageOptions.find((o) => o.id === cur!.parent_option_id);
           if (!triggerOpt) return null;
           const owning = damageCategoriesAll.find((x) => x.id === triggerOpt.damage_category_id);
           if (!owning) return null;
@@ -177,19 +186,7 @@ export function StepEvaluationChecklist({
       const rootId = findRootId(c.id);
       return rootId ? rootVisibility.get(rootId) === true : false;
     });
-  }, [damageCategoriesAll, selectedBrandId]);
-
-  const { data: damageOptions = [] } = useQuery({
-    queryKey: ["damage_deductions_public"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("damage_deductions")
-        .select("*")
-        .order("display_order");
-      if (error) throw error;
-      return (data || []) as unknown as DamageOption[];
-    },
-  });
+  }, [damageCategoriesAll, damageOptions, selectedBrandId]);
 
   const normalConditions = useMemo(() => conditions.filter((c) => !c.is_rejected), [conditions]);
   const rejectionReasons = useMemo(() => conditions.filter((c) => c.is_rejected), [conditions]);

@@ -32,6 +32,7 @@ type DamageCategory = {
   help_image_url: string | null;
   is_required: boolean;
   parent_id: string | null;
+  parent_option_id: string | null;
   display_order: number;
   brand_ids: string[];
 };
@@ -54,7 +55,11 @@ export function DefectsTab() {
     is_required: true,
     brand_ids: [] as string[],
   });
-  const [showNewCatForParent, setShowNewCatForParent] = useState<string | "__root__" | null>(null);
+  // String forms:
+  //   "__root__"         → new top-level category
+  //   "<categoryId>"     → new subcategory under a parent category
+  //   "option:<optId>"   → new conditional subcategory triggered by a damage option
+  const [showNewCatForParent, setShowNewCatForParent] = useState<string | null>(null);
   const [newCat, setNewCat] = useState({
     name: "",
     help_text: "",
@@ -198,8 +203,9 @@ export function DefectsTab() {
       is_required: boolean;
       brand_ids?: string[];
       parent_id?: string | null;
+      parent_option_id?: string | null;
     }) => {
-      const isRoot = (data.parent_id ?? null) === null;
+      const isRoot = (data.parent_id ?? null) === null && (data.parent_option_id ?? null) === null;
       const payload: any = {
         name: data.name,
         help_text: data.help_text?.trim() || null,
@@ -215,14 +221,18 @@ export function DefectsTab() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        // Compute display_order = max+1 within siblings of same parent
-        const siblings = categories.filter((c) => (c.parent_id ?? null) === (data.parent_id ?? null));
+        // Compute display_order = max+1 within siblings of same scope
+        const siblings = categories.filter((c) => {
+          if (data.parent_option_id) return c.parent_option_id === data.parent_option_id;
+          return (c.parent_id ?? null) === (data.parent_id ?? null) && !c.parent_option_id;
+        });
         const maxOrder = siblings.length ? Math.max(...siblings.map((s) => s.display_order)) + 1 : 0;
         const { error } = await supabase.from("damage_categories").insert({
           ...payload,
           parent_id: data.parent_id ?? null,
+          parent_option_id: data.parent_option_id ?? null,
           display_order: maxOrder,
-        });
+        } as any);
         if (error) throw error;
       }
     },
@@ -473,74 +483,107 @@ export function DefectsTab() {
     );
   }
 
-  // Helper: render new-category form (shared between root and per-parent)
-  const renderNewCatForm = (parentId: string | null) => (
-    <div className="bg-card border rounded-lg p-4 space-y-3">
-      <div>
-        <Label>{parentId ? "Nome da subcategoria" : "Nome da categoria"}</Label>
-        <Input
-          value={newCat.name}
-          onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
-          placeholder={parentId ? 'Ex: "É Tela Original?"' : "Ex: Bateria, Tela, Carcaça"}
-          className="mt-1"
-          autoFocus
-        />
-      </div>
-      <div>
-        <Label className="text-sm">Observação / Explicação (opcional)</Label>
-        <Textarea
-          value={newCat.help_text}
-          onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
-          placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
-          className="mt-1 text-sm"
-          rows={2}
-        />
-        <p className="text-[11px] text-muted-foreground mt-1">
-          Exibido como tooltip "?" ao lado do nome no formulário do cliente.
-        </p>
-      </div>
-      <ImageUploadField
-        value={newCat.help_image_url}
-        uploading={uploadingFor === "__new__"}
-        onUpload={async (file) => {
-          const url = await uploadImage(file, "__new__");
-          if (url) setNewCat((p) => ({ ...p, help_image_url: url }));
-        }}
-        onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
-      />
-      {parentId === null && (
-        <BrandsMultiSelect
-          brands={brands}
-          selected={newCat.brand_ids}
-          onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
-        />
-      )}
-      <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-        <Checkbox
-          checked={newCat.is_required}
-          onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
-        />
-        <span>Obrigatório (cliente precisa responder antes de avançar)</span>
-      </label>
-      <div className="flex gap-2">
-        <Button
-          onClick={() => saveCatMutation.mutate({ ...newCat, parent_id: parentId })}
-          disabled={!newCat.name || saveCatMutation.isPending}
-        >
-          <Check className="mr-1 h-4 w-4" /> Criar
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setShowNewCatForParent(null);
-            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+  // Helper: render new-category form (shared between root, per-parent, and per-option contexts)
+  const renderNewCatForm = (
+    parentId: string | null,
+    parentOptionId: string | null = null,
+  ) => {
+    const isOptionTriggered = !!parentOptionId;
+    return (
+      <div
+        className={`bg-card border rounded-lg p-4 space-y-3 ${
+          isOptionTriggered ? "border-primary/40 bg-primary/5" : ""
+        }`}
+      >
+        <div>
+          <Label>
+            {isOptionTriggered
+              ? "Nome da sub-pergunta condicional"
+              : parentId
+                ? "Nome da subcategoria"
+                : "Nome da categoria"}
+          </Label>
+          <Input
+            value={newCat.name}
+            onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+            placeholder={
+              isOptionTriggered
+                ? 'Ex: "Quantos riscos?", "É original?"'
+                : parentId
+                  ? 'Ex: "É Tela Original?"'
+                  : "Ex: Bateria, Tela, Carcaça"
+            }
+            className="mt-1"
+            autoFocus
+          />
+          {isOptionTriggered && (
+            <p className="text-[11px] text-primary mt-1.5">
+              Esta pergunta só aparecerá ao cliente quando ele selecionar a opção acima.
+            </p>
+          )}
+        </div>
+        <div>
+          <Label className="text-sm">Observação / Explicação (opcional)</Label>
+          <Textarea
+            value={newCat.help_text}
+            onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
+            placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
+            className="mt-1 text-sm"
+            rows={2}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Exibido como tooltip "?" ao lado do nome no formulário do cliente.
+          </p>
+        </div>
+        <ImageUploadField
+          value={newCat.help_image_url}
+          uploading={uploadingFor === "__new__"}
+          onUpload={async (file) => {
+            const url = await uploadImage(file, "__new__");
+            if (url) setNewCat((p) => ({ ...p, help_image_url: url }));
           }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+          onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
+        />
+        {parentId === null && !isOptionTriggered && (
+          <BrandsMultiSelect
+            brands={brands}
+            selected={newCat.brand_ids}
+            onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
+          />
+        )}
+        <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+          <Checkbox
+            checked={newCat.is_required}
+            onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
+          />
+          <span>Obrigatório (cliente precisa responder antes de avançar)</span>
+        </label>
+        <div className="flex gap-2">
+          <Button
+            onClick={() =>
+              saveCatMutation.mutate({
+                ...newCat,
+                parent_id: parentId,
+                parent_option_id: parentOptionId,
+              })
+            }
+            disabled={!newCat.name || saveCatMutation.isPending}
+          >
+            <Check className="mr-1 h-4 w-4" /> Criar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowNewCatForParent(null);
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Recursive render of a category and its children
   const renderCategoryNode = (cat: DamageCategory, depth: number) => {
@@ -549,9 +592,9 @@ export function DefectsTab() {
     const isEditing = editingCatId === cat.id;
     const draft = getNewOptionDraft(cat.id);
     const children = categories
-      .filter((c) => c.parent_id === cat.id)
+      .filter((c) => c.parent_id === cat.id && !c.parent_option_id)
       .sort((a, b) => a.display_order - b.display_order);
-    const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null));
+    const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null) && !c.parent_option_id);
 
     return (
       <div key={cat.id} className="bg-card">
@@ -774,111 +817,160 @@ export function DefectsTab() {
               )}
               {options.map((opt) => {
                 const isOptEditing = editingOptId === opt.id;
+                const optChildren = categories
+                  .filter((c) => c.parent_option_id === opt.id)
+                  .sort((a, b) => a.display_order - b.display_order);
                 return (
-                  <div
-                    key={opt.id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-                      opt.is_rejected
-                        ? "bg-destructive/5 border-destructive/20"
-                        : "bg-card border-transparent"
-                    }`}
-                  >
-                    {isOptEditing ? (
-                      <>
-                        <Input
-                          value={editOptForm.option_name}
-                          onChange={(e) =>
-                            setEditOptForm({ ...editOptForm, option_name: e.target.value })
-                          }
-                          className="h-8 text-sm flex-1"
-                          placeholder="Nome da opção"
-                          autoFocus
-                        />
-                        <CurrencyInput
-                          value={editOptForm.deduction_value}
-                          onValueChange={(v) =>
-                            setEditOptForm({ ...editOptForm, deduction_value: v })
-                          }
-                          className="h-8 text-sm w-32"
-                          disabled={editOptForm.is_rejected}
-                        />
-                        <div className="flex items-center gap-1.5 px-2">
-                          <Switch
-                            checked={editOptForm.is_rejected}
-                            onCheckedChange={(v) =>
-                              setEditOptForm({ ...editOptForm, is_rejected: v })
+                  <div key={opt.id} className="space-y-2">
+                    <div
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
+                        opt.is_rejected
+                          ? "bg-destructive/5 border-destructive/20"
+                          : "bg-card border-transparent"
+                      }`}
+                    >
+                      {isOptEditing ? (
+                        <>
+                          <Input
+                            value={editOptForm.option_name}
+                            onChange={(e) =>
+                              setEditOptForm({ ...editOptForm, option_name: e.target.value })
                             }
+                            className="h-8 text-sm flex-1"
+                            placeholder="Nome da opção"
+                            autoFocus
                           />
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            Inviabiliza
+                          <CurrencyInput
+                            value={editOptForm.deduction_value}
+                            onValueChange={(v) =>
+                              setEditOptForm({ ...editOptForm, deduction_value: v })
+                            }
+                            className="h-8 text-sm w-32"
+                            disabled={editOptForm.is_rejected}
+                          />
+                          <div className="flex items-center gap-1.5 px-2">
+                            <Switch
+                              checked={editOptForm.is_rejected}
+                              onCheckedChange={(v) =>
+                                setEditOptForm({ ...editOptForm, is_rejected: v })
+                              }
+                            />
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              Inviabiliza
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              saveOptionMutation.mutate({
+                                id: opt.id,
+                                damage_category_id: cat.id,
+                                ...editOptForm,
+                              })
+                            }
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {opt.is_rejected ? (
+                            <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                          ) : (
+                            <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium text-foreground flex-1">
+                            {opt.option_name}
                           </span>
+                          {optChildren.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-primary/40 text-primary gap-1">
+                              <GitBranch className="h-2.5 w-2.5" />
+                              {optChildren.length} sub
+                            </Badge>
+                          )}
+                          {opt.is_rejected ? (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Inviabiliza
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              R${" "}
+                              {opt.deduction_value?.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </Badge>
+                          )}
+                          {!opt.is_rejected && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Adicionar sub-pergunta condicional para esta opção"
+                              className="text-primary hover:text-primary"
+                              onClick={() => {
+                                setNewCat({
+                                  name: "",
+                                  help_text: "",
+                                  help_image_url: "",
+                                  is_required: true,
+                                  brand_ids: [],
+                                });
+                                setShowNewCatForParent(`option:${opt.id}`);
+                              }}
+                              disabled={showNewCatForParent === `option:${opt.id}`}
+                            >
+                              <GitBranch className="h-3.5 w-3.5 mr-1" />
+                              <span className="text-[11px]">Sub-pergunta</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingOptId(opt.id);
+                              setEditOptForm({
+                                option_name: opt.option_name,
+                                deduction_value: Number(opt.deduction_value) || 0,
+                                is_rejected: opt.is_rejected,
+                              });
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Remover opção "${opt.option_name}"?`))
+                                deleteOptionMutation.mutate(opt.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Conditional sub-questions triggered by THIS option */}
+                    {showNewCatForParent === `option:${opt.id}` && (
+                      <div className="ml-6 border-l-2 border-primary/30 pl-3">
+                        {renderNewCatForm(null, opt.id)}
+                      </div>
+                    )}
+                    {optChildren.length > 0 && (
+                      <div className="ml-6 border-l-2 border-primary/30 pl-3 space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-primary font-semibold flex items-center gap-1">
+                          ↳ Sub-perguntas (aparecem se "{opt.option_name}" for selecionada)
+                        </p>
+                        <div className="border rounded-md overflow-hidden divide-y bg-card">
+                          {optChildren.map((child) => renderCategoryNode(child, depth + 1))}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            saveOptionMutation.mutate({
-                              id: opt.id,
-                              damage_category_id: cat.id,
-                              ...editOptForm,
-                            })
-                          }
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        {opt.is_rejected ? (
-                          <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                        ) : (
-                          <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                        )}
-                        <span className="text-sm font-medium text-foreground flex-1">
-                          {opt.option_name}
-                        </span>
-                        {opt.is_rejected ? (
-                          <Badge variant="destructive" className="text-xs">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Inviabiliza
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            R${" "}
-                            {opt.deduction_value?.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingOptId(opt.id);
-                            setEditOptForm({
-                              option_name: opt.option_name,
-                              deduction_value: Number(opt.deduction_value) || 0,
-                              is_rejected: opt.is_rejected,
-                            });
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            if (confirm(`Remover opção "${opt.option_name}"?`))
-                              deleteOptionMutation.mutate(opt.id);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
+                      </div>
                     )}
                   </div>
                 );
@@ -978,7 +1070,7 @@ export function DefectsTab() {
   };
 
   const rootCategories = categories
-    .filter((c) => c.parent_id === null)
+    .filter((c) => c.parent_id === null && !c.parent_option_id)
     .sort((a, b) => a.display_order - b.display_order);
 
   return (

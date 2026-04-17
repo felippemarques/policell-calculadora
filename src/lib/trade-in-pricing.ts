@@ -29,6 +29,12 @@ export interface DamageCategory {
    * Brands this category applies to. Empty array (or undefined) = global (all brands).
    */
   brand_ids?: string[] | null;
+  /**
+   * Conditional reveal: when set, this category is only shown after the user
+   * selects the damage option with this id (in any other category). It's a
+   * subcategory triggered by a specific *answer*, not by another category.
+   */
+  parent_option_id?: string | null;
 }
 
 export interface ChecklistAnswers {

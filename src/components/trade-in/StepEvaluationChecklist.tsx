@@ -127,40 +127,6 @@ export function StepEvaluationChecklist({
     },
   });
 
-  // ── Filter categories by selected device's brand ──
-  // Rules:
-  //  - Root categories (parent_id null): visible if brand_ids empty (global) OR contains selectedBrandId
-  //  - Subcategories: visible only if their root ancestor is visible (so we hide orphans)
-  const damageCategories = useMemo(() => {
-    if (damageCategoriesAll.length === 0) return [];
-
-    const rootVisibility = new Map<string, boolean>();
-    for (const c of damageCategoriesAll) {
-      if (!c.parent_id) {
-        const ids = c.brand_ids ?? [];
-        const visible = ids.length === 0 || (!!selectedBrandId && ids.includes(selectedBrandId));
-        rootVisibility.set(c.id, visible);
-      }
-    }
-
-    // Walk up parent chain to find root
-    const findRootId = (id: string): string | null => {
-      let cur = damageCategoriesAll.find((x) => x.id === id);
-      while (cur && cur.parent_id) {
-        const parent = damageCategoriesAll.find((x) => x.id === cur!.parent_id);
-        if (!parent) return cur.id;
-        cur = parent;
-      }
-      return cur?.id ?? null;
-    };
-
-    return damageCategoriesAll.filter((c) => {
-      if (!c.parent_id) return rootVisibility.get(c.id) === true;
-      const rootId = findRootId(c.id);
-      return rootId ? rootVisibility.get(rootId) === true : false;
-    });
-  }, [damageCategoriesAll, selectedBrandId]);
-
   const { data: damageOptions = [] } = useQuery({
     queryKey: ["damage_deductions_public"],
     queryFn: async () => {
@@ -173,6 +139,55 @@ export function StepEvaluationChecklist({
     },
   });
 
+  // ── Filter categories by selected device's brand ──
+  // Rules:
+  //  - Root categories (parent_id null AND parent_option_id null): visible if brand_ids empty (global) OR contains selectedBrandId
+  //  - Subcategories (parent_id): inherit visibility from their root ancestor
+  //  - Conditional sub-questions (parent_option_id): inherit visibility from the category that owns the trigger option
+  const damageCategories = useMemo(() => {
+    if (damageCategoriesAll.length === 0) return [];
+
+    const rootVisibility = new Map<string, boolean>();
+    for (const c of damageCategoriesAll) {
+      if (!c.parent_id && !c.parent_option_id) {
+        const ids = c.brand_ids ?? [];
+        const visible = ids.length === 0 || (!!selectedBrandId && ids.includes(selectedBrandId));
+        rootVisibility.set(c.id, visible);
+      }
+    }
+
+    // Walk up parent chain to find root, following both parent_id and parent_option_id
+    const findRootId = (id: string): string | null => {
+      let cur = damageCategoriesAll.find((x) => x.id === id);
+      const visited = new Set<string>();
+      while (cur && !visited.has(cur.id)) {
+        visited.add(cur.id);
+        if (!cur.parent_id && !cur.parent_option_id) return cur.id;
+        if (cur.parent_id) {
+          const parent = damageCategoriesAll.find((x) => x.id === cur!.parent_id);
+          if (!parent) return cur.id;
+          cur = parent;
+          continue;
+        }
+        if (cur.parent_option_id) {
+          const triggerOpt = damageOptions.find((o) => o.id === cur!.parent_option_id);
+          if (!triggerOpt) return null;
+          const owning = damageCategoriesAll.find((x) => x.id === triggerOpt.damage_category_id);
+          if (!owning) return null;
+          cur = owning;
+          continue;
+        }
+      }
+      return cur?.id ?? null;
+    };
+
+    return damageCategoriesAll.filter((c) => {
+      if (!c.parent_id && !c.parent_option_id) return rootVisibility.get(c.id) === true;
+      const rootId = findRootId(c.id);
+      return rootId ? rootVisibility.get(rootId) === true : false;
+    });
+  }, [damageCategoriesAll, damageOptions, selectedBrandId]);
+
   const normalConditions = useMemo(() => conditions.filter((c) => !c.is_rejected), [conditions]);
   const rejectionReasons = useMemo(() => conditions.filter((c) => c.is_rejected), [conditions]);
 
@@ -183,9 +198,36 @@ export function StepEvaluationChecklist({
 
   const selectDamageOption = (catId: string, optId: string) => {
     const opt = damageOptions.find((o) => o.id === optId);
+    const previousOptId = answers.damageOptionByCategory[catId];
+    const nextMap = { ...answers.damageOptionByCategory, [catId]: optId };
+
+    // If switching to a different option, clear answers of any conditional
+    // sub-questions previously triggered by the OLD option (and recursively
+    // their own descendants) so they don't keep contributing to the price.
+    if (previousOptId && previousOptId !== optId) {
+      const collectDescendantCatIds = (rootOptId: string): string[] => {
+        const directCats = damageCategoriesAll
+          .filter((c) => c.parent_option_id === rootOptId)
+          .map((c) => c.id);
+        const result = [...directCats];
+        for (const cid of directCats) {
+          // Each cat's selected option may itself trigger more conditionals
+          const selectedChildOpt = nextMap[cid];
+          if (selectedChildOpt) result.push(...collectDescendantCatIds(selectedChildOpt));
+          // Also collect via parent_id chains
+          const subCats = damageCategoriesAll.filter((c) => c.parent_id === cid).map((c) => c.id);
+          result.push(...subCats);
+        }
+        return result;
+      };
+      for (const staleCatId of collectDescendantCatIds(previousOptId)) {
+        nextMap[staleCatId] = null;
+      }
+    }
+
     const next: ChecklistAnswers = {
       ...answers,
-      damageOptionByCategory: { ...answers.damageOptionByCategory, [catId]: optId },
+      damageOptionByCategory: nextMap,
     };
     onAnswersChange(next);
 
@@ -208,9 +250,9 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
-  // Build sets: root categories vs subcategories (parent_id != null)
+  // True root: no parent at all (neither parent_id nor parent_option_id)
   const rootCategories = useMemo(
-    () => damageCategories.filter((c) => !c.parent_id),
+    () => damageCategories.filter((c) => !c.parent_id && !c.parent_option_id),
     [damageCategories],
   );
   const subcategoriesByParent = useMemo(() => {
@@ -224,15 +266,41 @@ export function StepEvaluationChecklist({
     return map;
   }, [damageCategories]);
 
+  // Conditional sub-questions indexed by the option that triggers them
+  const conditionalsByOption = useMemo(() => {
+    const map: Record<string, DamageCategory[]> = {};
+    for (const c of damageCategories) {
+      if (c.parent_option_id) {
+        if (!map[c.parent_option_id]) map[c.parent_option_id] = [];
+        map[c.parent_option_id].push(c);
+      }
+    }
+    // Keep stable display_order
+    for (const key of Object.keys(map)) {
+      map[key].sort(
+        (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0),
+      );
+    }
+    return map;
+  }, [damageCategories]);
+
   // A required category that has no options is not actionable — exclude it.
+  // Conditional sub-questions only count when their trigger option is currently selected.
   const requiredDamageCategories = useMemo(
     () =>
-      damageCategories.filter(
-        (c) =>
-          c.is_required !== false &&
-          damageOptions.some((o) => o.damage_category_id === c.id),
-      ),
-    [damageCategories, damageOptions],
+      damageCategories.filter((c) => {
+        if (c.is_required === false) return false;
+        if (!damageOptions.some((o) => o.damage_category_id === c.id)) return false;
+        if (c.parent_option_id) {
+          // active only if the trigger option is currently chosen in its owning category
+          const triggerOpt = damageOptions.find((o) => o.id === c.parent_option_id);
+          if (!triggerOpt) return false;
+          const ownerCatId = triggerOpt.damage_category_id;
+          return answers.damageOptionByCategory[ownerCatId] === c.parent_option_id;
+        }
+        return true;
+      }),
+    [damageCategories, damageOptions, answers.damageOptionByCategory],
   );
   const conditionAnswered = !!answers.conditionId;
   const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(
@@ -519,6 +587,18 @@ export function StepEvaluationChecklist({
                             />
                           );
                         })}
+                      </div>
+                    )}
+
+                    {/* Reveal conditional sub-questions tied to the currently-selected option */}
+                    {selectedId && (conditionalsByOption[selectedId]?.length ?? 0) > 0 && (
+                      <div className="mt-4 space-y-3 animate-fade-in">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                          ↳ Por favor, responda também:
+                        </p>
+                        {conditionalsByOption[selectedId].map((cond) =>
+                          renderCategory(cond, depth + 1),
+                        )}
                       </div>
                     )}
 

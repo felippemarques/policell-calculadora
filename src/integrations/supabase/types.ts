@@ -121,18 +121,21 @@ export type Database = {
       brands: {
         Row: {
           created_at: string
+          display_order: number
           format_rule: string
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name?: string
@@ -142,18 +145,21 @@ export type Database = {
       colors: {
         Row: {
           created_at: string
+          display_order: number
           format_rule: string
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name?: string
@@ -194,28 +200,42 @@ export type Database = {
         Row: {
           created_at: string
           display_order: number
+          help_image_url: string | null
           help_text: string | null
           id: string
           is_required: boolean
           name: string
+          parent_id: string | null
         }
         Insert: {
           created_at?: string
           display_order?: number
+          help_image_url?: string | null
           help_text?: string | null
           id?: string
           is_required?: boolean
           name: string
+          parent_id?: string | null
         }
         Update: {
           created_at?: string
           display_order?: number
+          help_image_url?: string | null
           help_text?: string | null
           id?: string
           is_required?: boolean
           name?: string
+          parent_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "damage_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "damage_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       damage_deductions: {
         Row: {
@@ -259,6 +279,7 @@ export type Database = {
         Row: {
           brand_id: string
           created_at: string
+          display_order: number
           format_rule: string
           id: string
           name: string
@@ -266,6 +287,7 @@ export type Database = {
         Insert: {
           brand_id: string
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name: string
@@ -273,6 +295,7 @@ export type Database = {
         Update: {
           brand_id?: string
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
           name?: string
@@ -585,18 +608,21 @@ export type Database = {
         Row: {
           capacity: string
           created_at: string
+          display_order: number
           format_rule: string
           id: string
         }
         Insert: {
           capacity: string
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
         }
         Update: {
           capacity?: string
           created_at?: string
+          display_order?: number
           format_rule?: string
           id?: string
         }

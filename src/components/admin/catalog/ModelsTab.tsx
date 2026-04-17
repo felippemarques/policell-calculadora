@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OrderArrows } from "./OrderArrows";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,6 +41,7 @@ interface Model {
   brand_id: string;
   name: string;
   format_rule: FormatRule;
+  display_order: number;
   brands?: Brand;
 }
 
@@ -69,7 +71,11 @@ export function ModelsTab() {
   const { data: models = [], isLoading } = useQuery({
     queryKey: qk,
     queryFn: async () => {
-      const { data, error } = await supabase.from("device_models").select("*, brands(id, name)").order("name");
+      const { data, error } = await supabase
+        .from("device_models")
+        .select("*, brands(id, name)")
+        .order("display_order", { ascending: true })
+        .order("name", { ascending: true });
       if (error) throw error;
       return data as Model[];
     },
@@ -80,7 +86,11 @@ export function ModelsTab() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const formatted = applyFormatRule(formName.trim(), formRule);
-      const { error } = await supabase.from("device_models").insert({ name: formatted, brand_id: formBrand, format_rule: formRule });
+      const sameBrand = models.filter((m) => m.brand_id === formBrand);
+      const maxOrder = sameBrand.length > 0 ? Math.max(...sameBrand.map((m) => m.display_order || 0)) : 0;
+      const { error } = await supabase
+        .from("device_models")
+        .insert({ name: formatted, brand_id: formBrand, format_rule: formRule, display_order: maxOrder + 1 });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -191,6 +201,7 @@ export function ModelsTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-24">Ordem</TableHead>
                 <TableHead>Marca</TableHead>
                 <TableHead>Modelo</TableHead>
                 <TableHead>Regra de Formatação</TableHead>
@@ -202,6 +213,14 @@ export function ModelsTab() {
                 const isEditing = editId === m.id;
                 return (
                   <TableRow key={m.id}>
+                    <TableCell>
+                      <OrderArrows
+                        table="device_models"
+                        rows={models.filter((x) => x.brand_id === m.brand_id)}
+                        currentId={m.id}
+                        queryKey={qk}
+                      />
+                    </TableCell>
                     <TableCell>
                       {isEditing ? (
                         <Select value={editBrand} onValueChange={setEditBrand}>

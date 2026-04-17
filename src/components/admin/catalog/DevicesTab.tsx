@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
 
 export function DevicesTab() {
@@ -255,11 +256,11 @@ export function DevicesTab() {
             </div>
             <div>
               <Label className="text-xs">Preço mín (R$)</Label>
-              <Input type="number" min={0} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className="mt-1 h-9 text-xs" placeholder="0" />
+              <CurrencyInput value={Number(priceMin) || 0} onValueChange={(v) => setPriceMin(v ? String(v) : "")} className="mt-1 h-9 text-xs" />
             </div>
             <div>
               <Label className="text-xs">Preço máx (R$)</Label>
-              <Input type="number" min={0} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className="mt-1 h-9 text-xs" placeholder="∞" />
+              <CurrencyInput value={Number(priceMax) || 0} onValueChange={(v) => setPriceMax(v ? String(v) : "")} className="mt-1 h-9 text-xs" />
             </div>
           </div>
         </div>
@@ -325,14 +326,22 @@ export function DevicesTab() {
                   <Label className="text-xs">
                     {bulkPriceMode === "absolute" ? "Novo preço (R$)" : "Ajuste (%) — negativo diminui"}
                   </Label>
-                  <Input
-                    type="number"
-                    step={bulkPriceMode === "absolute" ? "0.01" : "1"}
-                    value={bulkPriceValue}
-                    onChange={(e) => setBulkPriceValue(e.target.value)}
-                    placeholder={bulkPriceMode === "absolute" ? "1500.00" : "+10 ou -15"}
-                    className="mt-1 w-40 h-9 text-xs"
-                  />
+                  {bulkPriceMode === "absolute" ? (
+                    <CurrencyInput
+                      value={Number(bulkPriceValue) || 0}
+                      onValueChange={(v) => setBulkPriceValue(String(v))}
+                      className="mt-1 w-40 h-9 text-xs"
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      step="1"
+                      value={bulkPriceValue}
+                      onChange={(e) => setBulkPriceValue(e.target.value)}
+                      placeholder="+10 ou -15"
+                      className="mt-1 w-40 h-9 text-xs"
+                    />
+                  )}
                 </div>
               </>
             ) : (
@@ -374,13 +383,10 @@ export function DevicesTab() {
                     <td className="px-3 py-1.5 text-destructive/80 line-through">{c.from}</td>
                     <td className="px-3 py-1.5">
                       {c.fieldKey === "base_price" ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          value={Number(c.rawTo)}
-                          onChange={(e) => updatePendingChange(i, Math.max(0, Number(e.target.value)))}
-                          className="h-7 w-28 text-xs font-medium text-primary"
+                        <CurrencyInput
+                          value={Number(c.rawTo) || 0}
+                          onValueChange={(v) => updatePendingChange(i, v)}
+                          className="h-7 w-32 text-xs font-medium text-primary"
                         />
                       ) : (
                         <Input
@@ -435,7 +441,7 @@ export function DevicesTab() {
             </div>
             <div>
               <Label>Preço Base (R$)</Label>
-              <Input type="number" min={0} step={0.01} value={form.base_price} onChange={(e) => setForm({ ...form, base_price: Number(e.target.value) })} className="mt-1" />
+              <CurrencyInput value={Number(form.base_price) || 0} onValueChange={(v) => setForm({ ...form, base_price: v })} className="mt-1" />
             </div>
             <div className="md:col-span-2">
               <Label>Cores (separadas por vírgula)</Label>

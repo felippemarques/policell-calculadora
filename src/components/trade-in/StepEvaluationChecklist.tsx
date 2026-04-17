@@ -198,9 +198,36 @@ export function StepEvaluationChecklist({
 
   const selectDamageOption = (catId: string, optId: string) => {
     const opt = damageOptions.find((o) => o.id === optId);
+    const previousOptId = answers.damageOptionByCategory[catId];
+    const nextMap = { ...answers.damageOptionByCategory, [catId]: optId };
+
+    // If switching to a different option, clear answers of any conditional
+    // sub-questions previously triggered by the OLD option (and recursively
+    // their own descendants) so they don't keep contributing to the price.
+    if (previousOptId && previousOptId !== optId) {
+      const collectDescendantCatIds = (rootOptId: string): string[] => {
+        const directCats = damageCategoriesAll
+          .filter((c) => c.parent_option_id === rootOptId)
+          .map((c) => c.id);
+        const result = [...directCats];
+        for (const cid of directCats) {
+          // Each cat's selected option may itself trigger more conditionals
+          const selectedChildOpt = nextMap[cid];
+          if (selectedChildOpt) result.push(...collectDescendantCatIds(selectedChildOpt));
+          // Also collect via parent_id chains
+          const subCats = damageCategoriesAll.filter((c) => c.parent_id === cid).map((c) => c.id);
+          result.push(...subCats);
+        }
+        return result;
+      };
+      for (const staleCatId of collectDescendantCatIds(previousOptId)) {
+        nextMap[staleCatId] = null;
+      }
+    }
+
     const next: ChecklistAnswers = {
       ...answers,
-      damageOptionByCategory: { ...answers.damageOptionByCategory, [catId]: optId },
+      damageOptionByCategory: nextMap,
     };
     onAnswersChange(next);
 

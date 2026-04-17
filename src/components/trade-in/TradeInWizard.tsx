@@ -95,7 +95,7 @@ export function TradeInWizard() {
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
-  const { leadId, setLeadId, createLead, updateLead, updateAssessment, markRejected } = useLead();
+  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected } = useLead();
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {
@@ -180,6 +180,20 @@ export function TradeInWizard() {
       customer_phone: data.phone,
     });
     return id;
+  };
+
+  // Called by StepPersonalInfo when an OAuth login auto-filled the form.
+  // Reuses an existing lead matching the email (so we don't duplicate) and
+  // advances the wizard to the device-selection step.
+  const handleSocialAutofill = async (info: { name: string; email: string; phone: string }) => {
+    const id = await upsertLeadByEmail({
+      customer_name: info.name,
+      customer_email: info.email,
+      customer_phone: info.phone,
+    });
+    if (!id) return;
+    setData((prev) => ({ ...prev, name: info.name, email: info.email, phone: info.phone }));
+    setStep(1);
   };
 
   const handleDeviceSelected = async () => {
@@ -313,6 +327,7 @@ export function TradeInWizard() {
               onChange={(d) => setData({ ...data, ...d })}
               onNext={() => setStep(1)}
               onCreateLead={handleCreateLead}
+              onSocialAutofill={handleSocialAutofill}
             />
           )}
           {step === 1 && (

@@ -362,6 +362,38 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
           Próximo <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
+
+      {/* ── Confirmation modal: changing device wipes the answers ── */}
+      <AlertDialog
+        open={!!pendingChange}
+        onOpenChange={(open) => !open && setPendingChange(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar seleção?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você já respondeu parte da avaliação. Trocar
+              {pendingChange?.kind === "brand"
+                ? " a marca"
+                : pendingChange?.kind === "model"
+                ? " o modelo"
+                : " o armazenamento"}{" "}
+              vai apagar as respostas para garantir o preço correto. Quer continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter respostas</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingChange) applyChange(pendingChange);
+                setPendingChange(null);
+              }}
+            >
+              Sim, alterar e reiniciar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

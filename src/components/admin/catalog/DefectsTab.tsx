@@ -553,32 +553,54 @@ export function DefectsTab() {
 
         {/* New category form */}
         {showNewCat && (
-          <div className="bg-card border rounded-lg p-4 flex items-end gap-3">
-            <div className="flex-1">
+          <div className="bg-card border rounded-lg p-4 space-y-3">
+            <div>
               <Label>Nome da categoria</Label>
               <Input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
+                value={newCat.name}
+                onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
                 placeholder="Ex: Bateria, Tela, Carcaça"
                 className="mt-1"
                 autoFocus
               />
             </div>
-            <Button
-              onClick={() => saveCatMutation.mutate({ name: newCatName })}
-              disabled={!newCatName || saveCatMutation.isPending}
-            >
-              <Check className="mr-1 h-4 w-4" /> Criar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNewCat(false);
-                setNewCatName("");
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div>
+              <Label className="text-sm">Texto de ajuda (opcional)</Label>
+              <Textarea
+                value={newCat.help_text}
+                onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
+                placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
+                className="mt-1 text-sm"
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Exibido como tooltip "?" ao lado do nome da categoria no formulário do cliente.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+              <Checkbox
+                checked={newCat.is_required}
+                onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
+              />
+              <span>Obrigatório (cliente precisa responder antes de avançar)</span>
+            </label>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => saveCatMutation.mutate(newCat)}
+                disabled={!newCat.name || saveCatMutation.isPending}
+              >
+                <Check className="mr-1 h-4 w-4" /> Criar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowNewCat(false);
+                  setNewCat({ name: "", help_text: "", is_required: true });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -612,13 +634,29 @@ export function DefectsTab() {
                   {isEditing ? (
                     <Input
                       value={catForm.name}
-                      onChange={(e) => setCatForm({ name: e.target.value })}
+                      onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
                       className="h-8 text-sm flex-1"
                       onClick={(e) => e.stopPropagation()}
                       autoFocus
                     />
                   ) : (
-                    <span className="font-medium text-foreground flex-1">{cat.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{cat.name}</span>
+                        {(cat as any).is_required === false ? (
+                          <Badge variant="outline" className="text-[10px]">opcional</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                            obrigatório
+                          </Badge>
+                        )}
+                      </div>
+                      {(cat as any).help_text && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {(cat as any).help_text}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -634,7 +672,7 @@ export function DefectsTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => saveCatMutation.mutate({ id: cat.id, name: catForm.name })}
+                          onClick={() => saveCatMutation.mutate({ id: cat.id, ...catForm })}
                         >
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -647,9 +685,15 @@ export function DefectsTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setCatForm({ name: cat.name });
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCatForm({
+                              name: cat.name,
+                              help_text: (cat as any).help_text ?? "",
+                              is_required: (cat as any).is_required !== false,
+                            });
                             setEditingCatId(cat.id);
+                            setExpandedCat(cat.id);
                           }}
                         >
                           <Pencil className="h-3.5 w-3.5" />

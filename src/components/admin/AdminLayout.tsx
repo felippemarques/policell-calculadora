@@ -9,7 +9,10 @@ import {
   ChevronLeft,
   PanelTop,
   ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
+import { AdminTour } from "@/components/admin/AdminTour";
+import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },

@@ -26,6 +26,7 @@ const navItems = [
 const AdminLayout = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const { restart } = useAdminOnboarding();
 
   const handleSignOut = async () => {
     await signOut();
@@ -34,6 +35,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <AdminTour />
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-border">

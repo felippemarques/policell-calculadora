@@ -526,7 +526,7 @@ export function DefectsTab() {
           variant="outline"
           onClick={() => {
             setShowNewCatForParent(null);
-            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
           }}
         >
           <X className="h-4 w-4" />
@@ -656,6 +656,7 @@ export function DefectsTab() {
                       help_text: cat.help_text ?? "",
                       help_image_url: cat.help_image_url ?? "",
                       is_required: cat.is_required !== false,
+                      brand_ids: Array.isArray(cat.brand_ids) ? cat.brand_ids : [],
                     });
                     setEditingCatId(cat.id);
                     setExpandedCat((prev) => new Set(prev).add(cat.id));
@@ -931,7 +932,7 @@ export function DefectsTab() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
                     setShowNewCatForParent(cat.id);
                   }}
                   disabled={showNewCatForParent === cat.id}
@@ -1177,7 +1178,7 @@ export function DefectsTab() {
           <Button
             size="sm"
             onClick={() => {
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
               setShowNewCatForParent("__root__");
             }}
             disabled={showNewCatForParent === "__root__"}

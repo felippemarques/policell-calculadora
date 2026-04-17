@@ -25,7 +25,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Trash2, UserPlus, Loader2, ShieldCheck } from "lucide-react";
+import { KeyRound, Trash2, UserPlus, Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -42,6 +42,8 @@ const AdminUsers = () => {
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchAdmins = async () => {
@@ -62,17 +64,27 @@ const AdminUsers = () => {
   }, []);
 
   const handleCreate = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !password) {
       toast.error("Preencha email e senha");
+      return;
+    }
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error("Email inválido. Use o formato nome@dominio.com");
       return;
     }
     if (password.length < 8) {
       toast.error("Senha deve ter ao menos 8 caracteres");
       return;
     }
+    if (password !== passwordConfirm) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
     setSubmitting(true);
     const { data, error } = await supabase.functions.invoke("manage-admins", {
-      body: { action: "create", email, password },
+      body: { action: "create", email: trimmedEmail, password },
     });
     setSubmitting(false);
     if (error || data?.error) {
@@ -83,6 +95,8 @@ const AdminUsers = () => {
     setCreateOpen(false);
     setEmail("");
     setPassword("");
+    setPasswordConfirm("");
+    setShowPassword(false);
     fetchAdmins();
   };
 
@@ -194,7 +208,18 @@ const AdminUsers = () => {
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(o) => {
+          setCreateOpen(o);
+          if (!o) {
+            setEmail("");
+            setPassword("");
+            setPasswordConfirm("");
+            setShowPassword(false);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Novo Administrador</DialogTitle>
@@ -208,29 +233,68 @@ const AdminUsers = () => {
               <Input
                 id="new-email"
                 type="email"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@policell.com"
                 className="mt-1"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use um email válido no formato <span className="font-mono">nome@dominio.com</span>.
+              </p>
             </div>
             <div>
               <Label htmlFor="new-password">Senha (mín. 8 caracteres)</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="new-password-confirm">Confirmar senha</Label>
               <Input
-                id="new-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                id="new-password-confirm"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                placeholder="Repita a senha"
                 className="mt-1"
               />
+              {passwordConfirm.length > 0 && password !== passwordConfirm && (
+                <p className="text-xs text-destructive mt-1">As senhas não coincidem.</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleCreate} disabled={submitting}>
+            <Button
+              onClick={handleCreate}
+              disabled={
+                submitting ||
+                !email ||
+                !password ||
+                password.length < 8 ||
+                password !== passwordConfirm
+              }
+            >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Criar administrador
             </Button>

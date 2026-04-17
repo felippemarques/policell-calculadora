@@ -817,111 +817,160 @@ export function DefectsTab() {
               )}
               {options.map((opt) => {
                 const isOptEditing = editingOptId === opt.id;
+                const optChildren = categories
+                  .filter((c) => c.parent_option_id === opt.id)
+                  .sort((a, b) => a.display_order - b.display_order);
                 return (
-                  <div
-                    key={opt.id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-                      opt.is_rejected
-                        ? "bg-destructive/5 border-destructive/20"
-                        : "bg-card border-transparent"
-                    }`}
-                  >
-                    {isOptEditing ? (
-                      <>
-                        <Input
-                          value={editOptForm.option_name}
-                          onChange={(e) =>
-                            setEditOptForm({ ...editOptForm, option_name: e.target.value })
-                          }
-                          className="h-8 text-sm flex-1"
-                          placeholder="Nome da opção"
-                          autoFocus
-                        />
-                        <CurrencyInput
-                          value={editOptForm.deduction_value}
-                          onValueChange={(v) =>
-                            setEditOptForm({ ...editOptForm, deduction_value: v })
-                          }
-                          className="h-8 text-sm w-32"
-                          disabled={editOptForm.is_rejected}
-                        />
-                        <div className="flex items-center gap-1.5 px-2">
-                          <Switch
-                            checked={editOptForm.is_rejected}
-                            onCheckedChange={(v) =>
-                              setEditOptForm({ ...editOptForm, is_rejected: v })
+                  <div key={opt.id} className="space-y-2">
+                    <div
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
+                        opt.is_rejected
+                          ? "bg-destructive/5 border-destructive/20"
+                          : "bg-card border-transparent"
+                      }`}
+                    >
+                      {isOptEditing ? (
+                        <>
+                          <Input
+                            value={editOptForm.option_name}
+                            onChange={(e) =>
+                              setEditOptForm({ ...editOptForm, option_name: e.target.value })
                             }
+                            className="h-8 text-sm flex-1"
+                            placeholder="Nome da opção"
+                            autoFocus
                           />
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            Inviabiliza
+                          <CurrencyInput
+                            value={editOptForm.deduction_value}
+                            onValueChange={(v) =>
+                              setEditOptForm({ ...editOptForm, deduction_value: v })
+                            }
+                            className="h-8 text-sm w-32"
+                            disabled={editOptForm.is_rejected}
+                          />
+                          <div className="flex items-center gap-1.5 px-2">
+                            <Switch
+                              checked={editOptForm.is_rejected}
+                              onCheckedChange={(v) =>
+                                setEditOptForm({ ...editOptForm, is_rejected: v })
+                              }
+                            />
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              Inviabiliza
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              saveOptionMutation.mutate({
+                                id: opt.id,
+                                damage_category_id: cat.id,
+                                ...editOptForm,
+                              })
+                            }
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {opt.is_rejected ? (
+                            <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                          ) : (
+                            <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium text-foreground flex-1">
+                            {opt.option_name}
                           </span>
+                          {optChildren.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-primary/40 text-primary gap-1">
+                              <GitBranch className="h-2.5 w-2.5" />
+                              {optChildren.length} sub
+                            </Badge>
+                          )}
+                          {opt.is_rejected ? (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Inviabiliza
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              R${" "}
+                              {opt.deduction_value?.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </Badge>
+                          )}
+                          {!opt.is_rejected && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Adicionar sub-pergunta condicional para esta opção"
+                              className="text-primary hover:text-primary"
+                              onClick={() => {
+                                setNewCat({
+                                  name: "",
+                                  help_text: "",
+                                  help_image_url: "",
+                                  is_required: true,
+                                  brand_ids: [],
+                                });
+                                setShowNewCatForParent(`option:${opt.id}`);
+                              }}
+                              disabled={showNewCatForParent === `option:${opt.id}`}
+                            >
+                              <GitBranch className="h-3.5 w-3.5 mr-1" />
+                              <span className="text-[11px]">Sub-pergunta</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingOptId(opt.id);
+                              setEditOptForm({
+                                option_name: opt.option_name,
+                                deduction_value: Number(opt.deduction_value) || 0,
+                                is_rejected: opt.is_rejected,
+                              });
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Remover opção "${opt.option_name}"?`))
+                                deleteOptionMutation.mutate(opt.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Conditional sub-questions triggered by THIS option */}
+                    {showNewCatForParent === `option:${opt.id}` && (
+                      <div className="ml-6 border-l-2 border-primary/30 pl-3">
+                        {renderNewCatForm(null, opt.id)}
+                      </div>
+                    )}
+                    {optChildren.length > 0 && (
+                      <div className="ml-6 border-l-2 border-primary/30 pl-3 space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-primary font-semibold flex items-center gap-1">
+                          ↳ Sub-perguntas (aparecem se "{opt.option_name}" for selecionada)
+                        </p>
+                        <div className="border rounded-md overflow-hidden divide-y bg-card">
+                          {optChildren.map((child) => renderCategoryNode(child, depth + 1))}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            saveOptionMutation.mutate({
-                              id: opt.id,
-                              damage_category_id: cat.id,
-                              ...editOptForm,
-                            })
-                          }
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        {opt.is_rejected ? (
-                          <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                        ) : (
-                          <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                        )}
-                        <span className="text-sm font-medium text-foreground flex-1">
-                          {opt.option_name}
-                        </span>
-                        {opt.is_rejected ? (
-                          <Badge variant="destructive" className="text-xs">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Inviabiliza
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            R${" "}
-                            {opt.deduction_value?.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingOptId(opt.id);
-                            setEditOptForm({
-                              option_name: opt.option_name,
-                              deduction_value: Number(opt.deduction_value) || 0,
-                              is_rejected: opt.is_rejected,
-                            });
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            if (confirm(`Remover opção "${opt.option_name}"?`))
-                              deleteOptionMutation.mutate(opt.id);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
+                      </div>
                     )}
                   </div>
                 );

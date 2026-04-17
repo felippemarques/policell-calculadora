@@ -146,9 +146,14 @@ const STATUS_META: Record<
   },
 };
 
+// Funnel stages.
+// "lead_only"   = in_progress  AND device_id IS NULL  (só preencheu contato)
+// "incomplete"  = in_progress  AND device_id IS NOT NULL (escolheu device, abandonou)
+// "completed"/"conversa_iniciada"/"rejected" map directly to leads.status.
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos os status" },
-  { value: "in_progress", label: "Aberto" },
+  { value: "lead_only", label: "Lead (só contato)" },
+  { value: "incomplete", label: "Proposta incompleta" },
   { value: "completed", label: "Concluído" },
   { value: "conversa_iniciada", label: "Conversa iniciada" },
   { value: "rejected", label: "Rejeitado" },
@@ -299,7 +304,15 @@ const AdminCustomers = () => {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return leads.filter((l) => {
-      if (statusFilter !== "all" && l.status !== statusFilter) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "lead_only") {
+          if (!(l.status === "in_progress" && !l.device_id)) return false;
+        } else if (statusFilter === "incomplete") {
+          if (!(l.status === "in_progress" && l.device_id)) return false;
+        } else if (l.status !== statusFilter) {
+          return false;
+        }
+      }
 
       if (term) {
         const hay = `${l.customer_name} ${l.customer_email} ${l.customer_phone}`.toLowerCase();

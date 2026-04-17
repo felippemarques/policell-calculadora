@@ -78,6 +78,11 @@ export function StepEvaluationChecklist({
     label: string;
   }>({ open: false, title: "", label: "" });
 
+  // Validation: which required ids (condition or damage category) are missing
+  const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
+  // Refs to scroll to the first missing card
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   useEffect(() => {
     onSubScreenChange?.(subScreen);
   }, [subScreen, onSubScreenChange]);

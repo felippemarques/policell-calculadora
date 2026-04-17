@@ -592,9 +592,9 @@ export function DefectsTab() {
     const isEditing = editingCatId === cat.id;
     const draft = getNewOptionDraft(cat.id);
     const children = categories
-      .filter((c) => c.parent_id === cat.id)
+      .filter((c) => c.parent_id === cat.id && !c.parent_option_id)
       .sort((a, b) => a.display_order - b.display_order);
-    const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null));
+    const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null) && !c.parent_option_id);
 
     return (
       <div key={cat.id} className="bg-card">

@@ -106,7 +106,22 @@ export function DefectsTab() {
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return (data || []) as DamageCategory[];
+      return (data || []).map((c: any) => ({
+        ...c,
+        brand_ids: Array.isArray(c.brand_ids) ? c.brand_ids : [],
+      })) as DamageCategory[];
+    },
+  });
+
+  const { data: brands = [] } = useQuery({
+    queryKey: ["admin-brands-for-defects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("id, name")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as Brand[];
     },
   });
 
@@ -181,13 +196,17 @@ export function DefectsTab() {
       help_text: string;
       help_image_url: string;
       is_required: boolean;
+      brand_ids?: string[];
       parent_id?: string | null;
     }) => {
+      const isRoot = (data.parent_id ?? null) === null;
       const payload: any = {
         name: data.name,
         help_text: data.help_text?.trim() || null,
         help_image_url: data.help_image_url?.trim() || null,
         is_required: data.is_required,
+        // brand_ids only meaningful for root categories
+        brand_ids: isRoot ? data.brand_ids ?? [] : [],
       };
       if (data.id) {
         const { error } = await supabase
@@ -211,7 +230,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCatForParent(null);
-      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -256,7 +275,8 @@ export function DefectsTab() {
           is_required: cat.is_required,
           parent_id: cat.parent_id,
           display_order: maxOrder,
-        })
+          brand_ids: cat.parent_id === null ? cat.brand_ids ?? [] : [],
+        } as any)
         .select("id")
         .single();
       if (error) throw error;

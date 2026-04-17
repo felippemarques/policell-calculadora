@@ -10,6 +10,7 @@ import {
   PanelTop,
   ShieldCheck,
   HelpCircle,
+  ExternalLink,
 } from "lucide-react";
 import { AdminTour } from "@/components/admin/AdminTour";
 import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";

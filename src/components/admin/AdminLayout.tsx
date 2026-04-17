@@ -8,6 +8,7 @@ import {
   LogOut,
   ChevronLeft,
   PanelTop,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -16,6 +17,7 @@ const navItems = [
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Produtos e Parâmetros" },
   { to: "/admin/clientes", icon: Users, label: "Clientes" },
+  { to: "/admin/administradores", icon: ShieldCheck, label: "Administradores" },
 ];
 
 const AdminLayout = () => {

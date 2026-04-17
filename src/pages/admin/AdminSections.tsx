@@ -1168,14 +1168,20 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
   const layoutData = (() => {
     try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
   })();
-  const setLayoutField = (key: string, value: string) => {
+  const setLayoutField = (key: string, value: string | number) => {
     const updated = { ...layoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+  const setLayoutFields = (patch: Record<string, string | number>) => {
+    const updated = { ...layoutData, ...patch };
     setForm({ ...form, layout: JSON.stringify(updated) });
   };
 
   const vAlign = layoutData.vAlign || "center";
   const hAlign = layoutData.hAlign || "center";
   const textAlign = layoutData.textAlign || "center";
+  const bgPosX: number = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
+  const bgPosY: number = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
   const vOptions = [
     { value: "top", label: "⬆ Topo" },

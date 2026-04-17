@@ -27,6 +27,8 @@ export interface WizardData {
   email: string;
   phone: string;
   deviceId: string;
+  /** Selected color id (informational only — does not affect price). null until chosen. */
+  colorId: string | null;
   answers: ChecklistAnswers;
 }
 
@@ -60,6 +62,7 @@ function loadPersisted(): PersistedState | null {
         email: parsed.data?.email ?? "",
         phone: parsed.data?.phone ?? "",
         deviceId: parsed.data?.deviceId ?? "",
+        colorId: parsed.data?.colorId ?? null,
         answers: parsed.data?.answers ?? emptyAnswers(),
       },
       leadId: parsed.leadId ?? null,
@@ -89,6 +92,7 @@ export function TradeInWizard() {
       email: "",
       phone: "",
       deviceId: "",
+      colorId: null,
       answers: emptyAnswers(),
     },
   );
@@ -199,6 +203,11 @@ export function TradeInWizard() {
   const handleDeviceSelected = async () => {
     if (leadId && data.deviceId) {
       await updateLead(leadId, { device_id: data.deviceId });
+      // Persist informational color choice into the lead's assessment_responses JSON
+      await updateAssessment(leadId, {
+        ...(data.answers as any),
+        selectedColorId: data.colorId ?? null,
+      });
     }
     setStep(2);
   };
@@ -266,7 +275,7 @@ export function TradeInWizard() {
 
   const handleReset = () => {
     clearPersisted();
-    setData({ name: "", email: "", phone: "", deviceId: "", answers: emptyAnswers() });
+    setData({ name: "", email: "", phone: "", deviceId: "", colorId: null, answers: emptyAnswers() });
     setResult(null);
     setLeadId(null);
     setStep(0);

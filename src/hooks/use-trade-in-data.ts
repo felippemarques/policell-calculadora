@@ -43,3 +43,38 @@ export function useConditionDiscounts() {
     },
   });
 }
+
+export interface ColorRow {
+  id: string;
+  name: string;
+  hex_code: string | null;
+  brand_ids: string[];
+  display_order: number;
+}
+
+/**
+ * Returns colors filtered by the device's brand.
+ * - If `brandId` is null/undefined → query is disabled.
+ * - Otherwise returns colors where `brand_ids` is empty (global) OR contains `brandId`.
+ */
+export function useColorsByBrand(brandId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["colors-by-brand", brandId ?? "none"],
+    enabled: !!brandId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("colors")
+        .select("id, name, hex_code, brand_ids, display_order")
+        .order("display_order")
+        .order("name");
+      if (error) throw error;
+      const all = (data || []) as ColorRow[];
+      return all.filter(
+        (c) =>
+          !c.brand_ids ||
+          c.brand_ids.length === 0 ||
+          (brandId ? c.brand_ids.includes(brandId) : false),
+      );
+    },
+  });
+}

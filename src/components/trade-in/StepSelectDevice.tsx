@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
+import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useColorsByBrand } from "@/hooks/use-trade-in-data";
 import type { WizardData } from "./TradeInWizard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -14,12 +15,14 @@ interface Props {
   onBack: () => void;
 }
 
-type Phase = "brand" | "model" | "storage";
+type Phase = "brand" | "model" | "storage" | "color";
 
 export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Props) {
   const selectedDevice = devices.find((d) => d.id === data.deviceId) || null;
 
-  const [phase, setPhase] = useState<Phase>(selectedDevice ? "storage" : "brand");
+  const [phase, setPhase] = useState<Phase>(
+    data.colorId ? "color" : selectedDevice ? "color" : "brand",
+  );
   const [selectedBrand, setSelectedBrand] = useState<string | null>(selectedDevice?.brand ?? null);
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedDevice?.model ?? null);
 
@@ -46,6 +49,12 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
       .sort((a, b) => a.base_price - b.base_price);
   }, [devices, selectedBrand, selectedModel]);
 
+  // ── Colors filtered by the brand of the selected device ──
+  const { data: colors = [], isLoading: loadingColors } = useColorsByBrand(
+    selectedDevice?.brand_id ?? null,
+  );
+  const selectedColor = colors.find((c) => c.id === data.colorId) || null;
+
   // animate phase transition by remounting
   const [animKey, setAnimKey] = useState(0);
   useEffect(() => {
@@ -55,21 +64,28 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
   const handleBrandPick = (b: string) => {
     setSelectedBrand(b);
     setSelectedModel(null);
-    onChange({ deviceId: "" });
+    onChange({ deviceId: "", colorId: null });
     setPhase("model");
   };
 
   const handleModelPick = (m: string) => {
     setSelectedModel(m);
-    onChange({ deviceId: "" });
+    onChange({ deviceId: "", colorId: null });
     setPhase("storage");
   };
 
   const handleStoragePick = (deviceId: string) => {
-    onChange({ deviceId });
+    // If device changed, clear previously chosen color (it may not belong to this brand anymore)
+    onChange({ deviceId, colorId: null });
+    setPhase("color");
   };
 
-  const isValid = !!data.deviceId;
+  const handleColorPick = (colorId: string) => {
+    onChange({ colorId });
+  };
+
+  // Validity: must have device + (color, if any color is available for this brand)
+  const isValid = !!data.deviceId && (colors.length === 0 || !!data.colorId);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -109,6 +125,17 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                 active={phase === "storage"}
                 done={!!selectedDevice}
                 onClick={() => selectedModel && setPhase("storage")}
+              />
+            </>
+          )}
+          {selectedDevice && (
+            <>
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              <Crumb
+                label={selectedColor?.name || "Cor"}
+                active={phase === "color"}
+                done={!!selectedColor}
+                onClick={() => selectedDevice && setPhase("color")}
               />
             </>
           )}
@@ -191,6 +218,83 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                   </p>
                   <p className="text-sm md:text-base font-semibold text-foreground">
                     {selectedDevice.brand} {selectedDevice.model} · {selectedDevice.storage}
+                  </p>
+                </div>
+                <p className="text-xl font-bold text-primary">
+                  R$ {selectedDevice.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {phase === "color" && (
+          <>
+            <BackLink
+              label={`Trocar armazenamento (${selectedDevice?.storage ?? ""})`}
+              onClick={() => setPhase("storage")}
+            />
+            <div className="flex items-center gap-2 mb-4">
+              <Palette className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium text-foreground">
+                Escolha a cor do seu aparelho
+              </p>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5">
+                informativo · sem desconto
+              </span>
+            </div>
+
+            {loadingColors ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : colors.length === 0 ? (
+              <EmptyState message="Nenhuma cor cadastrada para esta marca. Você pode prosseguir." />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                {colors.map((c) => {
+                  const isSel = data.colorId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => handleColorPick(c.id)}
+                      className={`group relative w-full rounded-2xl px-4 py-3 border transition-all duration-200 text-left
+                        ${
+                          isSel
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+                            : "border-border bg-card hover:border-primary/40 hover:ring-2 hover:ring-primary/15"
+                        }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="inline-block h-6 w-6 rounded-full border border-border/80 flex-shrink-0 shadow-inner"
+                          style={{ backgroundColor: c.hex_code || "transparent" }}
+                          aria-hidden
+                        />
+                        <span className="text-sm font-medium text-foreground truncate">
+                          {c.name}
+                        </span>
+                      </div>
+                      {isSel && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedDevice && (
+              <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/15 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast">
+                <div>
+                  <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">
+                    Selecionado
+                  </p>
+                  <p className="text-sm md:text-base font-semibold text-foreground">
+                    {selectedDevice.brand} {selectedDevice.model} · {selectedDevice.storage}
+                    {selectedColor ? ` · ${selectedColor.name}` : ""}
                   </p>
                 </div>
                 <p className="text-xl font-bold text-primary">

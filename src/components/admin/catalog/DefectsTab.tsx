@@ -600,6 +600,11 @@ export function DefectsTab() {
                     <ImageIcon className="h-2.5 w-2.5" /> imagem
                   </Badge>
                 )}
+                {!cat.parent_id && cat.brand_ids && cat.brand_ids.length > 0 && (
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                    {cat.brand_ids.length === 1 ? "1 marca" : `${cat.brand_ids.length} marcas`}
+                  </Badge>
+                )}
               </div>
               {cat.help_text && (
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
@@ -720,6 +725,13 @@ export function DefectsTab() {
               }}
               onClear={() => setCatForm((p) => ({ ...p, help_image_url: "" }))}
             />
+            {!cat.parent_id && (
+              <BrandsMultiSelect
+                brands={brands}
+                selected={catForm.brand_ids}
+                onChange={(ids) => setCatForm({ ...catForm, brand_ids: ids })}
+              />
+            )}
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
               <Checkbox
                 checked={catForm.is_required}

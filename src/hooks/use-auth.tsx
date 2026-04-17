@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -9,7 +10,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: (redirectTo?: string) => Promise<{ error: Error | null; redirected?: boolean }>;
+  signInWithApple: (redirectTo?: string) => Promise<{ error: Error | null; redirected?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -72,12 +74,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? new Error(error.message) : null };
   };
 
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + "/admin" },
+  const signInWithGoogle = async (redirectTo?: string) => {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: redirectTo ?? window.location.href,
     });
-    return { error: error ? new Error(error.message) : null };
+    if (result.error) {
+      const err = result.error;
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
+    return { error: null, redirected: result.redirected };
+  };
+
+  const signInWithApple = async (redirectTo?: string) => {
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: redirectTo ?? window.location.href,
+    });
+    if (result.error) {
+      const err = result.error;
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
+    return { error: null, redirected: result.redirected };
   };
 
   const signOut = async () => {
@@ -88,7 +104,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isAdmin,
+        loading,
+        signIn,
+        signUp,
+        signInWithGoogle,
+        signInWithApple,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

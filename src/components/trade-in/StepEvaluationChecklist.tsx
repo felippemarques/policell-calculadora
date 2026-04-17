@@ -223,9 +223,9 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
-  // Build sets: root categories vs subcategories (parent_id != null)
+  // True root: no parent at all (neither parent_id nor parent_option_id)
   const rootCategories = useMemo(
-    () => damageCategories.filter((c) => !c.parent_id),
+    () => damageCategories.filter((c) => !c.parent_id && !c.parent_option_id),
     [damageCategories],
   );
   const subcategoriesByParent = useMemo(() => {
@@ -239,15 +239,41 @@ export function StepEvaluationChecklist({
     return map;
   }, [damageCategories]);
 
+  // Conditional sub-questions indexed by the option that triggers them
+  const conditionalsByOption = useMemo(() => {
+    const map: Record<string, DamageCategory[]> = {};
+    for (const c of damageCategories) {
+      if (c.parent_option_id) {
+        if (!map[c.parent_option_id]) map[c.parent_option_id] = [];
+        map[c.parent_option_id].push(c);
+      }
+    }
+    // Keep stable display_order
+    for (const key of Object.keys(map)) {
+      map[key].sort(
+        (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0),
+      );
+    }
+    return map;
+  }, [damageCategories]);
+
   // A required category that has no options is not actionable — exclude it.
+  // Conditional sub-questions only count when their trigger option is currently selected.
   const requiredDamageCategories = useMemo(
     () =>
-      damageCategories.filter(
-        (c) =>
-          c.is_required !== false &&
-          damageOptions.some((o) => o.damage_category_id === c.id),
-      ),
-    [damageCategories, damageOptions],
+      damageCategories.filter((c) => {
+        if (c.is_required === false) return false;
+        if (!damageOptions.some((o) => o.damage_category_id === c.id)) return false;
+        if (c.parent_option_id) {
+          // active only if the trigger option is currently chosen in its owning category
+          const triggerOpt = damageOptions.find((o) => o.id === c.parent_option_id);
+          if (!triggerOpt) return false;
+          const ownerCatId = triggerOpt.damage_category_id;
+          return answers.damageOptionByCategory[ownerCatId] === c.parent_option_id;
+        }
+        return true;
+      }),
+    [damageCategories, damageOptions, answers.damageOptionByCategory],
   );
   const conditionAnswered = !!answers.conditionId;
   const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(

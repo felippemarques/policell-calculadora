@@ -281,9 +281,9 @@ export function TradeInWizard() {
           <Smartphone className="h-8 w-8 text-primary" />
         </div>
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
-          Calculadora Trade-in
+          Policell - Garantia de entrega e qualidade
         </h2>
-        <p className="text-muted-foreground mt-2">Descubra quanto vale seu aparelho</p>
+        <p className="text-muted-foreground mt-2">Seu aparelho vale mais do que você imagina.</p>
       </div>
 
       <div className="relative rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">

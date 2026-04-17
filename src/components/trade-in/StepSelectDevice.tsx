@@ -2,6 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useColorsByBrand } from "@/hooks/use-trade-in-data";
+import { hasAnyAnswers } from "@/lib/trade-in-sanity";
+import { emptyAnswers } from "@/lib/trade-in-pricing";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { WizardData } from "./TradeInWizard";
 import type { Database } from "@/integrations/supabase/types";
 

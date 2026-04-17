@@ -27,9 +27,9 @@ export function DefectsTab() {
   // ── Categories state ──
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
-  const [catForm, setCatForm] = useState({ name: "" });
+  const [catForm, setCatForm] = useState({ name: "", help_text: "", is_required: true });
   const [showNewCat, setShowNewCat] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
+  const [newCat, setNewCat] = useState({ name: "", help_text: "", is_required: true });
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
@@ -44,9 +44,19 @@ export function DefectsTab() {
 
   // ── Condition (normal) state ──
   const [showNewCondition, setShowNewCondition] = useState(false);
-  const [condForm, setCondForm] = useState({ condition_name: "", discount_percentage: 0 });
+  const [condForm, setCondForm] = useState({
+    condition_name: "",
+    discount_percentage: 0,
+    help_text: "",
+    is_required: true,
+  });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
-  const [editCondForm, setEditCondForm] = useState({ condition_name: "", discount_percentage: 0 });
+  const [editCondForm, setEditCondForm] = useState({
+    condition_name: "",
+    discount_percentage: 0,
+    help_text: "",
+    is_required: true,
+  });
 
   // ── Rejection reason state ──
   const [showNewRejection, setShowNewRejection] = useState(false);
@@ -102,12 +112,20 @@ export function DefectsTab() {
 
   // ── Category mutations ──
   const saveCatMutation = useMutation({
-    mutationFn: async ({ id, name }: { id?: string; name: string }) => {
-      if (id) {
-        const { error } = await supabase.from("damage_categories").update({ name }).eq("id", id);
+    mutationFn: async (data: { id?: string; name: string; help_text: string; is_required: boolean }) => {
+      const payload = {
+        name: data.name,
+        help_text: data.help_text?.trim() || null,
+        is_required: data.is_required,
+      };
+      if (data.id) {
+        const { error } = await supabase
+          .from("damage_categories")
+          .update(payload as any)
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("damage_categories").insert({ name });
+        const { error } = await supabase.from("damage_categories").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -115,7 +133,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCat(false);
-      setNewCatName("");
+      setNewCat({ name: "", help_text: "", is_required: true });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),

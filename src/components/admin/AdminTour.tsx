@@ -159,13 +159,13 @@ export function AdminTour() {
         <div
           className={`relative bg-gradient-to-br ${step.accent} px-7 sm:px-9 pt-7 pb-16`}
         >
-          {/* skip button */}
+          {/* close button (apenas oculta nesta sessão) */}
           <button
             type="button"
-            onClick={handleFinish}
+            onClick={handleClose}
             className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white/90 hover:text-white transition-colors backdrop-blur-sm"
-            aria-label="Pular tour"
-            title="Pular tour"
+            aria-label="Fechar tour"
+            title="Fechar (volta a aparecer depois)"
           >
             <X className="h-4 w-4" />
           </button>

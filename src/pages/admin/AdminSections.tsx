@@ -1233,11 +1233,11 @@ function HeroBackgroundDragger({
         onPointerLeave={(e) => {
           if (dragStateRef.current) endDrag(e);
         }}
-        className={`relative w-full overflow-hidden rounded-lg border select-none touch-none ${
+        className={`relative w-full aspect-[21/9] overflow-hidden rounded-xl border select-none touch-none ${
           isDragging ? "cursor-grabbing" : "cursor-grab"
         }`}
       >
-        <div className="pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.6]" style={{ width: "166.6667%", height: "166.6667%" }}>
           <HeroSection section={section} />
         </div>
         <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm border text-[11px] font-medium text-foreground shadow-sm pointer-events-none">
@@ -1346,8 +1346,8 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         </div>
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-2">Pré-visualização da posição:</p>
-          <div className="overflow-hidden rounded-lg border">
-            <div className="pointer-events-none">
+          <div className="relative w-full aspect-[21/9] overflow-hidden rounded-xl border">
+            <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.6]" style={{ width: "166.6667%", height: "166.6667%" }}>
               <HeroSection section={{ ...form, layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }) }} />
             </div>
           </div>

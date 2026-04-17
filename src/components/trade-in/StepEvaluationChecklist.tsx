@@ -129,33 +129,51 @@ export function StepEvaluationChecklist({
 
   // ── Filter categories by selected device's brand ──
   // Rules:
-  //  - Root categories (parent_id null): visible if brand_ids empty (global) OR contains selectedBrandId
-  //  - Subcategories: visible only if their root ancestor is visible (so we hide orphans)
+  //  - Root categories (parent_id null AND parent_option_id null): visible if brand_ids empty (global) OR contains selectedBrandId
+  //  - Subcategories (parent_id): inherit visibility from their root ancestor
+  //  - Conditional sub-questions (parent_option_id): inherit visibility from the category that owns the trigger option
   const damageCategories = useMemo(() => {
     if (damageCategoriesAll.length === 0) return [];
 
     const rootVisibility = new Map<string, boolean>();
     for (const c of damageCategoriesAll) {
-      if (!c.parent_id) {
+      if (!c.parent_id && !c.parent_option_id) {
         const ids = c.brand_ids ?? [];
         const visible = ids.length === 0 || (!!selectedBrandId && ids.includes(selectedBrandId));
         rootVisibility.set(c.id, visible);
       }
     }
 
-    // Walk up parent chain to find root
+    // Walk up parent chain to find root (following parent_id, then parent_option_id → option's category)
     const findRootId = (id: string): string | null => {
       let cur = damageCategoriesAll.find((x) => x.id === id);
-      while (cur && cur.parent_id) {
-        const parent = damageCategoriesAll.find((x) => x.id === cur!.parent_id);
-        if (!parent) return cur.id;
-        cur = parent;
+      const visited = new Set<string>();
+      while (cur && !visited.has(cur.id)) {
+        visited.add(cur.id);
+        if (!cur.parent_id && !cur.parent_option_id) return cur.id;
+        if (cur.parent_id) {
+          const parent = damageCategoriesAll.find((x) => x.id === cur!.parent_id);
+          if (!parent) return cur.id;
+          cur = parent;
+          continue;
+        }
+        if (cur.parent_option_id) {
+          // option → category that owns it → its root
+          // We need the option's owning category; look it up via damageOptions list captured below
+          // Defer: we use the local closure of damageOptionsRef set after this function is defined
+          const triggerOpt = damageOptionsForRoot.find((o) => o.id === cur!.parent_option_id);
+          if (!triggerOpt) return null;
+          const owning = damageCategoriesAll.find((x) => x.id === triggerOpt.damage_category_id);
+          if (!owning) return null;
+          cur = owning;
+          continue;
+        }
       }
       return cur?.id ?? null;
     };
 
     return damageCategoriesAll.filter((c) => {
-      if (!c.parent_id) return rootVisibility.get(c.id) === true;
+      if (!c.parent_id && !c.parent_option_id) return rootVisibility.get(c.id) === true;
       const rootId = findRootId(c.id);
       return rootId ? rootVisibility.get(rootId) === true : false;
     });

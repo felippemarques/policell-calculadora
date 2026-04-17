@@ -246,6 +246,7 @@ export type Database = {
         Row: {
           base_price: number
           brand: string
+          brand_id: string | null
           colors: string | null
           created_at: string
           id: string
@@ -255,6 +256,7 @@ export type Database = {
         Insert: {
           base_price: number
           brand?: string
+          brand_id?: string | null
           colors?: string | null
           created_at?: string
           id?: string
@@ -264,13 +266,22 @@ export type Database = {
         Update: {
           base_price?: number
           brand?: string
+          brand_id?: string | null
           colors?: string | null
           created_at?: string
           id?: string
           model?: string
           storage?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "devices_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       evaluations: {
         Row: {

@@ -73,24 +73,55 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
     setAnimKey((k) => k + 1);
   }, [phase]);
 
-  const handleBrandPick = (b: string) => {
-    setSelectedBrand(b);
-    setSelectedModel(null);
-    onChange({ deviceId: "", colorId: null });
-    setPhase("model");
+  // ── Reset-cascade with confirmation when answers exist ──
+  // Pending change is staged here; when user confirms (or no answers exist), we apply it.
+  const [pendingChange, setPendingChange] = useState<
+    | { kind: "brand"; value: string }
+    | { kind: "model"; value: string }
+    | { kind: "storage"; deviceId: string }
+    | null
+  >(null);
+
+  const answersDirty = hasAnyAnswers(data.answers);
+
+  const applyChange = (change: NonNullable<typeof pendingChange>) => {
+    if (change.kind === "brand") {
+      setSelectedBrand(change.value);
+      setSelectedModel(null);
+      // Brand change → wipe device, color AND all checklist answers downstream
+      onChange({ deviceId: "", colorId: null, answers: emptyAnswers() });
+      setPhase("model");
+    } else if (change.kind === "model") {
+      setSelectedModel(change.value);
+      // Model change → wipe storage, color AND all checklist answers downstream
+      onChange({ deviceId: "", colorId: null, answers: emptyAnswers() });
+      setPhase("storage");
+    } else {
+      // Storage change → switch device, wipe color AND restart the evaluation
+      onChange({ deviceId: change.deviceId, colorId: null, answers: emptyAnswers() });
+      setPhase("color");
+    }
   };
 
-  const handleModelPick = (m: string) => {
-    setSelectedModel(m);
-    onChange({ deviceId: "", colorId: null });
-    setPhase("storage");
+  const requestChange = (change: NonNullable<typeof pendingChange>) => {
+    // Detect "no-op" (clicking the already-selected option) to avoid the modal
+    const noop =
+      (change.kind === "brand" && change.value === selectedBrand) ||
+      (change.kind === "model" && change.value === selectedModel) ||
+      (change.kind === "storage" && change.deviceId === data.deviceId);
+    if (noop) return;
+
+    // Confirmation only matters when the user has already made checklist progress
+    if (answersDirty) {
+      setPendingChange(change);
+    } else {
+      applyChange(change);
+    }
   };
 
-  const handleStoragePick = (deviceId: string) => {
-    // If device changed, clear previously chosen color (it may not belong to this brand anymore)
-    onChange({ deviceId, colorId: null });
-    setPhase("color");
-  };
+  const handleBrandPick = (b: string) => requestChange({ kind: "brand", value: b });
+  const handleModelPick = (m: string) => requestChange({ kind: "model", value: m });
+  const handleStoragePick = (deviceId: string) => requestChange({ kind: "storage", deviceId });
 
   const handleColorPick = (colorId: string) => {
     onChange({ colorId });

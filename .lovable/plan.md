@@ -1,42 +1,71 @@
 
+## Análise do que já existe
 
-## Plano: Elevar UX de todas as seções ao nível do Hero Banner
+Confirmado lendo o código:
+- **`useLead.createLead`** já faz INSERT em `leads` no Step 0 (nome/email/telefone) com `status: 'in_progress'`
+- **`updateLead`** já salva `device_id` no Step 1
+- **`updateAssessment`** já faz UPDATE silencioso no JSONB `assessment_responses` a cada resposta + a cada transição de sub-tela
+- **`markRejected`** já marca `status: 'rejected'` + `rejection_reason`
+- **`handleSubmit`** já marca `status: 'completed'` + cria `evaluation` com `coupon_code`
 
-### Contexto
-O Hero Banner já tem controles de posição, pré-visualizações em tempo real, tooltips, hints e máscaras. As demais 7 seções (Passo a Passo, Como Vender, Benefícios, Depoimentos, FAQ, Mega Footer, Footer) ainda usam editores genéricos sem previews nem validações.
+Ou seja: a granularidade dos status já existe no banco. Não preciso de RPC complexa nem nova tabela. **Basta ler `leads.status` e fazer LEFT JOIN com `evaluations`** para classificar:
 
-### O que será feito
+| Status do funil          | Regra                                            |
+|--------------------------|--------------------------------------------------|
+| Lead (só contato)        | `leads.status='in_progress'` AND `device_id IS NULL` |
+| Proposta incompleta      | `leads.status='in_progress'` AND `device_id IS NOT NULL` |
+| Rejeitado (hard stop)    | `leads.status='rejected'`                        |
+| Cliente completo (cupom) | `leads.status='completed'` (tem evaluation+cupom)|
 
-**1. Passo a Passo** — Preview em tempo real dos 4 passos com ícones renderizados; seletor de ícone via dropdown (smartphone, clipboard, credit-card, gift, etc.) em vez de campo texto livre; contador de caracteres nos campos título (30) e descrição (80).
+## Plano simplificado (sem complicar)
 
-**2. Como Vender** — Preview ao vivo da seção com itens numerados + imagem lateral; validação de dimensões da imagem (600×800px recomendado) com detecção automática como feito na logo do AdminHeader; contadores de caracteres.
+### 1. Migration mínima
+- Adicionar `brand_id uuid` em `devices` + backfill por nome (mantém `brand` text por compat)
+- Índices em `leads(status, created_at)` e `evaluations(created_at, device_id)`
+- **Nada de RPC.** Queries diretas via supabase-js bastam — RLS já permite admin ler tudo.
 
-**3. Benefícios / Facilidades** — Preview dos cards renderizados; seletor de ícone dropdown (shield, zap, thumbs-up, banknote); validação de URL do YouTube com mensagem inline; preview do vídeo embed se URL válida; limite visual de 4 cards reforçado.
+### 2. Edge Function única: `get-dashboard-metrics` (REST para ERP)
+Um endpoint só, que recebe `?from=&to=&brand_id=` e retorna tudo:
+```json
+{
+  "totals": {
+    "leads": 120,            // só contato
+    "incomplete": 45,        // device escolhido, sem cupom
+    "rejected": 12,
+    "completed": 38,         // cliente completo
+    "abandonment_rate": 0.55,// (leads+incomplete) / total
+    "total_value_brl": 48200 // soma final_value dos completed
+  },
+  "top_devices": [ { "device_id", "model", "brand", "count", "total_value" } ]
+}
+```
+- Auth via header `x-api-key` (novo secret `DASHBOARD_API_KEY`) — para o ERP externo
+- Frontend chama a mesma function via `supabase.functions.invoke` (sem precisar da key, JWT do admin)
 
-**4. Depoimentos** — Preview dos cards de depoimento com estrelas; validação de URL da foto (https://); preview da foto inline ao colar URL; contadores: nome (30), texto (200).
+### 3. Frontend (mínimo)
+- **`AdminDashboard.tsx`**: 4 cards (Leads / Incompletos / Rejeitados / Completos + valor) + filtros simples (DateRange + Select de marca) + ranking top 5 modelos (lista, sem gráfico pesado)
+- **`AdminCustomers.tsx`**: adicionar filtro por status do funil (chips: Todos / Só contato / Incompleto / Rejeitado / Completo) na listagem que já existe
+- **Export**: 1 botão "Exportar CSV" no Dashboard (sem XLSX, sem dropdown — CSV puro abre em Excel/ERP, zero dependência)
 
-**5. Dúvidas Frequentes** — Preview em accordion funcional dentro do editor; contadores: pergunta (80), resposta (300); reordenação drag visual (setas ▲▼).
+### 4. Documentação
+Adicionar seção em `docs/coupon-format.md` com o contrato do endpoint `/get-dashboard-metrics` (params, response, exemplo curl com `x-api-key`).
 
-**6. Mega Footer** — Preview renderizado das colunas com links; validação de URLs dos links (https://); hint sobre limites (máx. 4 colunas, 6 links por coluna).
+## O que **descartei** do plano anterior
+- ❌ 3 edge functions separadas → **1 só**
+- ❌ RPC + Edge wrapper → **só Edge**
+- ❌ XLSX com dynamic import → **só CSV**
+- ❌ Recharts → **lista simples top 5** (já temos `chart.tsx` se quiser depois)
+- ❌ Hooks separados (`use-dashboard-metrics`, `use-top-devices`, `use-leads-list`) → **1 hook só**, `useDashboardMetrics`
+- ❌ Lógica nova de "abandono" → **já é `status='in_progress'`**, sem janela de tempo
 
-**7. Footer** — Preview do rodapé final com cores aplicadas; placeholder dinâmico com ano atual; hint de caracteres (100).
+## Arquivos afetados
+- **Novo**: `supabase/functions/get-dashboard-metrics/index.ts`
+- **Novo**: `src/hooks/use-dashboard-metrics.ts`
+- **Novo**: `src/components/admin/dashboard/DashboardFilters.tsx`
+- **Novo**: `src/lib/export-csv.ts` (pequeno helper)
+- **Refatorado**: `src/pages/admin/AdminDashboard.tsx`
+- **Refatorado**: `src/pages/admin/AdminCustomers.tsx` (adiciona filtro status)
+- **Migration**: add `brand_id` em devices + índices
+- **Atualizado**: `docs/coupon-format.md` (seção API métricas)
 
-### Melhorias transversais
-
-- **Reordenação** — Botões ▲/▼ em todos os ListEditor para mover itens sem precisar excluir e recriar
-- **Validação ao salvar** — URLs com https://, campos obrigatórios não vazios, toast de erro específico
-- **Preview de seção** — Cada seção terá um mini-preview estilizado mostrando como ficará na landing page, similar ao que o Hero já tem
-- **Detecção de imagem** — Reutilizar lógica de dimensões do AdminHeader no ImageUploader (mostrar WxH detectados + aviso de proporção)
-
-### Detalhes técnicos
-
-**Arquivo**: `src/pages/admin/AdminSections.tsx`
-
-- Expandir `ImageUploader` para detectar dimensões via `new Image()` + `URL.createObjectURL` e exibir feedback
-- Criar componente `IconPicker` com dropdown dos ícones disponíveis (lucide) mapeados ao `iconMap` existente nas seções
-- Criar previews específicos: `StepsPreview`, `BenefitsPreview`, `TestimonialsPreview`, `FaqPreview`, `FooterPreview`, `MegaFooterPreview`, `HowToSellPreview`
-- Adicionar funções `moveUp(i)` / `moveDown(i)` ao `ListEditor`
-- Validação no `handleSave`: iterar content array e verificar campos obrigatórios preenchidos
-
-Nenhuma dependência nova. Nenhuma alteração de banco de dados.
-
+Resultado: 1 endpoint REST limpo pro ERP, dashboard funcional, e nada de over-engineering. Quer que eu execute?

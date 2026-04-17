@@ -1163,6 +1163,103 @@ function FooterEditor({ form, setForm }: any) {
   );
 }
 
+// ========== HERO BACKGROUND DRAGGER ==========
+function HeroBackgroundDragger({
+  imageUrl,
+  bgPosX,
+  bgPosY,
+  onChange,
+}: {
+  imageUrl: string;
+  bgPosX: number;
+  bgPosY: number;
+  onChange: (x: number, y: number) => void;
+}) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const dragStateRef = React.useRef<{ startX: number; startY: number; startBgX: number; startBgY: number } | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const clamp = (v: number) => Math.max(0, Math.min(100, v));
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.setPointerCapture(e.pointerId);
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startBgX: bgPosX,
+      startBgY: bgPosY,
+    };
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const state = dragStateRef.current;
+    const el = containerRef.current;
+    if (!state || !el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    // Drag direction is inverted: arrastar pra direita move o "olhar" pra direita
+    // (ou seja, background-position diminui)
+    const deltaX = ((e.clientX - state.startX) / rect.width) * 100;
+    const deltaY = ((e.clientY - state.startY) / rect.height) * 100;
+    const nextX = clamp(state.startBgX - deltaX);
+    const nextY = clamp(state.startBgY - deltaY);
+    onChange(Math.round(nextX), Math.round(nextY));
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (el && el.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
+    dragStateRef.current = null;
+    setIsDragging(false);
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Pré-visualização da imagem — arraste para ajustar a posição:
+      </p>
+      <div
+        ref={containerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={(e) => {
+          if (dragStateRef.current) endDrag(e);
+        }}
+        className={`relative border rounded-lg overflow-hidden h-44 select-none touch-none ${
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
+        style={{
+          backgroundImage: `url(${imageUrl})`,
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+        }}
+      >
+        <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm border text-[11px] font-medium text-foreground shadow-sm pointer-events-none">
+          Arraste a imagem para ajustar a posição
+        </div>
+        <div className="absolute bottom-2 right-2 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm border text-[10px] font-mono text-muted-foreground shadow-sm pointer-events-none">
+          X: {Math.round(bgPosX)}% &nbsp; Y: {Math.round(bgPosY)}%
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(50, 50)}
+        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+      >
+        Resetar para o centro
+      </button>
+    </div>
+  );
+}
+
 // ========== HERO EDITOR (preserved from before) ==========
 function HeroEditor({ form, setForm, onUpload, uploading }: any) {
   const layoutData = (() => {

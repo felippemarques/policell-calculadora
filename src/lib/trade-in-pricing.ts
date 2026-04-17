@@ -25,6 +25,10 @@ export interface DamageCategory {
   help_image_url?: string | null;
   parent_id?: string | null;
   is_required?: boolean;
+  /**
+   * Brands this category applies to. Empty array (or undefined) = global (all brands).
+   */
+  brand_ids?: string[] | null;
 }
 
 export interface ChecklistAnswers {

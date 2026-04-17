@@ -21,6 +21,8 @@ import {
   emptyAnswers,
   formatBRL,
 } from "@/lib/trade-in-pricing";
+import { validateTradeInState } from "@/lib/trade-in-sanity";
+import { toast } from "sonner";
 
 export interface WizardData {
   name: string;

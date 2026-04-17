@@ -246,10 +246,12 @@ export function TradeInWizard() {
       await updateLead(leadId, { status: "completed" });
     }
 
+    clearPersisted();
     setStep(3);
   };
 
   const handleReset = () => {
+    clearPersisted();
     setData({ name: "", email: "", phone: "", deviceId: "", answers: emptyAnswers() });
     setResult(null);
     setLeadId(null);

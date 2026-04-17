@@ -406,6 +406,14 @@ export function StepEvaluationChecklist({
                       </span>
                     )}
                   </div>
+                  {cat.help_image_url && (
+                    <img
+                      src={cat.help_image_url}
+                      alt={cat.name}
+                      loading="lazy"
+                      className="mb-3 max-h-44 w-full sm:w-auto rounded-2xl border border-black/5 bg-muted/20 object-contain"
+                    />
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {opts.map((opt) => {
                       const isSelected = selectedId === opt.id;

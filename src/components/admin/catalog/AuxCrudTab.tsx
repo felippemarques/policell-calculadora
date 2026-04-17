@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { OrderArrows } from "./OrderArrows";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
@@ -40,6 +41,7 @@ interface AuxCrudTabProps {
 
 interface Row {
   id: string;
+  display_order: number;
   [key: string]: any;
   format_rule: FormatRule;
 }
@@ -59,7 +61,11 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
   const { data: rows = [], isLoading } = useQuery({
     queryKey: qk,
     queryFn: async () => {
-      const { data, error } = await supabase.from(table).select("*").order(fieldName);
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .order("display_order", { ascending: true })
+        .order(fieldName, { ascending: true });
       if (error) throw error;
       return data as Row[];
     },
@@ -70,7 +76,10 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
   const createMutation = useMutation({
     mutationFn: async () => {
       const formatted = applyFormatRule(formValue.trim(), formRule);
-      const { error } = await supabase.from(table).insert({ [fieldName]: formatted, format_rule: formRule } as any);
+      const maxOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.display_order || 0)) : 0;
+      const { error } = await supabase
+        .from(table)
+        .insert({ [fieldName]: formatted, format_rule: formRule, display_order: maxOrder + 1 } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -167,6 +176,7 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-24">Ordem</TableHead>
                 <TableHead>{fieldLabel}</TableHead>
                 <TableHead>Regra de Formatação</TableHead>
                 <TableHead className="w-24 text-right">Ações</TableHead>
@@ -177,6 +187,9 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
                 const isEditing = editId === row.id;
                 return (
                   <TableRow key={row.id}>
+                    <TableCell>
+                      <OrderArrows table={table} rows={rows} currentId={row.id} queryKey={qk} />
+                    </TableCell>
                     <TableCell>
                       {isEditing ? (
                         <Input

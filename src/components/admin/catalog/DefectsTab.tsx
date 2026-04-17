@@ -33,7 +33,10 @@ type DamageCategory = {
   is_required: boolean;
   parent_id: string | null;
   display_order: number;
+  brand_ids: string[];
 };
+
+type Brand = { id: string; name: string };
 
 const BUCKET = "lp-images";
 const STORAGE_FOLDER = "damage-categories";
@@ -49,6 +52,7 @@ export function DefectsTab() {
     help_text: "",
     help_image_url: "",
     is_required: true,
+    brand_ids: [] as string[],
   });
   const [showNewCatForParent, setShowNewCatForParent] = useState<string | "__root__" | null>(null);
   const [newCat, setNewCat] = useState({
@@ -56,6 +60,7 @@ export function DefectsTab() {
     help_text: "",
     help_image_url: "",
     is_required: true,
+    brand_ids: [] as string[],
   });
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
@@ -101,7 +106,22 @@ export function DefectsTab() {
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return (data || []) as DamageCategory[];
+      return (data || []).map((c: any) => ({
+        ...c,
+        brand_ids: Array.isArray(c.brand_ids) ? c.brand_ids : [],
+      })) as DamageCategory[];
+    },
+  });
+
+  const { data: brands = [] } = useQuery({
+    queryKey: ["admin-brands-for-defects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("id, name")
+        .order("display_order");
+      if (error) throw error;
+      return (data || []) as Brand[];
     },
   });
 
@@ -176,13 +196,17 @@ export function DefectsTab() {
       help_text: string;
       help_image_url: string;
       is_required: boolean;
+      brand_ids?: string[];
       parent_id?: string | null;
     }) => {
+      const isRoot = (data.parent_id ?? null) === null;
       const payload: any = {
         name: data.name,
         help_text: data.help_text?.trim() || null,
         help_image_url: data.help_image_url?.trim() || null,
         is_required: data.is_required,
+        // brand_ids only meaningful for root categories
+        brand_ids: isRoot ? data.brand_ids ?? [] : [],
       };
       if (data.id) {
         const { error } = await supabase
@@ -206,7 +230,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCatForParent(null);
-      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -251,7 +275,8 @@ export function DefectsTab() {
           is_required: cat.is_required,
           parent_id: cat.parent_id,
           display_order: maxOrder,
-        })
+          brand_ids: cat.parent_id === null ? cat.brand_ids ?? [] : [],
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
@@ -483,6 +508,13 @@ export function DefectsTab() {
         }}
         onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
       />
+      {parentId === null && (
+        <BrandsMultiSelect
+          brands={brands}
+          selected={newCat.brand_ids}
+          onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
+        />
+      )}
       <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
         <Checkbox
           checked={newCat.is_required}
@@ -501,7 +533,7 @@ export function DefectsTab() {
           variant="outline"
           onClick={() => {
             setShowNewCatForParent(null);
-            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
           }}
         >
           <X className="h-4 w-4" />
@@ -568,6 +600,11 @@ export function DefectsTab() {
                     <ImageIcon className="h-2.5 w-2.5" /> imagem
                   </Badge>
                 )}
+                {!cat.parent_id && cat.brand_ids && cat.brand_ids.length > 0 && (
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                    {cat.brand_ids.length === 1 ? "1 marca" : `${cat.brand_ids.length} marcas`}
+                  </Badge>
+                )}
               </div>
               {cat.help_text && (
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
@@ -631,6 +668,7 @@ export function DefectsTab() {
                       help_text: cat.help_text ?? "",
                       help_image_url: cat.help_image_url ?? "",
                       is_required: cat.is_required !== false,
+                      brand_ids: Array.isArray(cat.brand_ids) ? cat.brand_ids : [],
                     });
                     setEditingCatId(cat.id);
                     setExpandedCat((prev) => new Set(prev).add(cat.id));
@@ -687,6 +725,13 @@ export function DefectsTab() {
               }}
               onClear={() => setCatForm((p) => ({ ...p, help_image_url: "" }))}
             />
+            {!cat.parent_id && (
+              <BrandsMultiSelect
+                brands={brands}
+                selected={catForm.brand_ids}
+                onChange={(ids) => setCatForm({ ...catForm, brand_ids: ids })}
+              />
+            )}
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
               <Checkbox
                 checked={catForm.is_required}
@@ -906,7 +951,7 @@ export function DefectsTab() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
                     setShowNewCatForParent(cat.id);
                   }}
                   disabled={showNewCatForParent === cat.id}
@@ -1152,7 +1197,7 @@ export function DefectsTab() {
           <Button
             size="sm"
             onClick={() => {
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
               setShowNewCatForParent("__root__");
             }}
             disabled={showNewCatForParent === "__root__"}
@@ -1401,3 +1446,76 @@ function ImageUploadField({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────
+// Brands multi-select (used only for ROOT damage categories)
+// ─────────────────────────────────────────────────────
+function BrandsMultiSelect({
+  brands,
+  selected,
+  onChange,
+}: {
+  brands: Brand[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const toggle = (id: string) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter((x) => x !== id));
+    } else {
+      onChange([...selected, id]);
+    }
+  };
+  const isGlobal = selected.length === 0;
+
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-sm">Marcas em que esta categoria aparece</Label>
+        {isGlobal ? (
+          <Badge variant="secondary" className="text-[10px]">
+            Todas as marcas (global)
+          </Badge>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-[11px] text-muted-foreground underline hover:text-foreground"
+          >
+            Limpar (tornar global)
+          </button>
+        )}
+      </div>
+      {brands.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">
+          Nenhuma marca cadastrada. Cadastre marcas na aba "Marcas".
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {brands.map((b) => {
+            const checked = selected.includes(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggle(b.id)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                  checked
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {checked && <Check className="h-3 w-3" />}
+                {b.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Se nenhuma marca for selecionada, a categoria aparece para qualquer aparelho.
+      </p>
+    </div>
+  );
+}
+

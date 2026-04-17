@@ -350,6 +350,7 @@ export function TradeInWizard() {
               onResetAll={handleReset}
               isSubmitting={isSubmitting}
               basePrice={basePrice}
+              selectedBrandId={selectedDevice?.brand_id ?? null}
             />
           )}
           {step === 3 && result && (

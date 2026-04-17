@@ -60,6 +60,8 @@ interface Props {
   onResetAll?: () => void;
   isSubmitting: boolean;
   basePrice: number;
+  /** Brand id of the currently selected device — used to filter damage categories */
+  selectedBrandId?: string | null;
 }
 
 export type SubScreen = "condition" | "damages" | "rejection";
@@ -79,6 +81,7 @@ export function StepEvaluationChecklist({
   onReject,
   onResetAll,
   isSubmitting,
+  selectedBrandId,
 }: Props) {
   const [subScreen, setSubScreen] = useState<SubScreen>("condition");
   const [rejectionModal, setRejectionModal] = useState<{
@@ -109,7 +112,7 @@ export function StepEvaluationChecklist({
     },
   });
 
-  const { data: damageCategories = [] } = useQuery({
+  const { data: damageCategoriesAll = [] } = useQuery({
     queryKey: ["damage_categories_public"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -117,9 +120,46 @@ export function StepEvaluationChecklist({
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return (data || []) as DamageCategory[];
+      return (data || []).map((c: any) => ({
+        ...c,
+        brand_ids: Array.isArray(c.brand_ids) ? c.brand_ids : [],
+      })) as DamageCategory[];
     },
   });
+
+  // ── Filter categories by selected device's brand ──
+  // Rules:
+  //  - Root categories (parent_id null): visible if brand_ids empty (global) OR contains selectedBrandId
+  //  - Subcategories: visible only if their root ancestor is visible (so we hide orphans)
+  const damageCategories = useMemo(() => {
+    if (damageCategoriesAll.length === 0) return [];
+
+    const rootVisibility = new Map<string, boolean>();
+    for (const c of damageCategoriesAll) {
+      if (!c.parent_id) {
+        const ids = c.brand_ids ?? [];
+        const visible = ids.length === 0 || (!!selectedBrandId && ids.includes(selectedBrandId));
+        rootVisibility.set(c.id, visible);
+      }
+    }
+
+    // Walk up parent chain to find root
+    const findRootId = (id: string): string | null => {
+      let cur = damageCategoriesAll.find((x) => x.id === id);
+      while (cur && cur.parent_id) {
+        const parent = damageCategoriesAll.find((x) => x.id === cur!.parent_id);
+        if (!parent) return cur.id;
+        cur = parent;
+      }
+      return cur?.id ?? null;
+    };
+
+    return damageCategoriesAll.filter((c) => {
+      if (!c.parent_id) return rootVisibility.get(c.id) === true;
+      const rootId = findRootId(c.id);
+      return rootId ? rootVisibility.get(rootId) === true : false;
+    });
+  }, [damageCategoriesAll, selectedBrandId]);
 
   const { data: damageOptions = [] } = useQuery({
     queryKey: ["damage_deductions_public"],

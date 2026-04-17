@@ -1315,6 +1315,21 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
             onChange={(x, y) => setLayoutFields({ bgPosX: x, bgPosY: y })}
           />
         )}
+        <div className="mt-4">
+          <LabelWithHint
+            label="Link ao clicar no banner (opcional)"
+            hint="Quando preenchido, o banner inteiro vira clicável e leva para esta URL. Deixe em branco para usar apenas o botão CTA."
+          />
+          <Input
+            type="url"
+            value={form.link_url || ""}
+            onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+            className="mt-1"
+            placeholder="https://exemplo.com/promocao  ou  /calculadora"
+            maxLength={500}
+          />
+          <FieldHint text="Aceita URL completa (https://...) ou caminho interno (/calculadora)." />
+        </div>
       </SectionCard>
 
       <SectionCard icon={<LayoutGrid className="h-4 w-4" />} title="Posição do Conteúdo" description="Ajuste onde o título, subtítulo e botão aparecem sobre o banner.">

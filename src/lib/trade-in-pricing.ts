@@ -6,6 +6,8 @@ export interface ConditionRow {
   condition_name: string;
   discount_percentage: number;
   is_rejected: boolean;
+  help_text?: string | null;
+  is_required?: boolean;
 }
 
 export interface DamageOption {
@@ -19,6 +21,8 @@ export interface DamageOption {
 export interface DamageCategory {
   id: string;
   name: string;
+  help_text?: string | null;
+  is_required?: boolean;
 }
 
 export interface ChecklistAnswers {

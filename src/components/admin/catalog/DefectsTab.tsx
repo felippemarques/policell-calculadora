@@ -1446,3 +1446,76 @@ function ImageUploadField({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────
+// Brands multi-select (used only for ROOT damage categories)
+// ─────────────────────────────────────────────────────
+function BrandsMultiSelect({
+  brands,
+  selected,
+  onChange,
+}: {
+  brands: Brand[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const toggle = (id: string) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter((x) => x !== id));
+    } else {
+      onChange([...selected, id]);
+    }
+  };
+  const isGlobal = selected.length === 0;
+
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-sm">Marcas em que esta categoria aparece</Label>
+        {isGlobal ? (
+          <Badge variant="secondary" className="text-[10px]">
+            Todas as marcas (global)
+          </Badge>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-[11px] text-muted-foreground underline hover:text-foreground"
+          >
+            Limpar (tornar global)
+          </button>
+        )}
+      </div>
+      {brands.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">
+          Nenhuma marca cadastrada. Cadastre marcas na aba "Marcas".
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {brands.map((b) => {
+            const checked = selected.includes(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggle(b.id)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                  checked
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {checked && <Check className="h-3 w-3" />}
+                {b.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Se nenhuma marca for selecionada, a categoria aparece para qualquer aparelho.
+      </p>
+    </div>
+  );
+}
+

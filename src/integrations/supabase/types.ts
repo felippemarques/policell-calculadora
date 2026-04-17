@@ -198,6 +198,7 @@ export type Database = {
       }
       damage_categories: {
         Row: {
+          brand_ids: string[]
           created_at: string
           display_order: number
           help_image_url: string | null
@@ -208,6 +209,7 @@ export type Database = {
           parent_id: string | null
         }
         Insert: {
+          brand_ids?: string[]
           created_at?: string
           display_order?: number
           help_image_url?: string | null
@@ -218,6 +220,7 @@ export type Database = {
           parent_id?: string | null
         }
         Update: {
+          brand_ids?: string[]
           created_at?: string
           display_order?: number
           help_image_url?: string | null

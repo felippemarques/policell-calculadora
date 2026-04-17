@@ -75,6 +75,13 @@ const AdminLayout = () => {
             Voltar ao Site
           </NavLink>
           <button
+            onClick={() => restart()}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground transition-colors"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Refazer tour
+          </button>
+          <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           >

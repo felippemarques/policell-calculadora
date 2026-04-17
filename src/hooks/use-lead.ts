@@ -87,7 +87,13 @@ export function useLead() {
   const updateLead = useCallback(
     async (id: string, patch: Record<string, any>) => {
       try {
-        const { error } = await (supabase.from("leads") as any).update(patch).eq("id", id);
+        const { error } = await supabase.rpc("update_lead_progress", {
+          _lead_id: id,
+          _device_id: patch.device_id ?? null,
+          _assessment_responses: patch.assessment_responses ?? null,
+          _status: patch.status ?? null,
+          _rejection_reason: patch.rejection_reason ?? null,
+        });
         if (error) throw error;
       } catch (err) {
         console.error("Failed to update lead:", err);

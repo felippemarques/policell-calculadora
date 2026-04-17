@@ -390,9 +390,13 @@ export function TradeInWizard() {
               selectedBrandId={selectedDevice?.brand_id ?? null}
             />
           )}
-          {step === 3 && result && (
+          {step === 3 && (
             <div className="animate-fade-in">
-              <StepResult result={result} onReset={handleReset} />
+              <StepResult
+                result={result}
+                onReset={handleReset}
+                sanity={sanity}
+              />
             </div>
           )}
         </div>

@@ -289,18 +289,18 @@ export function TradeInWizard() {
     step === 2 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
 
   return (
-    <div id="calculadora" className="w-full max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-primary/10 mb-5 shadow-sm">
-          <Smartphone className="h-8 w-8 text-primary" />
+    <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">
+      <div className="text-center mb-6 md:mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-3xl bg-primary/10 mb-4 md:mb-5 shadow-sm">
+          <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-primary" />
         </div>
-        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
           Policell - Garantia de entrega e qualidade
         </h2>
-        <p className="text-muted-foreground mt-2">Seu aparelho vale mais do que você imagina.</p>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">Seu aparelho vale mais do que você imagina.</p>
       </div>
 
-      <div className="relative rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
+      <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
         {step < 3 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
@@ -311,7 +311,7 @@ export function TradeInWizard() {
           </div>
         )}
 
-        <div className="p-6 md:p-10 pb-6">
+        <div className="p-4 sm:p-6 md:p-10 pb-6">
           {step < 3 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
@@ -361,8 +361,8 @@ export function TradeInWizard() {
 
         {/* ───── Sticky price footer (telas A e B do checklist) ───── */}
         {showPriceFooter && (
-          <div className="sticky bottom-0 left-0 right-0 border-t border-border/60 bg-card/95 backdrop-blur-md px-6 md:px-10 py-4 animate-fade-in">
-            <div className="flex items-center justify-between gap-4">
+          <div className="sticky bottom-0 left-0 right-0 border-t border-border/60 bg-card/95 backdrop-blur-md px-4 sm:px-6 md:px-10 py-3 md:py-4 animate-fade-in">
+            <div className="flex items-center justify-between gap-3 md:gap-4">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <TrendingUp className="h-4 w-4 text-primary" />
@@ -371,13 +371,13 @@ export function TradeInWizard() {
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Valor Estimado
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-muted-foreground truncate hidden sm:block">
                     Atualiza conforme você responde
                   </p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-xl md:text-2xl font-semibold tracking-tight text-foreground tabular-nums">
+                <p className="text-lg md:text-2xl font-semibold tracking-tight text-foreground tabular-nums">
                   {formatBRL(pricing.finalValue)}
                 </p>
                 {(pricing.percentDiscount > 0 || pricing.fixedDeductions > 0) && (

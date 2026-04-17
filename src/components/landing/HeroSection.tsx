@@ -7,22 +7,24 @@ interface HeroSectionProps {
   section: any;
 }
 
+// Mobile-first: small screens are always centered (vert. + horiz.) for legibility.
+// On md+ we honor the admin's choice from the layout JSON.
 const vAlignClass = {
-  top: "items-start",
-  center: "items-center",
-  bottom: "items-end",
+  top: "md:items-start",
+  center: "md:items-center",
+  bottom: "md:items-end",
 } as const;
 
 const hAlignClass = {
-  left: "justify-start",
-  center: "justify-center",
-  right: "justify-end",
+  left: "md:justify-start",
+  center: "md:justify-center",
+  right: "md:justify-end",
 } as const;
 
 const textAlignClass = {
-  left: "text-left",
-  center: "text-center",
-  right: "text-right",
+  left: "md:text-left md:items-start",
+  center: "md:text-center md:items-center",
+  right: "md:text-right md:items-end",
 } as const;
 
 const HeroSection = ({ section }: HeroSectionProps) => {
@@ -58,20 +60,19 @@ const HeroSection = ({ section }: HeroSectionProps) => {
       <div
         className={cn(
           "relative w-full flex px-4 md:px-6 py-16 md:py-40",
-          // mobile: always center for readability; md+ respects admin choice
-          "items-center md:" + (vAlignClass[vAlign] || "items-center"),
-          "justify-center md:" + (hAlignClass[hAlign] || "justify-center"),
+          // Mobile defaults: centered
+          "items-center justify-center",
+          vAlignClass[vAlign],
+          hAlignClass[hAlign],
         )}
         style={{ color: section.text_color || undefined }}
       >
         <div
           className={cn(
             "w-full max-w-2xl flex flex-col gap-5 md:gap-6",
-            // mobile: always centered text; md+ respects admin choice
+            // Mobile defaults: centered
             "text-center items-center",
-            textAlign === "left" && "md:text-left md:items-start",
-            textAlign === "center" && "md:text-center md:items-center",
-            textAlign === "right" && "md:text-right md:items-end",
+            textAlignClass[textAlign],
           )}
         >
           {section.title && (

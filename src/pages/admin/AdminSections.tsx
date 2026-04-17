@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import HeroSection from "@/components/landing/HeroSection";
 import { toast } from "sonner";
 
 // --- Icon map shared with landing page components ---
@@ -1165,12 +1166,12 @@ function FooterEditor({ form, setForm }: any) {
 
 // ========== HERO BACKGROUND DRAGGER ==========
 function HeroBackgroundDragger({
-  imageUrl,
+  section,
   bgPosX,
   bgPosY,
   onChange,
 }: {
-  imageUrl: string;
+  section: any;
   bgPosX: number;
   bgPosY: number;
   onChange: (x: number, y: number) => void;
@@ -1232,16 +1233,13 @@ function HeroBackgroundDragger({
         onPointerLeave={(e) => {
           if (dragStateRef.current) endDrag(e);
         }}
-        className={`relative border rounded-lg overflow-hidden h-44 select-none touch-none ${
+        className={`relative w-full overflow-hidden rounded-lg border select-none touch-none ${
           isDragging ? "cursor-grabbing" : "cursor-grab"
         }`}
-        style={{
-          backgroundImage: `url(${imageUrl})`,
-          backgroundSize: "cover",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: `${bgPosX}% ${bgPosY}%`,
-        }}
       >
+        <div className="pointer-events-none">
+          <HeroSection section={section} />
+        </div>
         <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm border text-[11px] font-medium text-foreground shadow-sm pointer-events-none">
           Arraste a imagem para ajustar a posição
         </div>
@@ -1313,7 +1311,7 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         <ImageUploader form={form} setForm={setForm} onUpload={onUpload} uploading={uploading} label="Imagem de fundo" recommendedSize="1920×800px" />
         {form.image_url && (
           <HeroBackgroundDragger
-            imageUrl={form.image_url}
+            section={{ ...form, layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }) }}
             bgPosX={bgPosX}
             bgPosY={bgPosY}
             onChange={(x, y) => setLayoutFields({ bgPosX: x, bgPosY: y })}
@@ -1348,30 +1346,9 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         </div>
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-2">Pré-visualização da posição:</p>
-          <div className="relative border rounded-lg overflow-hidden h-32" style={{ backgroundColor: form.bg_color || "#1a1a2e" }}>
-            {form.image_url && <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
-            <div
-              className="relative w-full h-full flex p-3"
-              style={{
-                justifyContent: hAlign === "left" ? "flex-start" : hAlign === "right" ? "flex-end" : "center",
-                alignItems: vAlign === "top" ? "flex-start" : vAlign === "bottom" ? "flex-end" : "center",
-                textAlign: textAlign as any,
-              }}
-            >
-              <div className="max-w-[60%]" style={{ textAlign: textAlign as any }}>
-                <div className="text-xs font-bold text-white truncate">{form.title || "Título"}</div>
-                <div className="text-[10px] text-white/70 truncate mt-0.5">{form.content || "Subtítulo"}</div>
-                <div
-                  className="inline-block mt-1 px-2 py-0.5 text-[9px] font-medium rounded"
-                  style={{
-                    backgroundColor: form.cta_bg_color || "#7c3aed",
-                    color: form.cta_text_color || "#fff",
-                    borderRadius: `${Math.min(form.cta_border_radius ?? 8, 12)}px`,
-                  }}
-                >
-                  {form.cta_text || "CTA"}
-                </div>
-              </div>
+          <div className="overflow-hidden rounded-lg border">
+            <div className="pointer-events-none">
+              <HeroSection section={{ ...form, layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }) }} />
             </div>
           </div>
         </div>

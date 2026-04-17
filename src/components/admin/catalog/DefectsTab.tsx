@@ -55,7 +55,11 @@ export function DefectsTab() {
     is_required: true,
     brand_ids: [] as string[],
   });
-  const [showNewCatForParent, setShowNewCatForParent] = useState<string | "__root__" | null>(null);
+  // String forms:
+  //   "__root__"         → new top-level category
+  //   "<categoryId>"     → new subcategory under a parent category
+  //   "option:<optId>"   → new conditional subcategory triggered by a damage option
+  const [showNewCatForParent, setShowNewCatForParent] = useState<string | null>(null);
   const [newCat, setNewCat] = useState({
     name: "",
     help_text: "",
@@ -199,8 +203,9 @@ export function DefectsTab() {
       is_required: boolean;
       brand_ids?: string[];
       parent_id?: string | null;
+      parent_option_id?: string | null;
     }) => {
-      const isRoot = (data.parent_id ?? null) === null;
+      const isRoot = (data.parent_id ?? null) === null && (data.parent_option_id ?? null) === null;
       const payload: any = {
         name: data.name,
         help_text: data.help_text?.trim() || null,
@@ -216,14 +221,18 @@ export function DefectsTab() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        // Compute display_order = max+1 within siblings of same parent
-        const siblings = categories.filter((c) => (c.parent_id ?? null) === (data.parent_id ?? null));
+        // Compute display_order = max+1 within siblings of same scope
+        const siblings = categories.filter((c) => {
+          if (data.parent_option_id) return c.parent_option_id === data.parent_option_id;
+          return (c.parent_id ?? null) === (data.parent_id ?? null) && !c.parent_option_id;
+        });
         const maxOrder = siblings.length ? Math.max(...siblings.map((s) => s.display_order)) + 1 : 0;
         const { error } = await supabase.from("damage_categories").insert({
           ...payload,
           parent_id: data.parent_id ?? null,
+          parent_option_id: data.parent_option_id ?? null,
           display_order: maxOrder,
-        });
+        } as any);
         if (error) throw error;
       }
     },

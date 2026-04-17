@@ -636,6 +636,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_lead_progress: {
+        Args: {
+          _assessment_responses?: Json
+          _device_id?: string
+          _lead_id: string
+          _rejection_reason?: string
+          _status?: string
+        }
+        Returns: undefined
+      }
       upsert_lead_by_email: {
         Args: { _email: string; _name: string; _phone: string }
         Returns: string

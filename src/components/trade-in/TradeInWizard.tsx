@@ -30,20 +30,94 @@ export interface WizardData {
   answers: ChecklistAnswers;
 }
 
+// ── Persistence ──
+// Saves the wizard progress (step + sub-screen + data + leadId) in localStorage
+// so the user can refresh the page or come back later and resume exactly
+// where they were. Cleared on submit success or reset.
+const STORAGE_KEY = "pollicell.tradein.progress.v1";
+
+interface PersistedState {
+  step: number;
+  subScreen: SubScreen;
+  data: WizardData;
+  leadId: string | null;
+}
+
+function loadPersisted(): PersistedState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    if (typeof parsed?.step !== "number") return null;
+    // Never resume on the result screen — that one belongs to a finished flow.
+    if (parsed.step >= 3) return null;
+    return {
+      step: parsed.step,
+      subScreen: (parsed.subScreen as SubScreen) ?? "condition",
+      data: {
+        name: parsed.data?.name ?? "",
+        email: parsed.data?.email ?? "",
+        phone: parsed.data?.phone ?? "",
+        deviceId: parsed.data?.deviceId ?? "",
+        answers: parsed.data?.answers ?? emptyAnswers(),
+      },
+      leadId: parsed.leadId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearPersisted() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
+}
+
 export function TradeInWizard() {
-  const [step, setStep] = useState(0);
-  const [subScreen, setSubScreen] = useState<SubScreen>("condition");
-  const [data, setData] = useState<WizardData>({
-    name: "",
-    email: "",
-    phone: "",
-    deviceId: "",
-    answers: emptyAnswers(),
-  });
+  const persisted = useMemo(() => loadPersisted(), []);
+
+  const [step, setStep] = useState(persisted?.step ?? 0);
+  const [subScreen, setSubScreen] = useState<SubScreen>(persisted?.subScreen ?? "condition");
+  const [data, setData] = useState<WizardData>(
+    persisted?.data ?? {
+      name: "",
+      email: "",
+      phone: "",
+      deviceId: "",
+      answers: emptyAnswers(),
+    },
+  );
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, updateLead, updateAssessment, markRejected } = useLead();
+
+  // Restore the saved leadId into the useLead hook on first mount
+  useEffect(() => {
+    if (persisted?.leadId) {
+      setLeadId(persisted.leadId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist progress on every meaningful change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Don't persist the result step — it's a terminal screen
+    if (step >= 3) return;
+    try {
+      const snapshot: PersistedState = { step, subScreen, data, leadId };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      /* quota exceeded or private mode — silently ignore */
+    }
+  }, [step, subScreen, data, leadId]);
+
 
   // Pull dynamic catalog for live pricing
   const { data: conditions = [] } = useQuery({

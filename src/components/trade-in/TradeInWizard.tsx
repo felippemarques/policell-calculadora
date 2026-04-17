@@ -165,6 +165,7 @@ export function TradeInWizard() {
       conditionDiscount: pricing.percentDiscount,
       totalDeductions: pricing.fixedDeductions,
       finalValue: pricing.finalValue,
+      leadId,
     });
 
     if (leadId) {

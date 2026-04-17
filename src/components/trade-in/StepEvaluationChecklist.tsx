@@ -168,9 +168,31 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
-  const requiredDamageCategories = useMemo(
-    () => damageCategories.filter((c) => c.is_required !== false),
+  // Build sets: root categories vs subcategories (parent_id != null)
+  const rootCategories = useMemo(
+    () => damageCategories.filter((c) => !c.parent_id),
     [damageCategories],
+  );
+  const subcategoriesByParent = useMemo(() => {
+    const map: Record<string, DamageCategory[]> = {};
+    for (const c of damageCategories) {
+      if (c.parent_id) {
+        if (!map[c.parent_id]) map[c.parent_id] = [];
+        map[c.parent_id].push(c);
+      }
+    }
+    return map;
+  }, [damageCategories]);
+
+  // A required category that has no options is not actionable — exclude it.
+  const requiredDamageCategories = useMemo(
+    () =>
+      damageCategories.filter(
+        (c) =>
+          c.is_required !== false &&
+          damageOptions.some((o) => o.damage_category_id === c.id),
+      ),
+    [damageCategories, damageOptions],
   );
   const conditionAnswered = !!answers.conditionId;
   const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(

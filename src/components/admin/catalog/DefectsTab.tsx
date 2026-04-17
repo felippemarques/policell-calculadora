@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type DamageOption = {
@@ -370,6 +372,26 @@ export function DefectsTab() {
                 />
               </div>
             </div>
+            <div>
+              <Label className="text-sm">Texto de ajuda (opcional)</Label>
+              <Textarea
+                value={condForm.help_text}
+                onChange={(e) => setCondForm({ ...condForm, help_text: e.target.value })}
+                placeholder="Ex: Sem riscos visíveis, todas as funções operando perfeitamente."
+                className="mt-1 text-sm"
+                rows={2}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Exibido como tooltip "?" para o cliente entender o que essa condição significa.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+              <Checkbox
+                checked={condForm.is_required}
+                onCheckedChange={(v) => setCondForm({ ...condForm, is_required: v === true })}
+              />
+              <span>Obrigatório (cliente precisa escolher uma condição para avançar)</span>
+            </label>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -397,45 +419,81 @@ export function DefectsTab() {
             return (
               <div
                 key={cond.id}
-                className="flex items-center gap-4 px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
+                className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
               >
                 {isEditing ? (
-                  <>
-                    <Input
-                      value={editCondForm.condition_name}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editCondForm.condition_name}
+                        onChange={(e) =>
+                          setEditCondForm({ ...editCondForm, condition_name: e.target.value })
+                        }
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={editCondForm.discount_percentage}
+                        onChange={(e) =>
+                          setEditCondForm({
+                            ...editCondForm,
+                            discount_percentage: Number(e.target.value),
+                          })
+                        }
+                        className="h-8 text-sm w-24"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={editCondForm.help_text}
                       onChange={(e) =>
-                        setEditCondForm({ ...editCondForm, condition_name: e.target.value })
+                        setEditCondForm({ ...editCondForm, help_text: e.target.value })
                       }
-                      className="h-8 text-sm flex-1"
-                      autoFocus
+                      placeholder="Texto de ajuda (opcional)"
+                      className="text-sm"
+                      rows={2}
                     />
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={editCondForm.discount_percentage}
-                      onChange={(e) =>
-                        setEditCondForm({
-                          ...editCondForm,
-                          discount_percentage: Number(e.target.value),
-                        })
-                      }
-                      className="h-8 text-sm w-24"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => saveCondMutation.mutate({ id: cond.id, ...editCondForm })}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingCondId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+                      <Checkbox
+                        checked={editCondForm.is_required}
+                        onCheckedChange={(v) =>
+                          setEditCondForm({ ...editCondForm, is_required: v === true })
+                        }
+                      />
+                      <span>Obrigatório</span>
+                    </label>
+                  </div>
                 ) : (
-                  <>
-                    <span className="font-medium text-foreground flex-1">{cond.condition_name}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{cond.condition_name}</span>
+                        {cond.is_required === false ? (
+                          <Badge variant="outline" className="text-[10px]">opcional</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                            obrigatório
+                          </Badge>
+                        )}
+                      </div>
+                      {cond.help_text && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {cond.help_text}
+                        </p>
+                      )}
+                    </div>
                     <Badge variant="secondary" className="text-xs">
                       <Percent className="h-3 w-3 mr-1" />
                       {cond.discount_percentage}%
@@ -448,6 +506,8 @@ export function DefectsTab() {
                         setEditCondForm({
                           condition_name: cond.condition_name,
                           discount_percentage: cond.discount_percentage,
+                          help_text: (cond as any).help_text ?? "",
+                          is_required: (cond as any).is_required !== false,
                         });
                       }}
                     >
@@ -464,7 +524,7 @@ export function DefectsTab() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             );

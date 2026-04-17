@@ -10,7 +10,7 @@ interface OrderableRow {
 }
 
 interface OrderArrowsProps<T extends OrderableRow> {
-  table: "brands" | "device_models" | "storages" | "colors";
+  table: "brands" | "device_models" | "storages" | "colors" | "damage_categories" | "damage_deductions";
   rows: T[];
   currentId: string;
   queryKey: readonly unknown[];

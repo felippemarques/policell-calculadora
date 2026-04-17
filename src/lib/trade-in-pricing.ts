@@ -22,6 +22,8 @@ export interface DamageCategory {
   id: string;
   name: string;
   help_text?: string | null;
+  help_image_url?: string | null;
+  parent_id?: string | null;
   is_required?: boolean;
 }
 

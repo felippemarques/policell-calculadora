@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronDown, ChevronRight,
-  Percent, DollarSign, Ban, ShieldAlert,
+  Percent, DollarSign, Ban, ShieldAlert, Copy, Upload, ImageIcon, GitBranch, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { OrderArrows } from "@/components/admin/catalog/OrderArrows";
 import { toast } from "sonner";
 
 type DamageOption = {
@@ -24,15 +25,39 @@ type DamageOption = {
   display_order: number;
 };
 
+type DamageCategory = {
+  id: string;
+  name: string;
+  help_text: string | null;
+  help_image_url: string | null;
+  is_required: boolean;
+  parent_id: string | null;
+  display_order: number;
+};
+
+const BUCKET = "lp-images";
+const STORAGE_FOLDER = "damage-categories";
+
 export function DefectsTab() {
   const qc = useQueryClient();
 
   // ── Categories state ──
-  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [expandedCat, setExpandedCat] = useState<Set<string>>(new Set());
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
-  const [catForm, setCatForm] = useState({ name: "", help_text: "", is_required: true });
-  const [showNewCat, setShowNewCat] = useState(false);
-  const [newCat, setNewCat] = useState({ name: "", help_text: "", is_required: true });
+  const [catForm, setCatForm] = useState({
+    name: "",
+    help_text: "",
+    help_image_url: "",
+    is_required: true,
+  });
+  const [showNewCatForParent, setShowNewCatForParent] = useState<string | "__root__" | null>(null);
+  const [newCat, setNewCat] = useState({
+    name: "",
+    help_text: "",
+    help_image_url: "",
+    is_required: true,
+  });
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
@@ -76,7 +101,7 @@ export function DefectsTab() {
         .select("*")
         .order("display_order");
       if (error) throw error;
-      return data;
+      return (data || []) as DamageCategory[];
     },
   });
 
@@ -113,30 +138,75 @@ export function DefectsTab() {
     qc.invalidateQueries({ queryKey: ["admin-condition-discounts"] });
   };
 
+  const toggleExpanded = (id: string) => {
+    setExpandedCat((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ── Image upload helper ──
+  const uploadImage = async (file: File, contextId: string): Promise<string | null> => {
+    setUploadingFor(contextId);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${STORAGE_FOLDER}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      return pub.publicUrl;
+    } catch (e: any) {
+      toast.error(`Falha ao enviar imagem: ${e.message}`);
+      return null;
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
   // ── Category mutations ──
   const saveCatMutation = useMutation({
-    mutationFn: async (data: { id?: string; name: string; help_text: string; is_required: boolean }) => {
-      const payload = {
+    mutationFn: async (data: {
+      id?: string;
+      name: string;
+      help_text: string;
+      help_image_url: string;
+      is_required: boolean;
+      parent_id?: string | null;
+    }) => {
+      const payload: any = {
         name: data.name,
         help_text: data.help_text?.trim() || null,
+        help_image_url: data.help_image_url?.trim() || null,
         is_required: data.is_required,
       };
       if (data.id) {
         const { error } = await supabase
           .from("damage_categories")
-          .update(payload as any)
+          .update(payload)
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("damage_categories").insert(payload as any);
+        // Compute display_order = max+1 within siblings of same parent
+        const siblings = categories.filter((c) => (c.parent_id ?? null) === (data.parent_id ?? null));
+        const maxOrder = siblings.length ? Math.max(...siblings.map((s) => s.display_order)) + 1 : 0;
+        const { error } = await supabase.from("damage_categories").insert({
+          ...payload,
+          parent_id: data.parent_id ?? null,
+          display_order: maxOrder,
+        });
         if (error) throw error;
       }
     },
     onSuccess: () => {
       invalidateAll();
       setEditingCatId(null);
-      setShowNewCat(false);
-      setNewCat({ name: "", help_text: "", is_required: true });
+      setShowNewCatForParent(null);
+      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -144,13 +214,66 @@ export function DefectsTab() {
 
   const deleteCatMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("damage_deductions").delete().eq("damage_category_id", id);
-      const { error } = await supabase.from("damage_categories").delete().eq("id", id);
-      if (error) throw error;
+      // Recursively collect ids: this category + its descendants
+      const collect = (rootId: string): string[] => {
+        const children = categories.filter((c) => c.parent_id === rootId).map((c) => c.id);
+        return [rootId, ...children.flatMap(collect)];
+      };
+      const idsToDelete = collect(id);
+      // Delete options first
+      await supabase.from("damage_deductions").delete().in("damage_category_id", idsToDelete);
+      // Delete categories (children first to be safe even though FK is set null in our schema)
+      // Order: deepest first — reverse list works since we collected DFS root-first
+      const reversed = [...idsToDelete].reverse();
+      for (const cid of reversed) {
+        const { error } = await supabase.from("damage_categories").delete().eq("id", cid);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       invalidateAll();
       toast.success("Removido!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Duplicate: copia categoria + opções (sem subcategorias para evitar surpresas)
+  const duplicateCatMutation = useMutation({
+    mutationFn: async (cat: DamageCategory) => {
+      const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null));
+      const maxOrder = siblings.length ? Math.max(...siblings.map((s) => s.display_order)) + 1 : 0;
+      const { data: inserted, error } = await supabase
+        .from("damage_categories")
+        .insert({
+          name: `${cat.name} (Cópia)`,
+          help_text: cat.help_text,
+          help_image_url: cat.help_image_url,
+          is_required: cat.is_required,
+          parent_id: cat.parent_id,
+          display_order: maxOrder,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      const newId = inserted.id as string;
+
+      const opts = deductions.filter((d) => d.damage_category_id === cat.id);
+      if (opts.length) {
+        const { error: e2 } = await supabase.from("damage_deductions").insert(
+          opts.map((o) => ({
+            damage_category_id: newId,
+            option_name: o.option_name,
+            deduction_value: o.deduction_value,
+            is_rejected: o.is_rejected,
+            display_order: o.display_order,
+          })),
+        );
+        if (e2) throw e2;
+      }
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Categoria duplicada!");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -325,6 +448,494 @@ export function DefectsTab() {
     );
   }
 
+  // Helper: render new-category form (shared between root and per-parent)
+  const renderNewCatForm = (parentId: string | null) => (
+    <div className="bg-card border rounded-lg p-4 space-y-3">
+      <div>
+        <Label>{parentId ? "Nome da subcategoria" : "Nome da categoria"}</Label>
+        <Input
+          value={newCat.name}
+          onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+          placeholder={parentId ? 'Ex: "É Tela Original?"' : "Ex: Bateria, Tela, Carcaça"}
+          className="mt-1"
+          autoFocus
+        />
+      </div>
+      <div>
+        <Label className="text-sm">Observação / Explicação (opcional)</Label>
+        <Textarea
+          value={newCat.help_text}
+          onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
+          placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
+          className="mt-1 text-sm"
+          rows={2}
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Exibido como tooltip "?" ao lado do nome no formulário do cliente.
+        </p>
+      </div>
+      <ImageUploadField
+        value={newCat.help_image_url}
+        uploading={uploadingFor === "__new__"}
+        onUpload={async (file) => {
+          const url = await uploadImage(file, "__new__");
+          if (url) setNewCat((p) => ({ ...p, help_image_url: url }));
+        }}
+        onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
+      />
+      <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+        <Checkbox
+          checked={newCat.is_required}
+          onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
+        />
+        <span>Obrigatório (cliente precisa responder antes de avançar)</span>
+      </label>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => saveCatMutation.mutate({ ...newCat, parent_id: parentId })}
+          disabled={!newCat.name || saveCatMutation.isPending}
+        >
+          <Check className="mr-1 h-4 w-4" /> Criar
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setShowNewCatForParent(null);
+            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+          }}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Recursive render of a category and its children
+  const renderCategoryNode = (cat: DamageCategory, depth: number) => {
+    const options = getOptionsForCat(cat.id);
+    const isExpanded = expandedCat.has(cat.id);
+    const isEditing = editingCatId === cat.id;
+    const draft = getNewOptionDraft(cat.id);
+    const children = categories
+      .filter((c) => c.parent_id === cat.id)
+      .sort((a, b) => a.display_order - b.display_order);
+    const siblings = categories.filter((c) => (c.parent_id ?? null) === (cat.parent_id ?? null));
+
+    return (
+      <div key={cat.id} className="bg-card">
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+          style={{ paddingLeft: 16 + depth * 24 }}
+          onClick={() => toggleExpanded(cat.id)}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+          {depth > 0 ? (
+            <GitBranch className="h-4 w-4 text-primary/70 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+          )}
+
+          {isEditing ? (
+            <Input
+              value={catForm.name}
+              onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+              className="h-8 text-sm flex-1"
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          ) : (
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-foreground">{cat.name}</span>
+                {depth > 0 && (
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                    sub
+                  </Badge>
+                )}
+                {cat.is_required === false ? (
+                  <Badge variant="outline" className="text-[10px]">opcional</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                    obrigatório
+                  </Badge>
+                )}
+                {cat.help_image_url && (
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    <ImageIcon className="h-2.5 w-2.5" /> imagem
+                  </Badge>
+                )}
+              </div>
+              {cat.help_text && (
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                  {cat.help_text}
+                </p>
+              )}
+            </div>
+          )}
+
+          <Badge variant="secondary" className="text-xs flex-shrink-0">
+            {options.length} {options.length === 1 ? "opção" : "opções"}
+          </Badge>
+
+          <div
+            className="flex items-center gap-1 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!isEditing && (
+              <OrderArrows
+                table="damage_categories"
+                rows={siblings}
+                currentId={cat.id}
+                queryKey={["admin-damage-categories"]}
+              />
+            )}
+            {isEditing ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => saveCatMutation.mutate({ id: cat.id, ...catForm })}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditingCatId(null)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title="Duplicar categoria"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicateCatMutation.mutate(cat);
+                  }}
+                  disabled={duplicateCatMutation.isPending}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title="Editar"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCatForm({
+                      name: cat.name,
+                      help_text: cat.help_text ?? "",
+                      help_image_url: cat.help_image_url ?? "",
+                      is_required: cat.is_required !== false,
+                    });
+                    setEditingCatId(cat.id);
+                    setExpandedCat((prev) => new Set(prev).add(cat.id));
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  title="Remover"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      confirm(
+                        `Remover "${cat.name}"${
+                          children.length ? ` e ${children.length} subcategoria(s)` : ""
+                        } e todas as opções?`,
+                      )
+                    )
+                      deleteCatMutation.mutate(cat.id);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Edit panel (image + help_text shown on edit) */}
+        {isEditing && (
+          <div
+            className="px-4 pb-4 pt-2 border-t border-dashed space-y-3 bg-muted/20"
+            style={{ paddingLeft: 16 + depth * 24 + 28 }}
+          >
+            <div>
+              <Label className="text-sm">Observação / Explicação</Label>
+              <Textarea
+                value={catForm.help_text}
+                onChange={(e) => setCatForm({ ...catForm, help_text: e.target.value })}
+                placeholder="Ex: Detalhes que o cliente precisa saber sobre este critério."
+                rows={2}
+                className="mt-1 text-sm"
+              />
+            </div>
+            <ImageUploadField
+              value={catForm.help_image_url}
+              uploading={uploadingFor === cat.id}
+              onUpload={async (file) => {
+                const url = await uploadImage(file, cat.id);
+                if (url) setCatForm((p) => ({ ...p, help_image_url: url }));
+              }}
+              onClear={() => setCatForm((p) => ({ ...p, help_image_url: "" }))}
+            />
+            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+              <Checkbox
+                checked={catForm.is_required}
+                onCheckedChange={(v) => setCatForm({ ...catForm, is_required: v === true })}
+              />
+              <span>Obrigatório</span>
+            </label>
+          </div>
+        )}
+
+        {/* Expanded panel — options + subcategory area */}
+        {isExpanded && !isEditing && (
+          <div
+            className="px-4 pb-4 pt-2 border-t border-dashed space-y-4 bg-muted/10"
+            style={{ paddingLeft: 16 + depth * 24 + 28 }}
+          >
+            {/* Help image preview */}
+            {cat.help_image_url && (
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                  Imagem explicativa
+                </Label>
+                <img
+                  src={cat.help_image_url}
+                  alt={cat.name}
+                  className="max-h-40 rounded-md border bg-background object-contain"
+                />
+              </div>
+            )}
+
+            {/* Options list */}
+            <div className="space-y-2">
+              <Label className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                Opções de resposta
+              </Label>
+              {options.length === 0 && (
+                <p className="text-xs text-muted-foreground italic py-2">
+                  Nenhuma opção cadastrada.
+                </p>
+              )}
+              {options.map((opt) => {
+                const isOptEditing = editingOptId === opt.id;
+                return (
+                  <div
+                    key={opt.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
+                      opt.is_rejected
+                        ? "bg-destructive/5 border-destructive/20"
+                        : "bg-card border-transparent"
+                    }`}
+                  >
+                    {isOptEditing ? (
+                      <>
+                        <Input
+                          value={editOptForm.option_name}
+                          onChange={(e) =>
+                            setEditOptForm({ ...editOptForm, option_name: e.target.value })
+                          }
+                          className="h-8 text-sm flex-1"
+                          placeholder="Nome da opção"
+                          autoFocus
+                        />
+                        <CurrencyInput
+                          value={editOptForm.deduction_value}
+                          onValueChange={(v) =>
+                            setEditOptForm({ ...editOptForm, deduction_value: v })
+                          }
+                          className="h-8 text-sm w-32"
+                          disabled={editOptForm.is_rejected}
+                        />
+                        <div className="flex items-center gap-1.5 px-2">
+                          <Switch
+                            checked={editOptForm.is_rejected}
+                            onCheckedChange={(v) =>
+                              setEditOptForm({ ...editOptForm, is_rejected: v })
+                            }
+                          />
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            Inviabiliza
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            saveOptionMutation.mutate({
+                              id: opt.id,
+                              damage_category_id: cat.id,
+                              ...editOptForm,
+                            })
+                          }
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {opt.is_rejected ? (
+                          <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                        ) : (
+                          <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                        )}
+                        <span className="text-sm font-medium text-foreground flex-1">
+                          {opt.option_name}
+                        </span>
+                        {opt.is_rejected ? (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Inviabiliza
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            R${" "}
+                            {opt.deduction_value?.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingOptId(opt.id);
+                            setEditOptForm({
+                              option_name: opt.option_name,
+                              deduction_value: Number(opt.deduction_value) || 0,
+                              is_rejected: opt.is_rejected,
+                            });
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (confirm(`Remover opção "${opt.option_name}"?`))
+                              deleteOptionMutation.mutate(opt.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* New option inline form */}
+            <div className="bg-background border border-dashed rounded-md p-3 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Adicionar nova opção
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Nome da opção</Label>
+                  <Input
+                    value={draft.option_name}
+                    onChange={(e) =>
+                      updateNewOptionDraft(cat.id, { option_name: e.target.value })
+                    }
+                    placeholder="Ex: Sim, Não, 91-100%, Trinco leve..."
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
+                  <CurrencyInput
+                    value={draft.deduction_value}
+                    onValueChange={(v) =>
+                      updateNewOptionDraft(cat.id, { deduction_value: v })
+                    }
+                    disabled={draft.is_rejected}
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+                <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
+                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                    Inviabiliza compra
+                  </Label>
+                  <Switch
+                    checked={draft.is_rejected}
+                    onCheckedChange={(v) =>
+                      updateNewOptionDraft(cat.id, { is_rejected: v })
+                    }
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() =>
+                  saveOptionMutation.mutate({
+                    damage_category_id: cat.id,
+                    option_name: draft.option_name.trim(),
+                    deduction_value: draft.is_rejected ? 0 : draft.deduction_value,
+                    is_rejected: draft.is_rejected,
+                  })
+                }
+                disabled={!draft.option_name.trim() || saveOptionMutation.isPending}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar opção
+              </Button>
+            </div>
+
+            {/* Subcategory area */}
+            <div className="border-t pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <GitBranch className="h-3 w-3" /> Subcategorias
+                </Label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+                    setShowNewCatForParent(cat.id);
+                  }}
+                  disabled={showNewCatForParent === cat.id}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Nova subcategoria
+                </Button>
+              </div>
+              {showNewCatForParent === cat.id && renderNewCatForm(cat.id)}
+              {children.length > 0 && (
+                <div className="border rounded-md overflow-hidden divide-y">
+                  {children.map((child) => renderCategoryNode(child, depth + 1))}
+                </div>
+              )}
+              {children.length === 0 && showNewCatForParent !== cat.id && (
+                <p className="text-xs text-muted-foreground italic py-1">
+                  Sem subcategorias. Use para criar regras dependentes (ex: "É Tela Original?").
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const rootCategories = categories
+    .filter((c) => c.parent_id === null)
+    .sort((a, b) => a.display_order - b.display_order);
+
   return (
     <div className="space-y-10">
       {/* ═══════════════════════════════════════════════
@@ -345,7 +956,6 @@ export function DefectsTab() {
           </Button>
         </div>
 
-        {/* New condition form */}
         {showNewCondition && (
           <div className="bg-card border rounded-lg p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -382,9 +992,6 @@ export function DefectsTab() {
                 className="mt-1 text-sm"
                 rows={2}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Exibido como tooltip "?" para o cliente entender o que essa condição significa.
-              </p>
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
               <Checkbox
@@ -408,7 +1015,6 @@ export function DefectsTab() {
           </div>
         )}
 
-        {/* Conditions list */}
         <div className="border rounded-lg overflow-hidden divide-y">
           {normalConditions.length === 0 && (
             <p className="text-center text-muted-foreground py-6 text-sm">
@@ -418,10 +1024,7 @@ export function DefectsTab() {
           {normalConditions.map((cond) => {
             const isEditing = editingCondId === cond.id;
             return (
-              <div
-                key={cond.id}
-                className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors"
-              >
+              <div key={cond.id} className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
                 {isEditing ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -534,7 +1137,7 @@ export function DefectsTab() {
       </section>
 
       {/* ═══════════════════════════════════════════════
-          SEÇÃO 2: Categorias de Defeitos (1:N opções)
+          SEÇÃO 2: Categorias de Defeitos (com subcategorias)
          ═══════════════════════════════════════════════ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -543,377 +1146,35 @@ export function DefectsTab() {
               <DollarSign className="h-5 w-5 text-amber-500" /> Categorias de Defeitos
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cada categoria pode ter várias opções de resposta. Cada opção define uma dedução em
-              R$ ou inviabiliza a compra.
+              Cada categoria pode ter opções de resposta e subcategorias (ex: "É Tela Original?").
             </p>
           </div>
-          <Button size="sm" onClick={() => setShowNewCat(true)} disabled={showNewCat}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true });
+              setShowNewCatForParent("__root__");
+            }}
+            disabled={showNewCatForParent === "__root__"}
+          >
             <Plus className="h-4 w-4 mr-1" /> Nova Categoria
           </Button>
         </div>
 
-        {/* New category form */}
-        {showNewCat && (
-          <div className="bg-card border rounded-lg p-4 space-y-3">
-            <div>
-              <Label>Nome da categoria</Label>
-              <Input
-                value={newCat.name}
-                onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
-                placeholder="Ex: Bateria, Tela, Carcaça"
-                className="mt-1"
-                autoFocus
-              />
-            </div>
-            <div>
-              <Label className="text-sm">Texto de ajuda (opcional)</Label>
-              <Textarea
-                value={newCat.help_text}
-                onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
-                placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
-                className="mt-1 text-sm"
-                rows={2}
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Exibido como tooltip "?" ao lado do nome da categoria no formulário do cliente.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-              <Checkbox
-                checked={newCat.is_required}
-                onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
-              />
-              <span>Obrigatório (cliente precisa responder antes de avançar)</span>
-            </label>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => saveCatMutation.mutate(newCat)}
-                disabled={!newCat.name || saveCatMutation.isPending}
-              >
-                <Check className="mr-1 h-4 w-4" /> Criar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowNewCat(false);
-                  setNewCat({ name: "", help_text: "", is_required: true });
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        {showNewCatForParent === "__root__" && renderNewCatForm(null)}
 
-        {/* Categories accordion */}
         <div className="border rounded-lg overflow-hidden divide-y">
-          {categories.length === 0 && (
+          {rootCategories.length === 0 && (
             <p className="text-center text-muted-foreground py-6 text-sm">
               Nenhuma categoria cadastrada.
             </p>
           )}
-          {categories.map((cat) => {
-            const options = getOptionsForCat(cat.id);
-            const isExpanded = expandedCat === cat.id;
-            const isEditing = editingCatId === cat.id;
-            const draft = getNewOptionDraft(cat.id);
-
-            return (
-              <div key={cat.id} className="bg-card">
-                {/* Header row */}
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-
-                  {isEditing ? (
-                    <Input
-                      value={catForm.name}
-                      onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-                      className="h-8 text-sm flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                      autoFocus
-                    />
-                  ) : (
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{cat.name}</span>
-                        {(cat as any).is_required === false ? (
-                          <Badge variant="outline" className="text-[10px]">opcional</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
-                            obrigatório
-                          </Badge>
-                        )}
-                      </div>
-                      {(cat as any).help_text && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                          {(cat as any).help_text}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <Badge variant="secondary" className="text-xs flex-shrink-0">
-                    {options.length} {options.length === 1 ? "opção" : "opções"}
-                  </Badge>
-
-                  <div
-                    className="flex items-center gap-1 flex-shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isEditing ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => saveCatMutation.mutate({ id: cat.id, ...catForm })}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingCatId(null)}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCatForm({
-                              name: cat.name,
-                              help_text: (cat as any).help_text ?? "",
-                              is_required: (cat as any).is_required !== false,
-                            });
-                            setEditingCatId(cat.id);
-                            setExpandedCat(cat.id);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            if (
-                              confirm(`Remover "${cat.name}" e todas as suas opções?`)
-                            )
-                              deleteCatMutation.mutate(cat.id);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expanded panel */}
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-2 ml-7 border-t border-dashed space-y-4">
-                    {/* Options list */}
-                    <div className="space-y-2">
-                      {options.length === 0 && (
-                        <p className="text-xs text-muted-foreground italic py-2">
-                          Nenhuma opção cadastrada. Adicione opções abaixo.
-                        </p>
-                      )}
-                      {options.map((opt) => {
-                        const isOptEditing = editingOptId === opt.id;
-                        return (
-                          <div
-                            key={opt.id}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-                              opt.is_rejected
-                                ? "bg-destructive/5 border-destructive/20"
-                                : "bg-muted/30 border-transparent"
-                            }`}
-                          >
-                            {isOptEditing ? (
-                              <>
-                                <Input
-                                  value={editOptForm.option_name}
-                                  onChange={(e) =>
-                                    setEditOptForm({ ...editOptForm, option_name: e.target.value })
-                                  }
-                                  className="h-8 text-sm flex-1"
-                                  placeholder="Nome da opção"
-                                  autoFocus
-                                />
-                                <CurrencyInput
-                                  value={editOptForm.deduction_value}
-                                  onValueChange={(v) =>
-                                    setEditOptForm({
-                                      ...editOptForm,
-                                      deduction_value: v,
-                                    })
-                                  }
-                                  className="h-8 text-sm w-32"
-                                  disabled={editOptForm.is_rejected}
-                                />
-                                <div className="flex items-center gap-1.5 px-2">
-                                  <Switch
-                                    checked={editOptForm.is_rejected}
-                                    onCheckedChange={(v) =>
-                                      setEditOptForm({ ...editOptForm, is_rejected: v })
-                                    }
-                                  />
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                    Inviabiliza
-                                  </span>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    saveOptionMutation.mutate({
-                                      id: opt.id,
-                                      damage_category_id: cat.id,
-                                      ...editOptForm,
-                                    })
-                                  }
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingOptId(null)}
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                {opt.is_rejected ? (
-                                  <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                                ) : (
-                                  <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                                )}
-                                <span className="text-sm font-medium text-foreground flex-1">
-                                  {opt.option_name}
-                                </span>
-                                {opt.is_rejected ? (
-                                  <Badge variant="destructive" className="text-xs">
-                                    <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Inviabiliza
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="text-xs">
-                                    R${" "}
-                                    {opt.deduction_value?.toLocaleString("pt-BR", {
-                                      minimumFractionDigits: 2,
-                                    })}
-                                  </Badge>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingOptId(opt.id);
-                                    setEditOptForm({
-                                      option_name: opt.option_name,
-                                      deduction_value: Number(opt.deduction_value) || 0,
-                                      is_rejected: opt.is_rejected,
-                                    });
-                                  }}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    if (confirm(`Remover opção "${opt.option_name}"?`))
-                                      deleteOptionMutation.mutate(opt.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* New option inline form */}
-                    <div className="bg-background border border-dashed rounded-md p-3 space-y-3">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Adicionar nova opção
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Nome da opção</Label>
-                          <Input
-                            value={draft.option_name}
-                            onChange={(e) =>
-                              updateNewOptionDraft(cat.id, { option_name: e.target.value })
-                            }
-                            placeholder="Ex: 91-100%, Trinco leve..."
-                            className="mt-1 h-9 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
-                          <CurrencyInput
-                            value={draft.deduction_value}
-                            onValueChange={(v) =>
-                              updateNewOptionDraft(cat.id, {
-                                deduction_value: v,
-                              })
-                            }
-                            disabled={draft.is_rejected}
-                            className="mt-1 h-9 text-sm"
-                          />
-                        </div>
-                        <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                            Inviabiliza compra
-                          </Label>
-                          <Switch
-                            checked={draft.is_rejected}
-                            onCheckedChange={(v) =>
-                              updateNewOptionDraft(cat.id, { is_rejected: v })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          saveOptionMutation.mutate({
-                            damage_category_id: cat.id,
-                            option_name: draft.option_name.trim(),
-                            deduction_value: draft.is_rejected ? 0 : draft.deduction_value,
-                            is_rejected: draft.is_rejected,
-                          })
-                        }
-                        disabled={!draft.option_name.trim() || saveOptionMutation.isPending}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar opção
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {rootCategories.map((cat) => renderCategoryNode(cat, 0))}
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════
-          SEÇÃO 3: Motivos de Rejeição (Hard Stops globais)
+          SEÇÃO 3: Motivos de Rejeição
          ═══════════════════════════════════════════════ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -923,8 +1184,7 @@ export function DefectsTab() {
               <span className="text-xs font-normal text-muted-foreground">(Não comprar se...)</span>
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Condições gerais que bloqueiam imediatamente a compra. Ao selecionar uma destas
-              opções, o cliente é informado que o aparelho não pode ser adquirido.
+              Condições gerais que bloqueiam imediatamente a compra.
             </p>
           </div>
           <Button
@@ -937,7 +1197,6 @@ export function DefectsTab() {
           </Button>
         </div>
 
-        {/* New rejection form */}
         {showNewRejection && (
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
             <div>
@@ -954,9 +1213,6 @@ export function DefectsTab() {
                   }
                 }}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Salvo automaticamente como rejeição (100% de bloqueio).
-              </p>
             </div>
             <div className="flex gap-2">
               <Button
@@ -983,7 +1239,6 @@ export function DefectsTab() {
           </div>
         )}
 
-        {/* Rejection list */}
         <div className="border border-destructive/20 rounded-lg overflow-hidden divide-y divide-destructive/10">
           {rejectionReasons.length === 0 && (
             <p className="text-center text-muted-foreground py-6 text-sm">
@@ -1058,6 +1313,91 @@ export function DefectsTab() {
           })}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// Image upload reusable field
+// ─────────────────────────────────────────────────────
+function ImageUploadField({
+  value,
+  uploading,
+  onUpload,
+  onClear,
+}: {
+  value: string;
+  uploading: boolean;
+  onUpload: (file: File) => void | Promise<void>;
+  onClear: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm flex items-center gap-1.5">
+        <ImageIcon className="h-3.5 w-3.5" /> Imagem explicativa (opcional)
+      </Label>
+      {value ? (
+        <div className="flex items-start gap-3">
+          <img
+            src={value}
+            alt="Pré-visualização"
+            className="h-24 w-24 rounded-md border object-cover bg-background"
+          />
+          <div className="flex flex-col gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Enviando…</>
+              ) : (
+                <><Upload className="h-3.5 w-3.5 mr-1" /> Trocar</>
+              )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={onClear}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Enviando…</>
+          ) : (
+            <><Upload className="h-3.5 w-3.5 mr-1" /> Enviar imagem</>
+          )}
+        </Button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onUpload(f);
+          e.target.value = "";
+        }}
+      />
+      <p className="text-[11px] text-muted-foreground">
+        Mostrada para o cliente como referência visual ao avaliar este critério.
+      </p>
     </div>
   );
 }

@@ -211,26 +211,32 @@ export function DefectsTab() {
 
   // ── Condition (normal) mutations ──
   const saveCondMutation = useMutation({
-    mutationFn: async (data: { id?: string; condition_name: string; discount_percentage: number }) => {
+    mutationFn: async (data: {
+      id?: string;
+      condition_name: string;
+      discount_percentage: number;
+      help_text: string;
+      is_required: boolean;
+    }) => {
+      const payload = {
+        condition_name: data.condition_name,
+        discount_percentage: data.discount_percentage,
+        is_rejected: false,
+        help_text: data.help_text?.trim() || null,
+        is_required: data.is_required,
+      };
       if (data.id) {
         const { error } = await supabase
           .from("condition_discounts")
-          .update({
-            condition_name: data.condition_name,
-            discount_percentage: data.discount_percentage,
-            is_rejected: false,
-          })
+          .update(payload as any)
           .eq("id", data.id);
         if (error) throw error;
       } else {
         const maxOrder =
           conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
-        const { error } = await supabase.from("condition_discounts").insert({
-          condition_name: data.condition_name,
-          discount_percentage: data.discount_percentage,
-          is_rejected: false,
-          display_order: maxOrder,
-        });
+        const { error } = await supabase
+          .from("condition_discounts")
+          .insert({ ...payload, display_order: maxOrder } as any);
         if (error) throw error;
       }
     },
@@ -238,7 +244,7 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewCondition(false);
       setEditingCondId(null);
-      setCondForm({ condition_name: "", discount_percentage: 0 });
+      setCondForm({ condition_name: "", discount_percentage: 0, help_text: "", is_required: true });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),

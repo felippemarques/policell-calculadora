@@ -508,6 +508,13 @@ export function DefectsTab() {
         }}
         onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
       />
+      {parentId === null && (
+        <BrandsMultiSelect
+          brands={brands}
+          selected={newCat.brand_ids}
+          onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
+        />
+      )}
       <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
         <Checkbox
           checked={newCat.is_required}

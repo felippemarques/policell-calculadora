@@ -37,14 +37,19 @@ const HeroSection = ({ section }: HeroSectionProps) => {
   const vAlign = (layoutData.vAlign || "center") as keyof typeof vAlignClass;
   const hAlign = (layoutData.hAlign || "center") as keyof typeof hAlignClass;
   const textAlign = (layoutData.textAlign || "center") as keyof typeof textAlignClass;
+  const bgPosX = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
+  const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
   return (
     <section className="relative overflow-hidden min-h-[600px] flex bg-background">
       {section.image_url ? (
-        <img
-          src={section.image_url}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+        <div
+          className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"
+          style={{
+            backgroundImage: `url(${section.image_url})`,
+            backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+          }}
+          aria-hidden
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />

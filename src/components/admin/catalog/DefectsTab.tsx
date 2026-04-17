@@ -483,74 +483,107 @@ export function DefectsTab() {
     );
   }
 
-  // Helper: render new-category form (shared between root and per-parent)
-  const renderNewCatForm = (parentId: string | null) => (
-    <div className="bg-card border rounded-lg p-4 space-y-3">
-      <div>
-        <Label>{parentId ? "Nome da subcategoria" : "Nome da categoria"}</Label>
-        <Input
-          value={newCat.name}
-          onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
-          placeholder={parentId ? 'Ex: "É Tela Original?"' : "Ex: Bateria, Tela, Carcaça"}
-          className="mt-1"
-          autoFocus
-        />
-      </div>
-      <div>
-        <Label className="text-sm">Observação / Explicação (opcional)</Label>
-        <Textarea
-          value={newCat.help_text}
-          onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
-          placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
-          className="mt-1 text-sm"
-          rows={2}
-        />
-        <p className="text-[11px] text-muted-foreground mt-1">
-          Exibido como tooltip "?" ao lado do nome no formulário do cliente.
-        </p>
-      </div>
-      <ImageUploadField
-        value={newCat.help_image_url}
-        uploading={uploadingFor === "__new__"}
-        onUpload={async (file) => {
-          const url = await uploadImage(file, "__new__");
-          if (url) setNewCat((p) => ({ ...p, help_image_url: url }));
-        }}
-        onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
-      />
-      {parentId === null && (
-        <BrandsMultiSelect
-          brands={brands}
-          selected={newCat.brand_ids}
-          onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
-        />
-      )}
-      <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
-        <Checkbox
-          checked={newCat.is_required}
-          onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
-        />
-        <span>Obrigatório (cliente precisa responder antes de avançar)</span>
-      </label>
-      <div className="flex gap-2">
-        <Button
-          onClick={() => saveCatMutation.mutate({ ...newCat, parent_id: parentId })}
-          disabled={!newCat.name || saveCatMutation.isPending}
-        >
-          <Check className="mr-1 h-4 w-4" /> Criar
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setShowNewCatForParent(null);
-            setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+  // Helper: render new-category form (shared between root, per-parent, and per-option contexts)
+  const renderNewCatForm = (
+    parentId: string | null,
+    parentOptionId: string | null = null,
+  ) => {
+    const isOptionTriggered = !!parentOptionId;
+    return (
+      <div
+        className={`bg-card border rounded-lg p-4 space-y-3 ${
+          isOptionTriggered ? "border-primary/40 bg-primary/5" : ""
+        }`}
+      >
+        <div>
+          <Label>
+            {isOptionTriggered
+              ? "Nome da sub-pergunta condicional"
+              : parentId
+                ? "Nome da subcategoria"
+                : "Nome da categoria"}
+          </Label>
+          <Input
+            value={newCat.name}
+            onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+            placeholder={
+              isOptionTriggered
+                ? 'Ex: "Quantos riscos?", "É original?"'
+                : parentId
+                  ? 'Ex: "É Tela Original?"'
+                  : "Ex: Bateria, Tela, Carcaça"
+            }
+            className="mt-1"
+            autoFocus
+          />
+          {isOptionTriggered && (
+            <p className="text-[11px] text-primary mt-1.5">
+              Esta pergunta só aparecerá ao cliente quando ele selecionar a opção acima.
+            </p>
+          )}
+        </div>
+        <div>
+          <Label className="text-sm">Observação / Explicação (opcional)</Label>
+          <Textarea
+            value={newCat.help_text}
+            onChange={(e) => setNewCat({ ...newCat, help_text: e.target.value })}
+            placeholder='Ex: "Alto-falante baixo" significa volume reduzido perceptível.'
+            className="mt-1 text-sm"
+            rows={2}
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Exibido como tooltip "?" ao lado do nome no formulário do cliente.
+          </p>
+        </div>
+        <ImageUploadField
+          value={newCat.help_image_url}
+          uploading={uploadingFor === "__new__"}
+          onUpload={async (file) => {
+            const url = await uploadImage(file, "__new__");
+            if (url) setNewCat((p) => ({ ...p, help_image_url: url }));
           }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+          onClear={() => setNewCat((p) => ({ ...p, help_image_url: "" }))}
+        />
+        {parentId === null && !isOptionTriggered && (
+          <BrandsMultiSelect
+            brands={brands}
+            selected={newCat.brand_ids}
+            onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
+          />
+        )}
+        <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+          <Checkbox
+            checked={newCat.is_required}
+            onCheckedChange={(v) => setNewCat({ ...newCat, is_required: v === true })}
+          />
+          <span>Obrigatório (cliente precisa responder antes de avançar)</span>
+        </label>
+        <div className="flex gap-2">
+          <Button
+            onClick={() =>
+              saveCatMutation.mutate({
+                ...newCat,
+                parent_id: parentId,
+                parent_option_id: parentOptionId,
+              })
+            }
+            disabled={!newCat.name || saveCatMutation.isPending}
+          >
+            <Check className="mr-1 h-4 w-4" /> Criar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowNewCatForParent(null);
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Recursive render of a category and its children
   const renderCategoryNode = (cat: DamageCategory, depth: number) => {

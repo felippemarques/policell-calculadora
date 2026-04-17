@@ -1185,6 +1185,7 @@ function HeroBackgroundDragger({
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
+    e.preventDefault();
     el.setPointerCapture(e.pointerId);
     dragStateRef.current = {
       startX: e.clientX,
@@ -1199,10 +1200,9 @@ function HeroBackgroundDragger({
     const state = dragStateRef.current;
     const el = containerRef.current;
     if (!state || !el) return;
+    e.preventDefault();
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    // Drag direction is inverted: arrastar pra direita move o "olhar" pra direita
-    // (ou seja, background-position diminui)
     const deltaX = ((e.clientX - state.startX) / rect.width) * 100;
     const deltaY = ((e.clientY - state.startY) / rect.height) * 100;
     const nextX = clamp(state.startBgX - deltaX);
@@ -1237,9 +1237,7 @@ function HeroBackgroundDragger({
           isDragging ? "cursor-grabbing" : "cursor-grab"
         }`}
       >
-        <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.6]" style={{ width: "166.6667%", height: "166.6667%" }}>
-          <HeroSection section={section} />
-        </div>
+        <HeroSection section={section} previewMode />
         <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm border text-[11px] font-medium text-foreground shadow-sm pointer-events-none">
           Arraste a imagem para ajustar a posição
         </div>
@@ -1347,9 +1345,10 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-2">Pré-visualização da posição:</p>
           <div className="relative w-full aspect-[21/9] overflow-hidden rounded-xl border">
-            <div className="pointer-events-none absolute inset-0 origin-top-left scale-[0.6]" style={{ width: "166.6667%", height: "166.6667%" }}>
-              <HeroSection section={{ ...form, layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }) }} />
-            </div>
+            <HeroSection
+              section={{ ...form, layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }) }}
+              previewMode
+            />
           </div>
         </div>
       </SectionCard>

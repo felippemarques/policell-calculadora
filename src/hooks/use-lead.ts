@@ -14,20 +14,15 @@ export function useLead() {
   const createLead = useCallback(async (input: LeadInput): Promise<string | null> => {
     setCreating(true);
     try {
-      const { data, error } = await supabase
-        .from("leads")
-        .insert({
-          customer_name: input.customer_name,
-          customer_email: input.customer_email,
-          customer_phone: input.customer_phone,
-          assessment_responses: {},
-          status: "in_progress",
-        })
-        .select("id")
-        .single();
+      const { data, error } = await supabase.rpc("create_lead", {
+        _name: input.customer_name,
+        _email: input.customer_email,
+        _phone: input.customer_phone,
+      });
       if (error) throw error;
-      setLeadId(data.id);
-      return data.id;
+      const newId = data as unknown as string;
+      setLeadId(newId);
+      return newId;
     } catch (err) {
       console.error("Failed to create lead:", err);
       return null;

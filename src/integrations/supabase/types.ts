@@ -207,6 +207,7 @@ export type Database = {
           is_required: boolean
           name: string
           parent_id: string | null
+          parent_option_id: string | null
         }
         Insert: {
           brand_ids?: string[]
@@ -218,6 +219,7 @@ export type Database = {
           is_required?: boolean
           name: string
           parent_id?: string | null
+          parent_option_id?: string | null
         }
         Update: {
           brand_ids?: string[]
@@ -229,6 +231,7 @@ export type Database = {
           is_required?: boolean
           name?: string
           parent_id?: string | null
+          parent_option_id?: string | null
         }
         Relationships: [
           {
@@ -236,6 +239,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "damage_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "damage_categories_parent_option_id_fkey"
+            columns: ["parent_option_id"]
+            isOneToOne: false
+            referencedRelation: "damage_deductions"
             referencedColumns: ["id"]
           },
         ]

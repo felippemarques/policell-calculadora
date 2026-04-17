@@ -85,7 +85,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
 
       <div
         className={cn(
-          "relative flex w-full px-4 md:px-6",
+          "relative z-20 flex w-full px-4 md:px-6 pointer-events-none",
           previewMode ? "h-full py-6 md:py-8" : "py-16 md:py-40",
           vAlignClass[vAlign],
           hAlignClass[hAlign],
@@ -94,7 +94,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
       >
         <div
           className={cn(
-            "flex w-full max-w-2xl flex-col gap-4 md:gap-6",
+            "pointer-events-auto flex w-full max-w-2xl flex-col gap-4 md:gap-6",
             textAlignClass[textAlign],
           )}
         >

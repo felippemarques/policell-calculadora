@@ -1070,7 +1070,7 @@ export function DefectsTab() {
   };
 
   const rootCategories = categories
-    .filter((c) => c.parent_id === null)
+    .filter((c) => c.parent_id === null && !c.parent_option_id)
     .sort((a, b) => a.display_order - b.display_order);
 
   return (

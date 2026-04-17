@@ -8,73 +8,87 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
-  CheckCircle2,
+  Sparkles,
   PartyPopper,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
 
 interface TourStep {
   icon: typeof Smartphone;
+  badge: string;
   title: string;
   highlight: string;
   description: string;
   cta: string;
   route: string;
+  accent: string; // tailwind gradient class
 }
 
 const STEPS: TourStep[] = [
   {
     icon: Smartphone,
-    title: "Passo 1 — Cadastre os parâmetros básicos",
-    highlight: "Sem marcas, modelos, armazenamento e cores você não consegue cadastrar nenhum aparelho.",
+    badge: "Catálogo base",
+    title: "Cadastre os parâmetros básicos",
+    highlight:
+      "Sem marcas, modelos, armazenamento e cores você não consegue cadastrar nenhum aparelho.",
     description:
-      "Vá em Produtos e Parâmetros e comece criando suas Marcas, Modelos, Capacidades de Armazenamento e Cores. Só então você poderá cadastrar os aparelhos que aparecerão na calculadora.",
+      "Vá em Produtos e Parâmetros e cadastre Marcas, Modelos, Capacidades de Armazenamento e Cores. Só então você poderá criar os aparelhos que aparecerão na calculadora.",
     cta: "Ir para Produtos e Parâmetros",
     route: "/admin/catalogo",
+    accent: "from-violet-500 to-indigo-600",
   },
   {
     icon: ListChecks,
-    title: "Passo 2 — Monte os critérios de avaliação",
-    highlight: "Defina como o desconto será calculado quando o cliente avaliar o aparelho.",
+    badge: "Regras de preço",
+    title: "Monte os critérios de avaliação",
+    highlight:
+      "Defina como o desconto é calculado quando o cliente avalia o aparelho.",
     description:
-      "Ainda em Produtos e Parâmetros, abra a aba Critérios de Avaliação. Crie as condições gerais (ex: novo, usado, com avarias) e os defeitos com seus respectivos descontos. É essa estrutura que aparecerá para o cliente na página de venda.",
+      "Ainda em Produtos e Parâmetros, abra a aba Critérios de Avaliação. Crie as condições gerais (novo, usado, com avarias) e os defeitos com seus respectivos descontos. Essa estrutura é o que o cliente vê na página de venda.",
     cta: "Configurar critérios",
     route: "/admin/catalogo",
+    accent: "from-sky-500 to-cyan-600",
   },
   {
     icon: Users,
-    title: "Passo 3 — Acompanhe seus clientes",
-    highlight: "No menu Clientes você vê todos que iniciaram ou concluíram uma avaliação.",
+    badge: "Funil de vendas",
+    title: "Acompanhe seus clientes",
+    highlight:
+      "No menu Clientes você vê todos que iniciaram ou concluíram uma avaliação.",
     description:
-      "Clicando em Ver Detalhes você consegue tomar ações comerciais: entrar em contato, acompanhar status e fechar a negociação. Nenhum lead se perde.",
-    cta: "Ver Clientes",
+      "Em Ver Detalhes você consegue tomar ações comerciais: entrar em contato, acompanhar status e fechar a negociação. Nenhum lead se perde.",
+    cta: "Abrir Clientes",
     route: "/admin/clientes",
+    accent: "from-emerald-500 to-teal-600",
   },
   {
     icon: LayoutDashboard,
-    title: "Passo 4 — Acompanhe seu desempenho",
-    highlight: "O Dashboard mostra a visão clara do andamento da sua operação.",
+    badge: "Performance",
+    title: "Acompanhe seu desempenho",
+    highlight:
+      "O Dashboard mostra a visão clara do andamento da sua operação.",
     description:
       "Avaliações iniciadas, concluídas, aparelhos mais avaliados e métricas de conversão. Use os filtros para entender o que está convertendo e o que precisa de ajuste.",
     cta: "Abrir Dashboard",
     route: "/admin",
+    accent: "from-amber-500 to-orange-600",
   },
   {
     icon: Layers,
-    title: "Passo 5 — Personalize sua Landing Page",
+    badge: "Sua vitrine",
+    title: "Personalize sua Landing Page",
     highlight: "Agora deixe sua página pronta para receber os clientes.",
     description:
-      "No menu Seções LP você configura cada bloco da sua landing page: hero banner, benefícios, depoimentos, vídeos, CTA e mais. Capriche no visual — é a sua vitrine. Boas vendas! 🚀",
+      "Em Seções LP você configura cada bloco da landing: hero banner, benefícios, depoimentos, vídeos, CTA e mais. Capriche no visual — é a sua vitrine. Boas vendas! 🚀",
     cta: "Configurar Landing Page",
     route: "/admin/secoes",
+    accent: "from-rose-500 to-pink-600",
   },
 ];
 
@@ -90,6 +104,7 @@ export function AdminTour() {
   const isLast = stepIndex === STEPS.length - 1;
   const isFirst = stepIndex === 0;
   const Icon = step.icon;
+  const progress = ((stepIndex + 1) / STEPS.length) * 100;
 
   const handleNext = async () => {
     if (isLast) {
@@ -119,113 +134,130 @@ export function AdminTour() {
   };
 
   return (
-    <Dialog open={needsTour} onOpenChange={() => { /* tour é obrigatório, não fecha por fora */ }}>
+    <Dialog open={needsTour} onOpenChange={() => { /* tour é obrigatório */ }}>
       <DialogContent
-        className="max-w-lg p-0 overflow-hidden gap-0 [&>button]:hidden"
+        className="max-w-[640px] w-[calc(100vw-2rem)] p-0 overflow-hidden gap-0 border-0 shadow-2xl rounded-3xl [&>button]:hidden bg-card"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* Top progress bar */}
-        <div className="h-1.5 w-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
-          />
-        </div>
+        {/* ── Header colorido com gradient do passo ── */}
+        <div
+          className={`relative bg-gradient-to-br ${step.accent} px-7 sm:px-9 pt-7 pb-16`}
+        >
+          {/* skip button */}
+          <button
+            type="button"
+            onClick={handleFinish}
+            className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white/90 hover:text-white transition-colors backdrop-blur-sm"
+            aria-label="Pular tour"
+            title="Pular tour"
+          >
+            <X className="h-4 w-4" />
+          </button>
 
-        <div className="p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Icon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                  Tour {stepIndex + 1} de {STEPS.length}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Bem-vindo(a) ao painel Pollicell
-                </p>
-              </div>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
             </div>
-            <button
-              type="button"
-              onClick={handleFinish}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
-              aria-label="Pular tour"
-              title="Pular tour"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/95">
+              Tour guiado · {stepIndex + 1} de {STEPS.length}
+            </p>
           </div>
 
-          <DialogHeader className="text-left space-y-3 mb-4">
-            <DialogTitle className="text-xl sm:text-2xl font-semibold tracking-tight">
-              {step.title}
-            </DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3 text-sm">
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-foreground font-medium flex gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>{step.highlight}</span>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center flex-shrink-0 ring-1 ring-white/25 shadow-lg">
+              <Icon className="h-7 w-7 sm:h-8 sm:w-8 text-white" strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 pt-1">
+              <span className="inline-block text-[10px] font-semibold uppercase tracking-widest text-white/80 mb-1.5">
+                {step.badge}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white leading-tight">
+                {step.title}
+              </h2>
+            </div>
+          </div>
 
-          {/* Step indicator dots */}
-          <div className="flex items-center justify-center gap-1.5 py-3">
+          {/* progress bar grudada na base do header */}
+          <div className="absolute left-0 right-0 bottom-0 h-1 bg-white/20">
+            <div
+              className="h-full bg-white transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* ── Body ── */}
+        <div className="px-7 sm:px-9 pt-7 pb-6 space-y-5">
+          <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4 flex gap-3">
+            <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Rocket className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-sm font-medium text-foreground leading-relaxed">
+              {step.highlight}
+            </p>
+          </div>
+
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {step.description}
+          </p>
+
+          {/* Step dots */}
+          <div className="flex items-center justify-center gap-2 pt-1">
             {STEPS.map((_, i) => (
               <span
                 key={i}
-                className={`h-1.5 rounded-full transition-all ${
+                className={`rounded-full transition-all duration-300 ${
                   i === stepIndex
-                    ? "w-6 bg-primary"
+                    ? "h-2 w-8 bg-primary"
                     : i < stepIndex
-                      ? "w-1.5 bg-primary/60"
-                      : "w-1.5 bg-muted-foreground/20"
+                      ? "h-2 w-2 bg-primary/70"
+                      : "h-2 w-2 bg-muted-foreground/25"
                 }`}
               />
             ))}
           </div>
+        </div>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 mt-4">
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              disabled={isFirst}
-              className="sm:w-auto w-full"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Voltar
-            </Button>
+        {/* ── Footer com ações ── */}
+        <div className="border-t border-border/60 bg-muted/30 px-7 sm:px-9 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            disabled={isFirst}
+            className="sm:w-auto w-full text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Voltar
+          </Button>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            {!isLast && (
               <Button
                 variant="outline"
                 onClick={handleNext}
                 className="sm:w-auto w-full"
               >
-                {isLast ? (
-                  <>
-                    Concluir tour
-                    <PartyPopper className="h-4 w-4 ml-1" />
-                  </>
-                ) : (
-                  <>
-                    Próximo
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </>
-                )}
+                Próximo
+                <ArrowRight className="h-4 w-4 ml-1.5" />
               </Button>
-              <Button onClick={handleGo} className="sm:w-auto w-full">
-                {step.cta}
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+            )}
+            <Button
+              onClick={handleGo}
+              className="sm:w-auto w-full shadow-md hover:shadow-lg transition-shadow"
+            >
+              {isLast ? (
+                <>
+                  {step.cta}
+                  <PartyPopper className="h-4 w-4 ml-1.5" />
+                </>
+              ) : (
+                <>
+                  {step.cta}
+                  <ArrowRight className="h-4 w-4 ml-1.5" />
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>

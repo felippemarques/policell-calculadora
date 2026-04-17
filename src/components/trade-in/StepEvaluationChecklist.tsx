@@ -563,6 +563,18 @@ export function StepEvaluationChecklist({
                       </div>
                     )}
 
+                    {/* Reveal conditional sub-questions tied to the currently-selected option */}
+                    {selectedId && (conditionalsByOption[selectedId]?.length ?? 0) > 0 && (
+                      <div className="mt-4 space-y-3 animate-fade-in">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                          ↳ Por favor, responda também:
+                        </p>
+                        {conditionalsByOption[selectedId].map((cond) =>
+                          renderCategory(cond, depth + 1),
+                        )}
+                      </div>
+                    )}
+
                     {subs.length > 0 && (
                       <div className="mt-4 space-y-3">
                         {subs.map((sub) => renderCategory(sub, depth + 1))}

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -748,18 +749,15 @@ export function DefectsTab() {
                                   placeholder="Nome da opção"
                                   autoFocus
                                 />
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={1}
+                                <CurrencyInput
                                   value={editOptForm.deduction_value}
-                                  onChange={(e) =>
+                                  onValueChange={(v) =>
                                     setEditOptForm({
                                       ...editOptForm,
-                                      deduction_value: Number(e.target.value),
+                                      deduction_value: v,
                                     })
                                   }
-                                  className="h-8 text-sm w-24"
+                                  className="h-8 text-sm w-32"
                                   disabled={editOptForm.is_rejected}
                                 />
                                 <div className="flex items-center gap-1.5 px-2">
@@ -868,14 +866,11 @@ export function DefectsTab() {
                         </div>
                         <div>
                           <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={1}
+                          <CurrencyInput
                             value={draft.deduction_value}
-                            onChange={(e) =>
+                            onValueChange={(v) =>
                               updateNewOptionDraft(cat.id, {
-                                deduction_value: Number(e.target.value),
+                                deduction_value: v,
                               })
                             }
                             disabled={draft.is_rejected}

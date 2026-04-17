@@ -3,10 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Smartphone,
-  
-  ClipboardList,
   Layers,
-  Video,
   Users,
   LogOut,
   ChevronLeft,
@@ -17,11 +14,8 @@ const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/admin/header", icon: PanelTop, label: "Header" },
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
-  { to: "/admin/videos", icon: Video, label: "Vídeos" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Produtos e Parâmetros" },
-  
   { to: "/admin/clientes", icon: Users, label: "Clientes" },
-  { to: "/admin/avaliacoes", icon: ClipboardList, label: "Avaliações" },
 ];
 
 const AdminLayout = () => {

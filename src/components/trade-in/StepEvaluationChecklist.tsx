@@ -13,6 +13,8 @@ import {
   ShieldAlert,
   Check,
   HelpCircle,
+  Info,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +24,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -159,9 +168,31 @@ export function StepEvaluationChecklist({
   };
 
   // ── Validation per sub-screen ──
-  const requiredDamageCategories = useMemo(
-    () => damageCategories.filter((c) => c.is_required !== false),
+  // Build sets: root categories vs subcategories (parent_id != null)
+  const rootCategories = useMemo(
+    () => damageCategories.filter((c) => !c.parent_id),
     [damageCategories],
+  );
+  const subcategoriesByParent = useMemo(() => {
+    const map: Record<string, DamageCategory[]> = {};
+    for (const c of damageCategories) {
+      if (c.parent_id) {
+        if (!map[c.parent_id]) map[c.parent_id] = [];
+        map[c.parent_id].push(c);
+      }
+    }
+    return map;
+  }, [damageCategories]);
+
+  // A required category that has no options is not actionable — exclude it.
+  const requiredDamageCategories = useMemo(
+    () =>
+      damageCategories.filter(
+        (c) =>
+          c.is_required !== false &&
+          damageOptions.some((o) => o.damage_category_id === c.id),
+      ),
+    [damageCategories, damageOptions],
   );
   const conditionAnswered = !!answers.conditionId;
   const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(
@@ -372,79 +403,96 @@ export function StepEvaluationChecklist({
               </p>
             )}
 
-            {damageCategories.map((cat) => {
-              const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
-              const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
-              if (opts.length === 0) return null;
-              const isMissing = missingIds.has(cat.id);
-              const isRequired = cat.is_required !== false;
-              return (
-                <div
-                  key={cat.id}
-                  ref={(el) => {
-                    cardRefs.current[cat.id] = el;
-                  }}
-                  className={`rounded-3xl border bg-card p-5 md:p-6 shadow-sm transition-all ${
-                    isMissing
-                      ? "border-destructive ring-2 ring-destructive/40 bg-destructive/5"
-                      : "border-black/5"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h4 className="text-base font-semibold text-foreground flex items-center gap-2">
-                      {cat.name}
-                      {isRequired && (
-                        <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
-                          *
+            {(() => {
+              const renderCategory = (cat: DamageCategory, depth: number): JSX.Element | null => {
+                const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
+                const subs = subcategoriesByParent[cat.id] || [];
+                if (opts.length === 0 && subs.length === 0) return null;
+
+                const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
+                const isMissing = missingIds.has(cat.id);
+                const isRequired = cat.is_required !== false;
+                const hasMedia = !!(cat.help_image_url || (cat.help_text && cat.help_text.trim()));
+
+                return (
+                  <div
+                    key={cat.id}
+                    ref={(el) => {
+                      cardRefs.current[cat.id] = el;
+                    }}
+                    style={depth > 0 ? { marginLeft: `${Math.min(depth, 2) * 12}px` } : undefined}
+                    className={`rounded-3xl border p-5 md:p-6 shadow-sm transition-all ${
+                      depth > 0 ? "bg-muted/30 border-dashed" : "bg-card border-black/5"
+                    } ${
+                      isMissing
+                        ? "!border-destructive ring-2 ring-destructive/40 !bg-destructive/5"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h4 className="text-base font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                        {depth > 0 && (
+                          <span className="text-xs font-medium text-primary uppercase tracking-wider">
+                            ↳ Sub-pergunta
+                          </span>
+                        )}
+                        <span>{cat.name}</span>
+                        {isRequired && opts.length > 0 && (
+                          <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
+                            *
+                          </span>
+                        )}
+                        {hasMedia && <HelpExampleButton category={cat} />}
+                      </h4>
+                      {isMissing && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive whitespace-nowrap">
+                          Obrigatório
                         </span>
                       )}
-                      <HelpIcon text={cat.help_text} />
-                    </h4>
-                    {isMissing && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive">
-                        Obrigatório
-                      </span>
+                    </div>
+
+                    {opts.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {opts.map((opt) => {
+                          const isSelected = selectedId === opt.id;
+                          return (
+                            <OptionCard
+                              key={opt.id}
+                              selected={isSelected}
+                              onClick={() => {
+                                if (isMissing) {
+                                  const next = new Set(missingIds);
+                                  next.delete(cat.id);
+                                  setMissingIds(next);
+                                }
+                                selectDamageOption(cat.id, opt.id);
+                              }}
+                              label={opt.option_name}
+                              isReject={opt.is_rejected}
+                              badge={
+                                opt.is_rejected
+                                  ? "Inviabiliza"
+                                  : Number(opt.deduction_value) > 0
+                                    ? `−${formatBRL(Number(opt.deduction_value))}`
+                                    : "Sem dedução"
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {subs.length > 0 && (
+                      <div className="mt-4 space-y-3">
+                        {subs.map((sub) => renderCategory(sub, depth + 1))}
+                      </div>
                     )}
                   </div>
-                  {cat.help_image_url && (
-                    <img
-                      src={cat.help_image_url}
-                      alt={cat.name}
-                      loading="lazy"
-                      className="mb-3 max-h-44 w-full sm:w-auto rounded-2xl border border-black/5 bg-muted/20 object-contain"
-                    />
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {opts.map((opt) => {
-                      const isSelected = selectedId === opt.id;
-                      return (
-                        <OptionCard
-                          key={opt.id}
-                          selected={isSelected}
-                          onClick={() => {
-                            if (isMissing) {
-                              const next = new Set(missingIds);
-                              next.delete(cat.id);
-                              setMissingIds(next);
-                            }
-                            selectDamageOption(cat.id, opt.id);
-                          }}
-                          label={opt.option_name}
-                          isReject={opt.is_rejected}
-                          badge={
-                            opt.is_rejected
-                              ? "Inviabiliza"
-                              : Number(opt.deduction_value) > 0
-                                ? `−${formatBRL(Number(opt.deduction_value))}`
-                                : "Sem dedução"
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              };
+
+              return rootCategories.map((cat) => renderCategory(cat, 0));
+            })()}
           </div>
         )}
 
@@ -653,6 +701,53 @@ function HelpIcon({ text }: { text?: string | null }) {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+// ── "Ver Exemplo" button → opens dialog with help image + text ──
+function HelpExampleButton({ category }: { category: DamageCategory }) {
+  const [open, setOpen] = useState(false);
+  const hasImage = !!category.help_image_url;
+  const hasText = !!(category.help_text && category.help_text.trim());
+  if (!hasImage && !hasText) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+        aria-label="Ver exemplo"
+      >
+        {hasImage ? <ImageIcon className="h-3 w-3" /> : <Info className="h-3 w-3" />}
+        Ver exemplo
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-3xl max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg tracking-tight">{category.name}</DialogTitle>
+            {hasText && (
+              <DialogDescription className="text-sm text-muted-foreground pt-1 whitespace-pre-line">
+                {category.help_text}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {hasImage && (
+            <div className="rounded-2xl overflow-hidden border border-black/5 bg-muted/20">
+              <img
+                src={category.help_image_url!}
+                alt={`Exemplo: ${category.name}`}
+                loading="lazy"
+                className="w-full h-auto max-h-[60vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

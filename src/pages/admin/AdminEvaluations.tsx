@@ -24,6 +24,7 @@ interface Evaluation {
   customer_email: string;
   final_value: number;
   coupon_code: string | null;
+  coupon_id: string | null;
   status: string;
   devices: { brand: string; model: string; storage: string } | null;
 }

@@ -24,9 +24,8 @@ interface Evaluation {
   customer_email: string;
   final_value: number;
   coupon_code: string | null;
-  coupon_id: string | null;
   status: string;
-  devices: { name: string } | null;
+  devices: { brand: string; model: string; storage: string } | null;
 }
 
 const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {

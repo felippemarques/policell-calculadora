@@ -15,82 +15,118 @@ export interface EvaluationData {
   leadId?: string | null;
 }
 
-/**
- * Base64URL-safe encoding (no +, /, =).
- * Compatível com decodificação do lado da API externa.
- */
-function base64UrlEncode(input: string): string {
-  // btoa lida com latin1; usamos encodeURIComponent para suportar UTF-8 com segurança.
-  const utf8 = unescape(encodeURIComponent(input));
-  return btoa(utf8).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function fetchCouponSettings(): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("lp_settings")
+    .select("key,value")
+    .like("key", "coupon_%");
+  if (error) return {};
+  const map: Record<string, string> = {};
+  (data ?? []).forEach((row: any) => { map[row.key] = row.value; });
+  return map;
 }
 
-/**
- * FNV-1a 32-bit hash → 6 chars hex. Determinístico e leve.
- * A API externa pode reproduzir o mesmo hash com lead_id + final_value + timestamp
- * para validar a integridade do cupom.
- */
-function fnv1aHash(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = (hash + ((hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24))) >>> 0;
+interface N8nCouponResult {
+  coupon_code: string;
+  coupon_id: string;
+}
+
+async function callN8n(
+  settings: Record<string, string>,
+  evaluationId: string,
+  data: EvaluationData,
+): Promise<N8nCouponResult | null> {
+  const n8nUrl = settings["coupon_n8n_url"];
+  if (!n8nUrl) return null;
+
+  const startsAtMode = settings["coupon_starts_at_mode"] ?? "immediate";
+  const payload = {
+    evaluation_id: evaluationId,
+    customer_name: data.customerName,
+    customer_email: data.customerEmail,
+    customer_phone: data.customerPhone,
+    description: settings["coupon_description"] ?? "",
+    type: settings["coupon_type"] ?? "real",
+    value: data.finalValue,
+    starts_at: startsAtMode === "immediate" ? null : (settings["coupon_starts_at"] ?? null),
+    ends_at: settings["coupon_expires"] === "1" ? (settings["coupon_ends_at"] ?? null) : null,
+    value_start: settings["coupon_value_start"] ? Number(settings["coupon_value_start"]) : null,
+    value_end: settings["coupon_value_end"] ? Number(settings["coupon_value_end"]) : null,
+    usage_sum_limit: settings["coupon_usage_sum_limit"] ? Number(settings["coupon_usage_sum_limit"]) : null,
+    usage_counter_limit: Number(settings["coupon_usage_counter_limit"] ?? "1"),
+    usage_counter_limit_customer: Number(settings["coupon_usage_counter_limit_customer"] ?? "1"),
+    cumulative_discount: settings["coupon_cumulative_discount"] === "1",
+    store_url: settings["coupon_store_url"] ?? "",
+    store_id: settings["coupon_store_id"] ?? "",
+  };
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const auth = settings["coupon_n8n_auth"];
+  if (auth) headers["Authorization"] = auth;
+
+  try {
+    const res = await fetch(n8nUrl, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const coupon_code: string | null = json?.coupon_code ?? json?.code ?? (typeof json === "string" ? json : null);
+    const coupon_id: string | null = json?.coupon_id ?? json?.id ?? null;
+    if (!coupon_code || !coupon_id) return null;
+    return { coupon_code, coupon_id };
+  } catch {
+    return null;
   }
-  return hash.toString(16).padStart(8, "0");
-}
-
-/**
- * Gera cupom curto assinado: Base64URL( leadShort.valueCents.tsBase36.hash )
- * Resultado típico: 8–12 caracteres alfanuméricos.
- *
- * Payload (texto antes do encode): "<lead8>.<cents>.<ts36>.<hash6>"
- *  - lead8:  primeiros 8 chars do lead_id (sem hífens) — referência ao lead
- *  - cents:  final_value * 100 (inteiro, sem ponto flutuante)
- *  - ts36:   timestamp em segundos, base36 (compacto)
- *  - hash6:  FNV-1a dos 3 campos acima, 6 chars
- *
- * A API externa decodifica Base64URL → split('.') → recomputa o hash com
- * lead_id + final_value + timestamp e compara para validar integridade.
- */
-function generateCouponCode(leadId: string | null | undefined, finalValue: number): string {
-  const leadShort = (leadId ?? "anonymous").replace(/-/g, "").slice(0, 8) || "anonymous";
-  const cents = Math.round(finalValue * 100).toString();
-  const ts36 = Math.floor(Date.now() / 1000).toString(36);
-  const payload = `${leadShort}.${cents}.${ts36}`;
-  const hash = fnv1aHash(payload).slice(0, 6);
-  const signed = `${payload}.${hash}`;
-  // Encode and trim to 8–12 chars (entropia suficiente para cupom curto;
-  // validação real é feita pelo hash, não pelo tamanho).
-  return base64UrlEncode(signed).slice(0, 12);
 }
 
 export function useSubmitEvaluation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{
     finalValue: number;
-    couponCode: string;
+    couponCode: string | null;
   } | null>(null);
 
   const submit = async (data: EvaluationData) => {
     setIsSubmitting(true);
     try {
-      const couponCode = generateCouponCode(data.leadId, data.finalValue);
-      const { error } = await supabase.from("evaluations").insert({
-        customer_name: data.customerName,
-        customer_email: data.customerEmail,
-        customer_phone: data.customerPhone,
-        device_id: data.deviceId,
-        device_condition: data.deviceCondition,
-        damages: data.damages,
-        base_price: data.basePrice,
-        condition_discount: data.conditionDiscount,
-        total_deductions: data.totalDeductions,
-        final_value: data.finalValue,
-        coupon_code: couponCode,
-        status: "pending",
-      });
+      // 1. Insert evaluation first (coupon_code will be updated after n8n call)
+      const { data: inserted, error } = await supabase
+        .from("evaluations")
+        .insert({
+          customer_name: data.customerName,
+          customer_email: data.customerEmail,
+          customer_phone: data.customerPhone,
+          device_id: data.deviceId,
+          device_condition: data.deviceCondition,
+          damages: data.damages,
+          base_price: data.basePrice,
+          condition_discount: data.conditionDiscount,
+          total_deductions: data.totalDeductions,
+          final_value: data.finalValue,
+          coupon_code: null,
+          status: "pending",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
-      setResult({ finalValue: data.finalValue, couponCode });
+
+      const evaluationId = inserted.id;
+
+      // 2. Call n8n to generate coupon in the store
+      const settings = await fetchCouponSettings();
+      const couponCode = await callN8n(settings, evaluationId, data);
+
+      // 3. Update evaluation with coupon code + id (or keep null if n8n failed)
+      if (couponCode) {
+        await supabase
+          .from("evaluations")
+          .update({
+            coupon_code: couponCode.coupon_code,
+            coupon_id: couponCode.coupon_id,
+            status: "completed",
+          })
+          .eq("id", evaluationId);
+      }
+
+      setResult({ finalValue: data.finalValue, couponCode: couponCode?.coupon_code ?? null });
     } catch (err) {
       console.error("Error submitting evaluation:", err);
       throw err;

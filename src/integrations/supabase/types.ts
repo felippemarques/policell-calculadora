@@ -382,7 +382,7 @@ export type Database = {
           customer_phone: string
           damages: Json
           device_condition: string
-          device_id: string
+          device_id: string | null
           final_value: number
           id: string
           status: string
@@ -399,7 +399,7 @@ export type Database = {
           customer_phone: string
           damages?: Json
           device_condition: string
-          device_id: string
+          device_id?: string | null
           final_value: number
           id?: string
           status?: string
@@ -416,7 +416,7 @@ export type Database = {
           customer_phone?: string
           damages?: Json
           device_condition?: string
-          device_id?: string
+          device_id?: string | null
           final_value?: number
           id?: string
           status?: string

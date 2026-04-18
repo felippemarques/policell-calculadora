@@ -44,7 +44,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r border-border flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-border">
-          <h1 className="text-lg font-bold text-primary">Pollicell</h1>
+          <h1 className="text-lg font-bold text-primary">Policell</h1>
           <p className="text-xs text-muted-foreground">Painel Administrativo</p>
         </div>
 
@@ -69,9 +69,7 @@ const AdminLayout = () => {
         </nav>
 
         <div className="p-3 border-t border-border space-y-1">
-          {user && (
-            <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>
-          )}
+          {user && <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>}
           <a
             href="/"
             target="_blank"

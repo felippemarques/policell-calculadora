@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   HelpCircle,
   ExternalLink,
+  Ticket,
+  ClipboardList,
 } from "lucide-react";
 import { AdminTour } from "@/components/admin/AdminTour";
 import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
@@ -21,6 +23,8 @@ const navItems = [
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Produtos e Parâmetros" },
   { to: "/admin/clientes", icon: Users, label: "Clientes" },
+  { to: "/admin/avaliacoes", icon: ClipboardList, label: "Avaliações" },
+  { to: "/admin/cupom", icon: Ticket, label: "Configuração de Cupom" },
   { to: "/admin/administradores", icon: ShieldCheck, label: "Administradores" },
 ];
 

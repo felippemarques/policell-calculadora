@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import type { SanityResult } from "@/lib/trade-in-sanity";
 
 interface Props {
-  result: { finalValue: number; couponCode: string } | null;
+  result: { finalValue: number; couponCode: string | null } | null;
   onReset: () => void;
   sanity?: SanityResult;
 }
@@ -63,7 +63,7 @@ export function StepResult({ result, onReset, sanity }: Props) {
   });
 
   const copyToClipboard = async () => {
-    if (!result) return;
+    if (!result?.couponCode) return;
     await navigator.clipboard.writeText(result.couponCode);
     setCopied(true);
     toast.success("Cupom copiado!");
@@ -74,7 +74,8 @@ export function StepResult({ result, onReset, sanity }: Props) {
 
   const handleSpecialist = () => {
     if (!result) return;
-    const message = `Olá! Acabei de fazer minha avaliação e gostaria de falar com um especialista. Meu cupom: ${result.couponCode} (valor estimado: R$ ${result.finalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}).`;
+    const couponPart = result.couponCode ? ` Meu cupom: ${result.couponCode}.` : "";
+    const message = `Olá! Acabei de fazer minha avaliação e gostaria de falar com um especialista.${couponPart} Valor estimado: R$ ${result.finalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`;
     const url = buildWhatsAppUrl(settings.whatsapp || settings.phone, message);
     if (!url) {
       toast.error("Canal de atendimento ainda não foi configurado.");
@@ -126,14 +127,20 @@ export function StepResult({ result, onReset, sanity }: Props) {
           </div>
           <div className="bg-card rounded-xl p-4 border">
             <p className="text-xs text-muted-foreground mb-1">Seu cupom de desconto:</p>
-            <div className="flex items-center justify-center gap-2">
-              <code className="text-lg font-mono font-bold text-primary tracking-wider">
-                {result.couponCode}
-              </code>
-              <Button variant="ghost" size="icon" onClick={copyToClipboard}>
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
+            {result.couponCode ? (
+              <div className="flex items-center justify-center gap-2">
+                <code className="text-lg font-mono font-bold text-primary tracking-wider">
+                  {result.couponCode}
+                </code>
+                <Button variant="ghost" size="icon" onClick={copyToClipboard}>
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-1">
+                Seu cupom está sendo processado. Em breve você receberá o código.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

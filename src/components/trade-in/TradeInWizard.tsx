@@ -111,6 +111,28 @@ export function TradeInWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Catalog-sync guard ──
+  // The wizard persists the user's progress in localStorage. If the catalog
+  // changed (e.g. an admin deleted the device the user had selected), the
+  // restored deviceId may no longer exist. Detect this on mount and clear
+  // the stale selection so the user starts cleanly at brand selection.
+  useEffect(() => {
+    if (!devices || devices.length === 0) return;
+    if (!data.deviceId) return;
+    const stillExists = devices.some((d) => d.id === data.deviceId);
+    if (!stillExists) {
+      setData((prev) => ({
+        ...prev,
+        deviceId: "",
+        colorId: null,
+        answers: emptyAnswers(),
+      }));
+      // If the user was past device selection, send them back to it
+      if (step > 1) setStep(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devices]);
+
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;

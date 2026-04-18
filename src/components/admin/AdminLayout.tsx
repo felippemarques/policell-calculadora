@@ -23,8 +23,8 @@ const navItems = [
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Produtos e Parâmetros" },
   { to: "/admin/clientes", icon: Users, label: "Clientes" },
-  { to: "/admin/avaliacoes", icon: ClipboardList, label: "Avaliações" },
-  { to: "/admin/cupom", icon: Ticket, label: "Configuração de Cupom" },
+  { to: "/admin/avaliacoes", icon: ClipboardList, label: "Cupons Criados" },
+  { to: "/admin/cupom", icon: Ticket, label: "Configurações de Cupom" },
   { to: "/admin/administradores", icon: ShieldCheck, label: "Administradores" },
 ];
 

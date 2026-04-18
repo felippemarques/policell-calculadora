@@ -38,6 +38,18 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
   const [selectedBrand, setSelectedBrand] = useState<string | null>(selectedDevice?.brand ?? null);
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedDevice?.model ?? null);
 
+  // If parent clears the deviceId (e.g. catalog-sync removed a stale device),
+  // snap the phase back to brand selection so the UI doesn't show "color"
+  // with no device behind it.
+  useEffect(() => {
+    if (!data.deviceId && phase !== "brand") {
+      setPhase("brand");
+      setSelectedBrand(null);
+      setSelectedModel(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.deviceId]);
+
   // brands list
   const brands = useMemo(() => {
     const set = new Set<string>();

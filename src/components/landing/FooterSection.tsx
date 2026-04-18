@@ -16,7 +16,9 @@ const FooterSection = ({ section }: FooterSectionProps) => {
   });
 
   const settings: Record<string, string> = {};
-  settingsRaw?.forEach((s: any) => { settings[s.key] = s.value; });
+  settingsRaw?.forEach((s: any) => {
+    settings[s.key] = s.value;
+  });
 
   const bgColor = section.bg_color || settings.footer_bg_color || undefined;
   const textColor = section.text_color || settings.footer_text_color || undefined;
@@ -28,11 +30,11 @@ const FooterSection = ({ section }: FooterSectionProps) => {
           {settings.logo_url ? (
             <img src={settings.logo_url} alt="Logo" className="h-7 max-w-[120px] object-contain opacity-80" />
           ) : (
-            <span className="font-semibold tracking-tight">Pollicell</span>
+            <span className="font-semibold tracking-tight">Policell</span>
           )}
         </div>
         <p className="opacity-60 text-center">
-          {section.content || `© ${new Date().getFullYear()} Pollicell. Todos os direitos reservados.`}
+          {section.content || `© ${new Date().getFullYear()} Policell. Todos os direitos reservados.`}
         </p>
       </div>
     </footer>

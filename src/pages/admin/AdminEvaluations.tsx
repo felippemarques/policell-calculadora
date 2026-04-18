@@ -173,7 +173,7 @@ const AdminEvaluations = () => {
                           <p className="text-xs text-muted-foreground">{ev.customer_email}</p>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {ev.devices?.name ?? "—"}
+                          {ev.devices ? `${ev.devices.brand} ${ev.devices.model} ${ev.devices.storage}` : "—"}
                         </td>
                         <td className="px-4 py-3 font-medium tabular-nums">
                           {ev.final_value.toLocaleString("pt-BR", {

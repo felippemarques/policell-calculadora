@@ -26,7 +26,7 @@ interface Evaluation {
   coupon_code: string | null;
   coupon_id: string | null;
   status: string;
-  devices: { name: string } | null;
+  devices: { brand: string; model: string; storage: string } | null;
 }
 
 const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -95,10 +95,10 @@ const AdminEvaluations = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, created_at, customer_name, customer_email, final_value, coupon_code, coupon_id, status, devices(name)")
+        .select("id, created_at, customer_name, customer_email, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Evaluation[];
+      return data as unknown as Evaluation[];
     },
   });
 
@@ -173,7 +173,7 @@ const AdminEvaluations = () => {
                           <p className="text-xs text-muted-foreground">{ev.customer_email}</p>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {ev.devices?.name ?? "—"}
+                          {ev.devices ? `${ev.devices.brand} ${ev.devices.model} ${ev.devices.storage}` : "—"}
                         </td>
                         <td className="px-4 py-3 font-medium tabular-nums">
                           {ev.final_value.toLocaleString("pt-BR", {

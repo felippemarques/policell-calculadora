@@ -94,10 +94,10 @@ const AdminEvaluations = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, created_at, customer_name, customer_email, final_value, coupon_code, coupon_id, status, devices(name)")
+        .select("id, created_at, customer_name, customer_email, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Evaluation[];
+      return data as unknown as Evaluation[];
     },
   });
 

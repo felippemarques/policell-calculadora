@@ -229,6 +229,8 @@ export function DefectsTab() {
       help_image_url: string;
       is_required: boolean;
       brand_ids?: string[];
+      model_ids?: string[];
+      youtube_url?: string;
       parent_id?: string | null;
       parent_option_id?: string | null;
     }) => {
@@ -240,6 +242,8 @@ export function DefectsTab() {
         is_required: data.is_required,
         // brand_ids only meaningful for root categories
         brand_ids: isRoot ? data.brand_ids ?? [] : [],
+        model_ids: data.model_ids ?? [],
+        youtube_url: data.youtube_url?.trim() || null,
       };
       if (data.id) {
         const { error } = await supabase
@@ -347,16 +351,21 @@ export function DefectsTab() {
       damage_category_id: string;
       option_name: string;
       deduction_value: number;
+      deduction_percent: number;
+      deduction_mode: DiscountMode;
       is_rejected: boolean;
     }) => {
+      const payload: any = {
+        option_name: data.option_name,
+        deduction_value: data.deduction_mode === "fixed" ? data.deduction_value : 0,
+        deduction_percent: data.deduction_mode === "percent" ? data.deduction_percent : 0,
+        deduction_mode: data.deduction_mode,
+        is_rejected: data.is_rejected,
+      };
       if (data.id) {
         const { error } = await supabase
           .from("damage_deductions")
-          .update({
-            option_name: data.option_name,
-            deduction_value: data.deduction_value,
-            is_rejected: data.is_rejected,
-          } as any)
+          .update(payload)
           .eq("id", data.id);
         if (error) throw error;
       } else {
@@ -364,10 +373,8 @@ export function DefectsTab() {
         const maxOrder =
           catOptions.length > 0 ? Math.max(...catOptions.map((o) => o.display_order)) + 1 : 0;
         const { error } = await supabase.from("damage_deductions").insert({
+          ...payload,
           damage_category_id: data.damage_category_id,
-          option_name: data.option_name,
-          deduction_value: data.deduction_value,
-          is_rejected: data.is_rejected,
           display_order: maxOrder,
         } as any);
         if (error) throw error;
@@ -591,6 +598,16 @@ export function DefectsTab() {
             onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
           />
         )}
+        <ModelMultiSelect
+          selected={newCat.model_ids}
+          onChange={(ids) => setNewCat({ ...newCat, model_ids: ids })}
+          label="Modelos aplicáveis (opcional)"
+          compact
+        />
+        <YouTubeUrlInput
+          value={newCat.youtube_url}
+          onChange={(v) => setNewCat({ ...newCat, youtube_url: v })}
+        />
         <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
           <Checkbox
             checked={newCat.is_required}
@@ -817,6 +834,16 @@ export function DefectsTab() {
                 onChange={(ids) => setCatForm({ ...catForm, brand_ids: ids })}
               />
             )}
+            <ModelMultiSelect
+              selected={catForm.model_ids}
+              onChange={(ids) => setCatForm({ ...catForm, model_ids: ids })}
+              label="Modelos aplicáveis (opcional)"
+              compact
+            />
+            <YouTubeUrlInput
+              value={catForm.youtube_url}
+              onChange={(v) => setCatForm({ ...catForm, youtube_url: v })}
+            />
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
               <Checkbox
                 checked={catForm.is_required}
@@ -872,52 +899,92 @@ export function DefectsTab() {
                       }`}
                     >
                       {isOptEditing ? (
-                        <>
-                          <Input
-                            value={editOptForm.option_name}
-                            onChange={(e) =>
-                              setEditOptForm({ ...editOptForm, option_name: e.target.value })
-                            }
-                            className="h-8 text-sm flex-1"
-                            placeholder="Nome da opção"
-                            autoFocus
-                          />
-                          <CurrencyInput
-                            value={editOptForm.deduction_value}
-                            onValueChange={(v) =>
-                              setEditOptForm({ ...editOptForm, deduction_value: v })
-                            }
-                            className="h-8 text-sm w-32"
-                            disabled={editOptForm.is_rejected}
-                          />
-                          <div className="flex items-center gap-1.5 px-2">
-                            <Switch
-                              checked={editOptForm.is_rejected}
-                              onCheckedChange={(v) =>
-                                setEditOptForm({ ...editOptForm, is_rejected: v })
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Input
+                              value={editOptForm.option_name}
+                              onChange={(e) =>
+                                setEditOptForm({ ...editOptForm, option_name: e.target.value })
                               }
+                              className="h-8 text-sm flex-1 min-w-[140px]"
+                              placeholder="Nome da opção"
+                              autoFocus
                             />
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              Inviabiliza
-                            </span>
+                            <ToggleGroup
+                              type="single"
+                              size="sm"
+                              value={editOptForm.deduction_mode}
+                              onValueChange={(v) =>
+                                v && setEditOptForm({ ...editOptForm, deduction_mode: v as DiscountMode })
+                              }
+                              className="h-8"
+                            >
+                              <ToggleGroupItem value="fixed" className="h-8 px-2 text-xs">R$</ToggleGroupItem>
+                              <ToggleGroupItem value="percent" className="h-8 px-2 text-xs">%</ToggleGroupItem>
+                            </ToggleGroup>
+                            {editOptForm.deduction_mode === "fixed" ? (
+                              <CurrencyInput
+                                value={editOptForm.deduction_value}
+                                onValueChange={(v) =>
+                                  setEditOptForm({ ...editOptForm, deduction_value: v })
+                                }
+                                className="h-8 text-sm w-32"
+                                disabled={editOptForm.is_rejected}
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={editOptForm.deduction_percent}
+                                onChange={(e) =>
+                                  setEditOptForm({ ...editOptForm, deduction_percent: Number(e.target.value) })
+                                }
+                                className="h-8 text-sm w-24"
+                                placeholder="%"
+                                disabled={editOptForm.is_rejected}
+                              />
+                            )}
+                            <div className="flex items-center gap-1.5 px-2">
+                              <Switch
+                                checked={editOptForm.is_rejected}
+                                onCheckedChange={(v) =>
+                                  setEditOptForm({ ...editOptForm, is_rejected: v })
+                                }
+                              />
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                Inviabiliza
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                saveOptionMutation.mutate({
+                                  id: opt.id,
+                                  damage_category_id: cat.id,
+                                  ...editOptForm,
+                                })
+                              }
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              saveOptionMutation.mutate({
-                                id: opt.id,
-                                damage_category_id: cat.id,
-                                ...editOptForm,
-                              })
-                            }
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
+                          {!editOptForm.is_rejected && (
+                            <DiscountImpactSimulator
+                              mode={editOptForm.deduction_mode}
+                              value={
+                                editOptForm.deduction_mode === "fixed"
+                                  ? editOptForm.deduction_value
+                                  : editOptForm.deduction_percent
+                              }
+                              title="Impacto da opção"
+                            />
+                          )}
+                        </div>
                       ) : (
                         <>
                           {opt.is_rejected ? (
@@ -1026,7 +1093,7 @@ export function DefectsTab() {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Adicionar nova opção
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_140px_auto] gap-2 items-end">
                 <div>
                   <Label className="text-xs text-muted-foreground">Nome da opção</Label>
                   <Input
@@ -1039,15 +1106,47 @@ export function DefectsTab() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
-                  <CurrencyInput
-                    value={draft.deduction_value}
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <ToggleGroup
+                    type="single"
+                    size="sm"
+                    value={draft.deduction_mode}
                     onValueChange={(v) =>
-                      updateNewOptionDraft(cat.id, { deduction_value: v })
+                      v && updateNewOptionDraft(cat.id, { deduction_mode: v as DiscountMode })
                     }
-                    disabled={draft.is_rejected}
-                    className="mt-1 h-9 text-sm"
-                  />
+                    className="mt-1 h-9"
+                  >
+                    <ToggleGroupItem value="fixed" className="h-9 px-3 text-xs">R$</ToggleGroupItem>
+                    <ToggleGroupItem value="percent" className="h-9 px-3 text-xs">%</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    {draft.deduction_mode === "fixed" ? "Dedução (R$)" : "Dedução (%)"}
+                  </Label>
+                  {draft.deduction_mode === "fixed" ? (
+                    <CurrencyInput
+                      value={draft.deduction_value}
+                      onValueChange={(v) =>
+                        updateNewOptionDraft(cat.id, { deduction_value: v })
+                      }
+                      disabled={draft.is_rejected}
+                      className="mt-1 h-9 text-sm"
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={draft.deduction_percent}
+                      onChange={(e) =>
+                        updateNewOptionDraft(cat.id, { deduction_percent: Number(e.target.value) })
+                      }
+                      disabled={draft.is_rejected}
+                      className="mt-1 h-9 text-sm"
+                      placeholder="%"
+                    />
+                  )}
                 </div>
                 <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
                   <Label className="text-xs text-muted-foreground whitespace-nowrap">
@@ -1061,6 +1160,17 @@ export function DefectsTab() {
                   />
                 </div>
               </div>
+              {!draft.is_rejected && (
+                <DiscountImpactSimulator
+                  mode={draft.deduction_mode}
+                  value={
+                    draft.deduction_mode === "fixed"
+                      ? draft.deduction_value
+                      : draft.deduction_percent
+                  }
+                  title="Impacto desta opção"
+                />
+              )}
               <Button
                 size="sm"
                 onClick={() =>
@@ -1068,6 +1178,8 @@ export function DefectsTab() {
                     damage_category_id: cat.id,
                     option_name: draft.option_name.trim(),
                     deduction_value: draft.is_rejected ? 0 : draft.deduction_value,
+                    deduction_percent: draft.is_rejected ? 0 : draft.deduction_percent,
+                    deduction_mode: draft.deduction_mode,
                     is_rejected: draft.is_rejected,
                   })
                 }
@@ -1139,7 +1251,7 @@ export function DefectsTab() {
 
         {showNewCondition && (
           <div className="bg-card border rounded-lg p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_180px] gap-3 items-end">
               <div>
                 <Label className="text-sm">Nome</Label>
                 <Input
@@ -1151,19 +1263,52 @@ export function DefectsTab() {
                 />
               </div>
               <div>
-                <Label className="text-sm">Desconto (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={condForm.discount_percentage}
-                  onChange={(e) =>
-                    setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })
+                <Label className="text-sm">Tipo</Label>
+                <ToggleGroup
+                  type="single"
+                  size="sm"
+                  value={condForm.discount_mode}
+                  onValueChange={(v) =>
+                    v && setCondForm({ ...condForm, discount_mode: v as DiscountMode })
                   }
-                  className="mt-1"
-                />
+                  className="mt-1 h-10"
+                >
+                  <ToggleGroupItem value="percent" className="h-10 px-3 text-xs">%</ToggleGroupItem>
+                  <ToggleGroupItem value="fixed" className="h-10 px-3 text-xs">R$</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div>
+                <Label className="text-sm">
+                  {condForm.discount_mode === "percent" ? "Desconto (%)" : "Desconto (R$)"}
+                </Label>
+                {condForm.discount_mode === "percent" ? (
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={condForm.discount_percentage}
+                    onChange={(e) =>
+                      setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })
+                    }
+                    className="mt-1"
+                  />
+                ) : (
+                  <CurrencyInput
+                    value={condForm.discount_fixed}
+                    onValueChange={(v) => setCondForm({ ...condForm, discount_fixed: v })}
+                    className="mt-1"
+                  />
+                )}
               </div>
             </div>
+            <DiscountImpactSimulator
+              mode={condForm.discount_mode}
+              value={
+                condForm.discount_mode === "percent"
+                  ? condForm.discount_percentage
+                  : condForm.discount_fixed
+              }
+            />
             <div>
               <Label className="text-sm">Texto de ajuda (opcional)</Label>
               <Textarea
@@ -1172,6 +1317,16 @@ export function DefectsTab() {
                 placeholder="Ex: Sem riscos visíveis, todas as funções operando perfeitamente."
                 className="mt-1 text-sm"
                 rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ModelMultiSelect
+                selected={condForm.model_ids}
+                onChange={(ids) => setCondForm({ ...condForm, model_ids: ids })}
+              />
+              <YouTubeUrlInput
+                value={condForm.youtube_url}
+                onChange={(v) => setCondForm({ ...condForm, youtube_url: v })}
               />
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
@@ -1208,28 +1363,50 @@ export function DefectsTab() {
               <div key={cond.id} className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
                 {isEditing ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Input
                         value={editCondForm.condition_name}
                         onChange={(e) =>
                           setEditCondForm({ ...editCondForm, condition_name: e.target.value })
                         }
-                        className="h-8 text-sm flex-1"
+                        className="h-8 text-sm flex-1 min-w-[140px]"
                         autoFocus
                       />
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        value={editCondForm.discount_percentage}
-                        onChange={(e) =>
-                          setEditCondForm({
-                            ...editCondForm,
-                            discount_percentage: Number(e.target.value),
-                          })
+                      <ToggleGroup
+                        type="single"
+                        size="sm"
+                        value={editCondForm.discount_mode}
+                        onValueChange={(v) =>
+                          v && setEditCondForm({ ...editCondForm, discount_mode: v as DiscountMode })
                         }
-                        className="h-8 text-sm w-24"
-                      />
+                        className="h-8"
+                      >
+                        <ToggleGroupItem value="percent" className="h-8 px-2 text-xs">%</ToggleGroupItem>
+                        <ToggleGroupItem value="fixed" className="h-8 px-2 text-xs">R$</ToggleGroupItem>
+                      </ToggleGroup>
+                      {editCondForm.discount_mode === "percent" ? (
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.1}
+                          value={editCondForm.discount_percentage}
+                          onChange={(e) =>
+                            setEditCondForm({
+                              ...editCondForm,
+                              discount_percentage: Number(e.target.value),
+                            })
+                          }
+                          className="h-8 text-sm w-24"
+                        />
+                      ) : (
+                        <CurrencyInput
+                          value={editCondForm.discount_fixed}
+                          onValueChange={(v) =>
+                            setEditCondForm({ ...editCondForm, discount_fixed: v })
+                          }
+                          className="h-8 text-sm w-32"
+                        />
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1241,6 +1418,14 @@ export function DefectsTab() {
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    <DiscountImpactSimulator
+                      mode={editCondForm.discount_mode}
+                      value={
+                        editCondForm.discount_mode === "percent"
+                          ? editCondForm.discount_percentage
+                          : editCondForm.discount_fixed
+                      }
+                    />
                     <Textarea
                       value={editCondForm.help_text}
                       onChange={(e) =>
@@ -1250,6 +1435,16 @@ export function DefectsTab() {
                       className="text-sm"
                       rows={2}
                     />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <ModelMultiSelect
+                        selected={editCondForm.model_ids}
+                        onChange={(ids) => setEditCondForm({ ...editCondForm, model_ids: ids })}
+                      />
+                      <YouTubeUrlInput
+                        value={editCondForm.youtube_url}
+                        onChange={(v) => setEditCondForm({ ...editCondForm, youtube_url: v })}
+                      />
+                    </div>
                     <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
                       <Checkbox
                         checked={editCondForm.is_required}
@@ -1279,10 +1474,22 @@ export function DefectsTab() {
                         </p>
                       )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      <Percent className="h-3 w-3 mr-1" />
-                      {cond.discount_percentage}%
-                    </Badge>
+                    {((cond as any).discount_mode === "fixed") ? (
+                      <Badge variant="secondary" className="text-xs">
+                        <DollarSign className="h-3 w-3 mr-1" />
+                        R$ {Number((cond as any).discount_fixed || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        <Percent className="h-3 w-3 mr-1" />
+                        {cond.discount_percentage}%
+                      </Badge>
+                    )}
+                    {Array.isArray((cond as any).model_ids) && (cond as any).model_ids.length > 0 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {(cond as any).model_ids.length} modelo(s)
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1392,11 +1599,16 @@ export function DefectsTab() {
                 placeholder='Ex: "Não estiver ligando", "Estiver bloqueado"'
                 className="mt-1"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && rejectionName.trim()) {
-                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube });
-                  }
-                }}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ModelMultiSelect
+                selected={rejectionModelIds}
+                onChange={setRejectionModelIds}
+              />
+              <YouTubeUrlInput
+                value={rejectionYoutube}
+                onChange={setRejectionYoutube}
               />
             </div>
             <div className="flex gap-2">
@@ -1416,6 +1628,8 @@ export function DefectsTab() {
                 onClick={() => {
                   setShowNewRejection(false);
                   setRejectionName("");
+                  setRejectionModelIds([]);
+                  setRejectionYoutube("");
                 }}
               >
                 Cancelar
@@ -1435,39 +1649,57 @@ export function DefectsTab() {
             return (
               <div
                 key={rej.id}
-                className="flex items-center gap-3 px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors"
+                className="px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors"
               >
-                <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
                 {isEditing ? (
-                  <>
-                    <Input
-                      value={editRejName}
-                      onChange={(e) => setEditRejName(e.target.value)}
-                      className="h-8 text-sm flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        saveRejectionMutation.mutate({
-                          id: rej.id,
-                          condition_name: editRejName.trim(),
-                          model_ids: editRejModelIds,
-                          youtube_url: editRejYoutube,
-                        })
-                      }
-                      disabled={!editRejName.trim()}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
+                      <Input
+                        value={editRejName}
+                        onChange={(e) => setEditRejName(e.target.value)}
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          saveRejectionMutation.mutate({
+                            id: rej.id,
+                            condition_name: editRejName.trim(),
+                            model_ids: editRejModelIds,
+                            youtube_url: editRejYoutube,
+                          })
+                        }
+                        disabled={!editRejName.trim()}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
+                      <ModelMultiSelect
+                        selected={editRejModelIds}
+                        onChange={setEditRejModelIds}
+                      />
+                      <YouTubeUrlInput
+                        value={editRejYoutube}
+                        onChange={setEditRejYoutube}
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex items-center gap-3">
+                    <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
                     <span className="font-medium text-foreground flex-1">{rej.condition_name}</span>
+                    {Array.isArray((rej as any).model_ids) && (rej as any).model_ids.length > 0 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {(rej as any).model_ids.length} modelo(s)
+                      </Badge>
+                    )}
                     <Badge variant="destructive" className="text-xs">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Hard Stop
@@ -1478,6 +1710,8 @@ export function DefectsTab() {
                       onClick={() => {
                         setEditingRejId(rej.id);
                         setEditRejName(rej.condition_name);
+                        setEditRejModelIds(Array.isArray((rej as any).model_ids) ? (rej as any).model_ids : []);
+                        setEditRejYoutube((rej as any).youtube_url ?? "");
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -1493,7 +1727,7 @@ export function DefectsTab() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             );

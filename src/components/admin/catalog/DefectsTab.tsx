@@ -1599,11 +1599,16 @@ export function DefectsTab() {
                 placeholder='Ex: "Não estiver ligando", "Estiver bloqueado"'
                 className="mt-1"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && rejectionName.trim()) {
-                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube });
-                  }
-                }}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ModelMultiSelect
+                selected={rejectionModelIds}
+                onChange={setRejectionModelIds}
+              />
+              <YouTubeUrlInput
+                value={rejectionYoutube}
+                onChange={setRejectionYoutube}
               />
             </div>
             <div className="flex gap-2">
@@ -1623,6 +1628,8 @@ export function DefectsTab() {
                 onClick={() => {
                   setShowNewRejection(false);
                   setRejectionName("");
+                  setRejectionModelIds([]);
+                  setRejectionYoutube("");
                 }}
               >
                 Cancelar

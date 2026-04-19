@@ -752,6 +752,8 @@ export function DefectsTab() {
                       help_image_url: cat.help_image_url ?? "",
                       is_required: cat.is_required !== false,
                       brand_ids: Array.isArray(cat.brand_ids) ? cat.brand_ids : [],
+                      model_ids: Array.isArray((cat as any).model_ids) ? (cat as any).model_ids : [],
+                      youtube_url: (cat as any).youtube_url ?? "",
                     });
                     setEditingCatId(cat.id);
                     setExpandedCat((prev) => new Set(prev).add(cat.id));
@@ -975,6 +977,8 @@ export function DefectsTab() {
                               setEditOptForm({
                                 option_name: opt.option_name,
                                 deduction_value: Number(opt.deduction_value) || 0,
+                                deduction_percent: Number((opt as any).deduction_percent) || 0,
+                                deduction_mode: ((opt as any).deduction_mode as DiscountMode) || "fixed",
                                 is_rejected: opt.is_rejected,
                               });
                             }}
@@ -1287,8 +1291,12 @@ export function DefectsTab() {
                         setEditCondForm({
                           condition_name: cond.condition_name,
                           discount_percentage: cond.discount_percentage,
+                          discount_fixed: Number((cond as any).discount_fixed) || 0,
+                          discount_mode: ((cond as any).discount_mode as DiscountMode) || "percent",
                           help_text: (cond as any).help_text ?? "",
                           is_required: (cond as any).is_required !== false,
+                          model_ids: Array.isArray((cond as any).model_ids) ? (cond as any).model_ids : [],
+                          youtube_url: (cond as any).youtube_url ?? "",
                         });
                       }}
                     >
@@ -1386,7 +1394,7 @@ export function DefectsTab() {
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && rejectionName.trim()) {
-                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim() });
+                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube });
                   }
                 }}
               />
@@ -1396,7 +1404,7 @@ export function DefectsTab() {
                 size="sm"
                 variant="destructive"
                 onClick={() =>
-                  saveRejectionMutation.mutate({ condition_name: rejectionName.trim() })
+                  saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube })
                 }
                 disabled={!rejectionName.trim() || saveRejectionMutation.isPending}
               >
@@ -1445,6 +1453,8 @@ export function DefectsTab() {
                         saveRejectionMutation.mutate({
                           id: rej.id,
                           condition_name: editRejName.trim(),
+                          model_ids: editRejModelIds,
+                          youtube_url: editRejYoutube,
                         })
                       }
                       disabled={!editRejName.trim()}

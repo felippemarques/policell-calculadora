@@ -103,7 +103,7 @@ export function ModelStorageRow({ brandId, storage }: Props) {
               />
             </div>
             <div className="space-y-0.5">
-              <Label className="text-[10px] text-emerald-600 flex items-center gap-1">
+              <Label className="text-[10px] text-accent-foreground flex items-center gap-1">
                 <Banknote className="h-3 w-3" /> Venda
               </Label>
               <CurrencyInput
@@ -134,7 +134,7 @@ export function ModelStorageRow({ brandId, storage }: Props) {
               <ArrowRightLeft className="h-3 w-3" />
               {formatBRLWithSymbol(tradePrice)}
             </span>
-            <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
+            <span className="inline-flex items-center gap-1 text-accent-foreground font-semibold">
               <Banknote className="h-3 w-3" />
               {formatBRLWithSymbol(salePrice)}
             </span>

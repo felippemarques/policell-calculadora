@@ -3,27 +3,29 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote } from "lucide-react";
 import { toast } from "sonner";
+import { useFlowSettings } from "@/hooks/use-flow-settings";
 import type { SanityResult } from "@/lib/trade-in-sanity";
+import type { FlowType } from "./StepChooseFlow";
 
 interface Props {
   result: { finalValue: number; couponCode: string | null } | null;
   onReset: () => void;
   sanity?: SanityResult;
+  flowType?: FlowType | null;
+  customerName?: string;
+  deviceLabel?: string;
 }
 
 /**
  * Normalize a stored phone/whatsapp setting into a usable wa.me URL.
- * Accepts: full https://wa.me/... links, https://api.whatsapp.com/... links,
- * or a raw number (with or without country code, with mask).
  */
 function buildWhatsAppUrl(raw: string | undefined, message: string): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Already a link → just append/replace text param
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const url = new URL(trimmed);
@@ -34,18 +36,16 @@ function buildWhatsAppUrl(raw: string | undefined, message: string): string | nu
     }
   }
 
-  // Raw number → strip non-digits, default BR country code if missing
   let digits = trimmed.replace(/\D/g, "");
   if (!digits) return null;
   if (digits.length <= 11) digits = `55${digits}`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function StepResult({ result, onReset, sanity }: Props) {
+export function StepResult({ result, onReset, sanity, flowType, customerName, deviceLabel }: Props) {
   const [copied, setCopied] = useState(false);
+  const { data: flowSettings } = useFlowSettings();
 
-  // Sanity guard: if anything is inconsistent (or there's no saved result), show the
-  // inconsistency banner and force the user to restart instead of trusting stale numbers.
   const inconsistent = (sanity && !sanity.ok) || !result;
 
   const { data: settingsRaw } = useQuery({
@@ -70,7 +70,7 @@ export function StepResult({ result, onReset, sanity }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const storeUrl = "https://pollicell.com.br"; // TODO: configurar
+  const storeUrl = settings["coupon_store_url"] || "https://pollicell.com.br";
 
   const handleSpecialist = () => {
     if (!result) return;
@@ -84,7 +84,21 @@ export function StepResult({ result, onReset, sanity }: Props) {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  // ── Inconsistency screen: blocks the result UI and forces a fresh start ──
+  const handleSaleWhatsApp = () => {
+    if (!result) return;
+    const wa = flowSettings?.sale.whatsapp || settings.whatsapp || settings.phone;
+    const namePart = customerName ? `${customerName}, ` : "";
+    const devicePart = deviceLabel ? ` (${deviceLabel})` : "";
+    const message = `Olá! Sou ${namePart}quero VENDER meu aparelho${devicePart}. Valor proposto pela calculadora: R$ ${result.finalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. Como prosseguimos?`;
+    const url = buildWhatsAppUrl(wa, message);
+    if (!url) {
+      toast.error("WhatsApp do fluxo de venda ainda não foi configurado pelo administrador.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // ── Inconsistency screen ──
   if (inconsistent) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -112,6 +126,8 @@ export function StepResult({ result, onReset, sanity }: Props) {
     );
   }
 
+  const isSale = flowType === "sale";
+
   return (
     <div className="space-y-6">
       <Card className="border-primary/20 bg-primary/5">
@@ -120,54 +136,79 @@ export function StepResult({ result, onReset, sanity }: Props) {
             <Check className="h-8 w-8 text-accent" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Valor estimado do seu aparelho:</p>
+            <p className="text-sm text-muted-foreground">
+              {isSale
+                ? "Valor proposto em dinheiro pelo seu aparelho:"
+                : "Valor estimado em crédito para troca:"}
+            </p>
             <p className="text-4xl font-bold text-foreground mt-1">
               R$ {result.finalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </div>
-          <div className="bg-card rounded-xl p-4 border">
-            <p className="text-xs text-muted-foreground mb-1">Seu cupom de desconto:</p>
-            {result.couponCode ? (
-              <div className="flex items-center justify-center gap-2">
-                <code className="text-lg font-mono font-bold text-primary tracking-wider">
-                  {result.couponCode}
-                </code>
-                <Button variant="ghost" size="icon" onClick={copyToClipboard}>
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-1">
-                Seu cupom está sendo processado. Em breve você receberá o código.
+
+          {isSale ? (
+            <div className="bg-card rounded-xl p-4 border">
+              <p className="text-xs text-muted-foreground">
+                Para concluir a venda, fale agora com nossa equipe pelo WhatsApp.
               </p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="bg-card rounded-xl p-4 border">
+              <p className="text-xs text-muted-foreground mb-1">Seu cupom de desconto:</p>
+              {result.couponCode ? (
+                <div className="flex items-center justify-center gap-2">
+                  <code className="text-lg font-mono font-bold text-primary tracking-wider">
+                    {result.couponCode}
+                  </code>
+                  <Button variant="ghost" size="icon" onClick={copyToClipboard}>
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-1">
+                  Seu cupom está sendo processado. Em breve você receberá o código.
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="space-y-3">
-        <Button
-          className="w-full"
-          onClick={() => {
-            copyToClipboard();
-            window.open(storeUrl, "_blank");
-          }}
-        >
-          <ShoppingCart className="mr-2 h-4 w-4" /> Comprar Agora
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            // TODO: webhook N8N
-            toast.success("Solicitação enviada! Entraremos em contato em breve.");
-          }}
-        >
-          <Clock className="mr-2 h-4 w-4" /> Aguardar Contato
-        </Button>
-        <Button variant="outline" className="w-full" onClick={handleSpecialist}>
-          <MessageCircle className="mr-2 h-4 w-4" /> Falar com Especialista
-        </Button>
+        {isSale ? (
+          <>
+            <Button className="w-full" onClick={handleSaleWhatsApp}>
+              <Banknote className="mr-2 h-4 w-4" /> Receber em dinheiro — Falar no WhatsApp
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleSpecialist}>
+              <MessageCircle className="mr-2 h-4 w-4" /> Falar com Especialista
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              className="w-full"
+              onClick={() => {
+                copyToClipboard();
+                window.open(storeUrl, "_blank");
+              }}
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" /> Comprar Agora com o cupom
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                toast.success("Solicitação enviada! Entraremos em contato em breve.");
+              }}
+            >
+              <Clock className="mr-2 h-4 w-4" /> Aguardar Contato
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleSpecialist}>
+              <MessageCircle className="mr-2 h-4 w-4" /> Falar com Especialista
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="text-center">

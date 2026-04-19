@@ -899,52 +899,92 @@ export function DefectsTab() {
                       }`}
                     >
                       {isOptEditing ? (
-                        <>
-                          <Input
-                            value={editOptForm.option_name}
-                            onChange={(e) =>
-                              setEditOptForm({ ...editOptForm, option_name: e.target.value })
-                            }
-                            className="h-8 text-sm flex-1"
-                            placeholder="Nome da opção"
-                            autoFocus
-                          />
-                          <CurrencyInput
-                            value={editOptForm.deduction_value}
-                            onValueChange={(v) =>
-                              setEditOptForm({ ...editOptForm, deduction_value: v })
-                            }
-                            className="h-8 text-sm w-32"
-                            disabled={editOptForm.is_rejected}
-                          />
-                          <div className="flex items-center gap-1.5 px-2">
-                            <Switch
-                              checked={editOptForm.is_rejected}
-                              onCheckedChange={(v) =>
-                                setEditOptForm({ ...editOptForm, is_rejected: v })
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Input
+                              value={editOptForm.option_name}
+                              onChange={(e) =>
+                                setEditOptForm({ ...editOptForm, option_name: e.target.value })
                               }
+                              className="h-8 text-sm flex-1 min-w-[140px]"
+                              placeholder="Nome da opção"
+                              autoFocus
                             />
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              Inviabiliza
-                            </span>
+                            <ToggleGroup
+                              type="single"
+                              size="sm"
+                              value={editOptForm.deduction_mode}
+                              onValueChange={(v) =>
+                                v && setEditOptForm({ ...editOptForm, deduction_mode: v as DiscountMode })
+                              }
+                              className="h-8"
+                            >
+                              <ToggleGroupItem value="fixed" className="h-8 px-2 text-xs">R$</ToggleGroupItem>
+                              <ToggleGroupItem value="percent" className="h-8 px-2 text-xs">%</ToggleGroupItem>
+                            </ToggleGroup>
+                            {editOptForm.deduction_mode === "fixed" ? (
+                              <CurrencyInput
+                                value={editOptForm.deduction_value}
+                                onValueChange={(v) =>
+                                  setEditOptForm({ ...editOptForm, deduction_value: v })
+                                }
+                                className="h-8 text-sm w-32"
+                                disabled={editOptForm.is_rejected}
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={editOptForm.deduction_percent}
+                                onChange={(e) =>
+                                  setEditOptForm({ ...editOptForm, deduction_percent: Number(e.target.value) })
+                                }
+                                className="h-8 text-sm w-24"
+                                placeholder="%"
+                                disabled={editOptForm.is_rejected}
+                              />
+                            )}
+                            <div className="flex items-center gap-1.5 px-2">
+                              <Switch
+                                checked={editOptForm.is_rejected}
+                                onCheckedChange={(v) =>
+                                  setEditOptForm({ ...editOptForm, is_rejected: v })
+                                }
+                              />
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                Inviabiliza
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                saveOptionMutation.mutate({
+                                  id: opt.id,
+                                  damage_category_id: cat.id,
+                                  ...editOptForm,
+                                })
+                              }
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              saveOptionMutation.mutate({
-                                id: opt.id,
-                                damage_category_id: cat.id,
-                                ...editOptForm,
-                              })
-                            }
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setEditingOptId(null)}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
+                          {!editOptForm.is_rejected && (
+                            <DiscountImpactSimulator
+                              mode={editOptForm.deduction_mode}
+                              value={
+                                editOptForm.deduction_mode === "fixed"
+                                  ? editOptForm.deduction_value
+                                  : editOptForm.deduction_percent
+                              }
+                              title="Impacto da opção"
+                            />
+                          )}
+                        </div>
                       ) : (
                         <>
                           {opt.is_rejected ? (

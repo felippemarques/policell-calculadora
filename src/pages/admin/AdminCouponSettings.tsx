@@ -14,9 +14,7 @@ import { Save, Loader2 } from "lucide-react";
 
 const COUPON_KEYS = [
   "coupon_description",
-  "coupon_starts_at_mode",
-  "coupon_starts_at",
-  "coupon_expires",
+  "coupon_starts_at_days",
   "coupon_ends_at",
   "coupon_type",
   "coupon_value_start",
@@ -38,10 +36,8 @@ type FormState = Record<CouponKey, string>;
 
 const DEFAULTS: FormState = {
   coupon_description: "",
-  coupon_starts_at_mode: "immediate",
-  coupon_starts_at: "",
-  coupon_expires: "0",
-  coupon_ends_at: "",
+  coupon_starts_at_days: "0",
+  coupon_ends_at: "0",
   coupon_type: "real",
   coupon_value_start: "",
   coupon_value_end: "",
@@ -160,48 +156,34 @@ const AdminCouponSettings = () => {
             </div>
           </div>
 
-          {/* Validade - início */}
+          {/* Início da validade */}
           <div className="space-y-2">
-            <Label>Início da validade</Label>
-            <Select
-              value={form.coupon_starts_at_mode}
-              onValueChange={(v) => set("coupon_starts_at_mode", v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="immediate">Imediatamente</SelectItem>
-                <SelectItem value="scheduled">Data futura</SelectItem>
-              </SelectContent>
-            </Select>
-            {form.coupon_starts_at_mode === "scheduled" && (
-              <Input
-                type="datetime-local"
-                value={form.coupon_starts_at}
-                onChange={(e) => set("coupon_starts_at", e.target.value)}
-              />
-            )}
+            <Label htmlFor="starts_at_days">Início da validade (dias)</Label>
+            <Input
+              id="starts_at_days"
+              type="number"
+              min={0}
+              value={form.coupon_starts_at_days}
+              onChange={(e) => set("coupon_starts_at_days", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              <strong>0</strong> = inicia imediatamente; qualquer número = dias até o início da validade.
+            </p>
           </div>
 
-          {/* Validade - fim */}
+          {/* Expiração */}
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Switch
-                id="expires"
-                checked={form.coupon_expires === "1"}
-                onCheckedChange={(v) => set("coupon_expires", v ? "1" : "0")}
-              />
-              <Label htmlFor="expires">Cupom expirável</Label>
-            </div>
-            {form.coupon_expires === "1" && (
-              <Input
-                type="datetime-local"
-                value={form.coupon_ends_at}
-                onChange={(e) => set("coupon_ends_at", e.target.value)}
-                placeholder="Data de expiração"
-              />
-            )}
+            <Label htmlFor="ends_at">Validade do cupom (dias)</Label>
+            <Input
+              id="ends_at"
+              type="number"
+              min={0}
+              value={form.coupon_ends_at}
+              onChange={(e) => set("coupon_ends_at", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              <strong>0</strong> = nunca expira; qualquer número = dias até a expiração.
+            </p>
           </div>
 
           <Separator />
@@ -214,7 +196,7 @@ const AdminCouponSettings = () => {
                 id="value_start"
                 type="number"
                 min={0}
-                placeholder="0,00"
+                placeholder="Sem mínimo"
                 value={form.coupon_value_start}
                 onChange={(e) => set("coupon_value_start", e.target.value)}
               />

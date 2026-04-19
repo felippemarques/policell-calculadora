@@ -1474,10 +1474,22 @@ export function DefectsTab() {
                         </p>
                       )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      <Percent className="h-3 w-3 mr-1" />
-                      {cond.discount_percentage}%
-                    </Badge>
+                    {((cond as any).discount_mode === "fixed") ? (
+                      <Badge variant="secondary" className="text-xs">
+                        <DollarSign className="h-3 w-3 mr-1" />
+                        R$ {Number((cond as any).discount_fixed || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        <Percent className="h-3 w-3 mr-1" />
+                        {cond.discount_percentage}%
+                      </Badge>
+                    )}
+                    {Array.isArray((cond as any).model_ids) && (cond as any).model_ids.length > 0 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {(cond as any).model_ids.length} modelo(s)
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

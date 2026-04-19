@@ -142,20 +142,28 @@ export function StepEvaluationChecklist({
     },
   });
 
-  // ── Filter categories by selected device's brand ──
+  // ── Filter categories by selected device's brand AND model ──
   // Rules:
-  //  - Root categories (parent_id null AND parent_option_id null): visible if brand_ids empty (global) OR contains selectedBrandId
+  //  - Root categories (parent_id null AND parent_option_id null): visible if
+  //      brand_ids empty (global) OR contains selectedBrandId, AND
+  //      model_ids empty (global) OR contains selectedModelId
   //  - Subcategories (parent_id): inherit visibility from their root ancestor
   //  - Conditional sub-questions (parent_option_id): inherit visibility from the category that owns the trigger option
   const damageCategories = useMemo(() => {
     if (damageCategoriesAll.length === 0) return [];
 
+    const matchesScope = (c: DamageCategory) => {
+      const brandIds = c.brand_ids ?? [];
+      const modelIds = c.model_ids ?? [];
+      const brandOk = brandIds.length === 0 || (!!selectedBrandId && brandIds.includes(selectedBrandId));
+      const modelOk = modelIds.length === 0 || (!!selectedModelId && modelIds.includes(selectedModelId));
+      return brandOk && modelOk;
+    };
+
     const rootVisibility = new Map<string, boolean>();
     for (const c of damageCategoriesAll) {
       if (!c.parent_id && !c.parent_option_id) {
-        const ids = c.brand_ids ?? [];
-        const visible = ids.length === 0 || (!!selectedBrandId && ids.includes(selectedBrandId));
-        rootVisibility.set(c.id, visible);
+        rootVisibility.set(c.id, matchesScope(c));
       }
     }
 
@@ -189,10 +197,18 @@ export function StepEvaluationChecklist({
       const rootId = findRootId(c.id);
       return rootId ? rootVisibility.get(rootId) === true : false;
     });
-  }, [damageCategoriesAll, damageOptions, selectedBrandId]);
+  }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId]);
 
-  const normalConditions = useMemo(() => conditions.filter((c) => !c.is_rejected), [conditions]);
-  const rejectionReasons = useMemo(() => conditions.filter((c) => c.is_rejected), [conditions]);
+  // Conditions (Tela A + rejections) filtered by model_ids (brand filter not used here today)
+  const filteredConditions = useMemo(() => {
+    return conditions.filter((c) => {
+      const ids = c.model_ids ?? [];
+      return ids.length === 0 || (!!selectedModelId && ids.includes(selectedModelId));
+    });
+  }, [conditions, selectedModelId]);
+
+  const normalConditions = useMemo(() => filteredConditions.filter((c) => !c.is_rejected), [filteredConditions]);
+  const rejectionReasons = useMemo(() => filteredConditions.filter((c) => c.is_rejected), [filteredConditions]);
 
   // ── Selection helpers ──
   const selectCondition = (id: string) => {

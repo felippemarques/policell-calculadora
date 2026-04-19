@@ -1363,28 +1363,50 @@ export function DefectsTab() {
               <div key={cond.id} className="px-4 py-3 bg-card hover:bg-muted/30 transition-colors">
                 {isEditing ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Input
                         value={editCondForm.condition_name}
                         onChange={(e) =>
                           setEditCondForm({ ...editCondForm, condition_name: e.target.value })
                         }
-                        className="h-8 text-sm flex-1"
+                        className="h-8 text-sm flex-1 min-w-[140px]"
                         autoFocus
                       />
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        value={editCondForm.discount_percentage}
-                        onChange={(e) =>
-                          setEditCondForm({
-                            ...editCondForm,
-                            discount_percentage: Number(e.target.value),
-                          })
+                      <ToggleGroup
+                        type="single"
+                        size="sm"
+                        value={editCondForm.discount_mode}
+                        onValueChange={(v) =>
+                          v && setEditCondForm({ ...editCondForm, discount_mode: v as DiscountMode })
                         }
-                        className="h-8 text-sm w-24"
-                      />
+                        className="h-8"
+                      >
+                        <ToggleGroupItem value="percent" className="h-8 px-2 text-xs">%</ToggleGroupItem>
+                        <ToggleGroupItem value="fixed" className="h-8 px-2 text-xs">R$</ToggleGroupItem>
+                      </ToggleGroup>
+                      {editCondForm.discount_mode === "percent" ? (
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.1}
+                          value={editCondForm.discount_percentage}
+                          onChange={(e) =>
+                            setEditCondForm({
+                              ...editCondForm,
+                              discount_percentage: Number(e.target.value),
+                            })
+                          }
+                          className="h-8 text-sm w-24"
+                        />
+                      ) : (
+                        <CurrencyInput
+                          value={editCondForm.discount_fixed}
+                          onValueChange={(v) =>
+                            setEditCondForm({ ...editCondForm, discount_fixed: v })
+                          }
+                          className="h-8 text-sm w-32"
+                        />
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1396,6 +1418,14 @@ export function DefectsTab() {
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    <DiscountImpactSimulator
+                      mode={editCondForm.discount_mode}
+                      value={
+                        editCondForm.discount_mode === "percent"
+                          ? editCondForm.discount_percentage
+                          : editCondForm.discount_fixed
+                      }
+                    />
                     <Textarea
                       value={editCondForm.help_text}
                       onChange={(e) =>
@@ -1405,6 +1435,16 @@ export function DefectsTab() {
                       className="text-sm"
                       rows={2}
                     />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <ModelMultiSelect
+                        selected={editCondForm.model_ids}
+                        onChange={(ids) => setEditCondForm({ ...editCondForm, model_ids: ids })}
+                      />
+                      <YouTubeUrlInput
+                        value={editCondForm.youtube_url}
+                        onChange={(v) => setEditCondForm({ ...editCondForm, youtube_url: v })}
+                      />
+                    </div>
                     <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
                       <Checkbox
                         checked={editCondForm.is_required}

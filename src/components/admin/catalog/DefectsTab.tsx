@@ -351,16 +351,21 @@ export function DefectsTab() {
       damage_category_id: string;
       option_name: string;
       deduction_value: number;
+      deduction_percent: number;
+      deduction_mode: DiscountMode;
       is_rejected: boolean;
     }) => {
+      const payload: any = {
+        option_name: data.option_name,
+        deduction_value: data.deduction_mode === "fixed" ? data.deduction_value : 0,
+        deduction_percent: data.deduction_mode === "percent" ? data.deduction_percent : 0,
+        deduction_mode: data.deduction_mode,
+        is_rejected: data.is_rejected,
+      };
       if (data.id) {
         const { error } = await supabase
           .from("damage_deductions")
-          .update({
-            option_name: data.option_name,
-            deduction_value: data.deduction_value,
-            is_rejected: data.is_rejected,
-          } as any)
+          .update(payload)
           .eq("id", data.id);
         if (error) throw error;
       } else {
@@ -368,10 +373,8 @@ export function DefectsTab() {
         const maxOrder =
           catOptions.length > 0 ? Math.max(...catOptions.map((o) => o.display_order)) + 1 : 0;
         const { error } = await supabase.from("damage_deductions").insert({
+          ...payload,
           damage_category_id: data.damage_category_id,
-          option_name: data.option_name,
-          deduction_value: data.deduction_value,
-          is_rejected: data.is_rejected,
           display_order: maxOrder,
         } as any);
         if (error) throw error;

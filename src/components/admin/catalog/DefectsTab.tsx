@@ -229,6 +229,8 @@ export function DefectsTab() {
       help_image_url: string;
       is_required: boolean;
       brand_ids?: string[];
+      model_ids?: string[];
+      youtube_url?: string;
       parent_id?: string | null;
       parent_option_id?: string | null;
     }) => {
@@ -240,6 +242,8 @@ export function DefectsTab() {
         is_required: data.is_required,
         // brand_ids only meaningful for root categories
         brand_ids: isRoot ? data.brand_ids ?? [] : [],
+        model_ids: data.model_ids ?? [],
+        youtube_url: data.youtube_url?.trim() || null,
       };
       if (data.id) {
         const { error } = await supabase

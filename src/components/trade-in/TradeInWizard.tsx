@@ -194,6 +194,23 @@ export function TradeInWizard() {
   );
   const basePrice = selectedDevice?.base_price ?? 0;
 
+  // Resolve the model_id of the selected device by looking up the
+  // model_storages row whose id matches the device id (devices are
+  // synced 1:1 from model_storages by the catalog trigger).
+  const { data: selectedModelId = null } = useQuery({
+    queryKey: ["selected-device-model-id", data.deviceId],
+    enabled: !!data.deviceId,
+    queryFn: async () => {
+      const { data: ms, error } = await supabase
+        .from("model_storages")
+        .select("model_id")
+        .eq("id", data.deviceId)
+        .maybeSingle();
+      if (error) throw error;
+      return ms?.model_id ?? null;
+    },
+  });
+
   // ── Live pricing breakdown ──
   const pricing = useMemo(
     () => computePricing(basePrice, data.answers, conditions, damageOptions, damageCategories),
@@ -410,6 +427,7 @@ export function TradeInWizard() {
               isSubmitting={isSubmitting}
               basePrice={basePrice}
               selectedBrandId={selectedDevice?.brand_id ?? null}
+              selectedModelId={selectedModelId}
             />
           )}
           {step === 3 && (

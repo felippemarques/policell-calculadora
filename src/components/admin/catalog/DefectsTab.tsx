@@ -14,6 +14,11 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { OrderArrows } from "@/components/admin/catalog/OrderArrows";
+import { ModelMultiSelect } from "@/components/admin/catalog/ModelMultiSelect";
+import { YouTubeUrlInput } from "@/components/admin/catalog/YouTubeUrlInput";
+import { DiscountImpactSimulator } from "@/components/admin/catalog/DiscountImpactSimulator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { DiscountMode } from "@/lib/trade-in-pricing";
 import { toast } from "sonner";
 
 type DamageOption = {
@@ -21,6 +26,8 @@ type DamageOption = {
   damage_category_id: string;
   option_name: string;
   deduction_value: number;
+  deduction_percent: number;
+  deduction_mode: DiscountMode;
   is_rejected: boolean;
   display_order: number;
 };
@@ -35,6 +42,8 @@ type DamageCategory = {
   parent_option_id: string | null;
   display_order: number;
   brand_ids: string[];
+  model_ids: string[];
+  youtube_url: string | null;
 };
 
 type Brand = { id: string; name: string };
@@ -54,6 +63,8 @@ export function DefectsTab() {
     help_image_url: "",
     is_required: true,
     brand_ids: [] as string[],
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   // String forms:
   //   "__root__"         → new top-level category
@@ -66,17 +77,21 @@ export function DefectsTab() {
     help_image_url: "",
     is_required: true,
     brand_ids: [] as string[],
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
-    Record<string, { option_name: string; deduction_value: number; is_rejected: boolean }>
+    Record<string, { option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean }>
   >({});
   const [editingOptId, setEditingOptId] = useState<string | null>(null);
   const [editOptForm, setEditOptForm] = useState({
     option_name: "",
     deduction_value: 0,
+    deduction_percent: 0,
+    deduction_mode: "fixed" as DiscountMode,
     is_rejected: false,
   });
 
@@ -85,22 +100,34 @@ export function DefectsTab() {
   const [condForm, setCondForm] = useState({
     condition_name: "",
     discount_percentage: 0,
+    discount_fixed: 0,
+    discount_mode: "percent" as DiscountMode,
     help_text: "",
     is_required: true,
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
   const [editCondForm, setEditCondForm] = useState({
     condition_name: "",
     discount_percentage: 0,
+    discount_fixed: 0,
+    discount_mode: "percent" as DiscountMode,
     help_text: "",
     is_required: true,
+    model_ids: [] as string[],
+    youtube_url: "",
   });
 
   // ── Rejection reason state ──
   const [showNewRejection, setShowNewRejection] = useState(false);
   const [rejectionName, setRejectionName] = useState("");
+  const [rejectionModelIds, setRejectionModelIds] = useState<string[]>([]);
+  const [rejectionYoutube, setRejectionYoutube] = useState("");
   const [editingRejId, setEditingRejId] = useState<string | null>(null);
   const [editRejName, setEditRejName] = useState("");
+  const [editRejModelIds, setEditRejModelIds] = useState<string[]>([]);
+  const [editRejYoutube, setEditRejYoutube] = useState("");
 
   // ── Queries ──
   const { data: categories = [], isLoading } = useQuery({
@@ -240,7 +267,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCatForParent(null);
-      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -351,7 +378,7 @@ export function DefectsTab() {
       setEditingOptId(null);
       setNewOptionByCat((prev) => ({
         ...prev,
-        [vars.damage_category_id]: { option_name: "", deduction_value: 0, is_rejected: false },
+        [vars.damage_category_id]: { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed", is_rejected: false },
       }));
       toast.success("Opção salva!");
     },
@@ -376,20 +403,28 @@ export function DefectsTab() {
       id?: string;
       condition_name: string;
       discount_percentage: number;
+      discount_fixed: number;
+      discount_mode: DiscountMode;
       help_text: string;
       is_required: boolean;
+      model_ids: string[];
+      youtube_url: string;
     }) => {
-      const payload = {
+      const payload: any = {
         condition_name: data.condition_name,
-        discount_percentage: data.discount_percentage,
+        discount_percentage: data.discount_mode === "percent" ? data.discount_percentage : 0,
+        discount_fixed: data.discount_mode === "fixed" ? data.discount_fixed : 0,
+        discount_mode: data.discount_mode,
         is_rejected: false,
         help_text: data.help_text?.trim() || null,
         is_required: data.is_required,
+        model_ids: data.model_ids ?? [],
+        youtube_url: data.youtube_url?.trim() || null,
       };
       if (data.id) {
         const { error } = await supabase
           .from("condition_discounts")
-          .update(payload as any)
+          .update(payload)
           .eq("id", data.id);
         if (error) throw error;
       } else {
@@ -397,7 +432,7 @@ export function DefectsTab() {
           conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
         const { error } = await supabase
           .from("condition_discounts")
-          .insert({ ...payload, display_order: maxOrder } as any);
+          .insert({ ...payload, display_order: maxOrder });
         if (error) throw error;
       }
     },
@@ -405,7 +440,7 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewCondition(false);
       setEditingCondId(null);
-      setCondForm({ condition_name: "", discount_percentage: 0, help_text: "", is_required: true });
+      setCondForm({ condition_name: "", discount_percentage: 0, discount_fixed: 0, discount_mode: "percent", help_text: "", is_required: true, model_ids: [], youtube_url: "" });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -413,24 +448,25 @@ export function DefectsTab() {
 
   // ── Rejection mutations ──
   const saveRejectionMutation = useMutation({
-    mutationFn: async (data: { id?: string; condition_name: string }) => {
+    mutationFn: async (data: { id?: string; condition_name: string; model_ids: string[]; youtube_url: string }) => {
+      const base: any = {
+        condition_name: data.condition_name,
+        discount_percentage: 100,
+        is_rejected: true,
+        model_ids: data.model_ids ?? [],
+        youtube_url: data.youtube_url?.trim() || null,
+      };
       if (data.id) {
         const { error } = await supabase
           .from("condition_discounts")
-          .update({
-            condition_name: data.condition_name,
-            discount_percentage: 100,
-            is_rejected: true,
-          })
+          .update(base)
           .eq("id", data.id);
         if (error) throw error;
       } else {
         const maxOrder =
           conditions.length > 0 ? Math.max(...conditions.map((c) => c.display_order)) + 1 : 0;
         const { error } = await supabase.from("condition_discounts").insert({
-          condition_name: data.condition_name,
-          discount_percentage: 100,
-          is_rejected: true,
+          ...base,
           display_order: maxOrder,
         });
         if (error) throw error;
@@ -440,8 +476,12 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewRejection(false);
       setRejectionName("");
+      setRejectionModelIds([]);
+      setRejectionYoutube("");
       setEditingRejId(null);
       setEditRejName("");
+      setEditRejModelIds([]);
+      setEditRejYoutube("");
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -463,11 +503,11 @@ export function DefectsTab() {
     deductions.filter((d) => d.damage_category_id === catId);
 
   const getNewOptionDraft = (catId: string) =>
-    newOptionByCat[catId] || { option_name: "", deduction_value: 0, is_rejected: false };
+    newOptionByCat[catId] || { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed" as DiscountMode, is_rejected: false };
 
   const updateNewOptionDraft = (
     catId: string,
-    patch: Partial<{ option_name: string; deduction_value: number; is_rejected: boolean }>,
+    patch: Partial<{ option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean }>,
   ) => {
     setNewOptionByCat((prev) => ({
       ...prev,
@@ -575,7 +615,7 @@ export function DefectsTab() {
             variant="outline"
             onClick={() => {
               setShowNewCatForParent(null);
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
             }}
           >
             <X className="h-4 w-4" />
@@ -712,6 +752,8 @@ export function DefectsTab() {
                       help_image_url: cat.help_image_url ?? "",
                       is_required: cat.is_required !== false,
                       brand_ids: Array.isArray(cat.brand_ids) ? cat.brand_ids : [],
+                      model_ids: Array.isArray((cat as any).model_ids) ? (cat as any).model_ids : [],
+                      youtube_url: (cat as any).youtube_url ?? "",
                     });
                     setEditingCatId(cat.id);
                     setExpandedCat((prev) => new Set(prev).add(cat.id));
@@ -917,7 +959,7 @@ export function DefectsTab() {
                                   help_text: "",
                                   help_image_url: "",
                                   is_required: true,
-                                  brand_ids: [],
+                                  brand_ids: [], model_ids: [], youtube_url: "",
                                 });
                                 setShowNewCatForParent(`option:${opt.id}`);
                               }}
@@ -935,6 +977,8 @@ export function DefectsTab() {
                               setEditOptForm({
                                 option_name: opt.option_name,
                                 deduction_value: Number(opt.deduction_value) || 0,
+                                deduction_percent: Number((opt as any).deduction_percent) || 0,
+                                deduction_mode: ((opt as any).deduction_mode as DiscountMode) || "fixed",
                                 is_rejected: opt.is_rejected,
                               });
                             }}
@@ -1043,7 +1087,7 @@ export function DefectsTab() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
                     setShowNewCatForParent(cat.id);
                   }}
                   disabled={showNewCatForParent === cat.id}
@@ -1247,8 +1291,12 @@ export function DefectsTab() {
                         setEditCondForm({
                           condition_name: cond.condition_name,
                           discount_percentage: cond.discount_percentage,
+                          discount_fixed: Number((cond as any).discount_fixed) || 0,
+                          discount_mode: ((cond as any).discount_mode as DiscountMode) || "percent",
                           help_text: (cond as any).help_text ?? "",
                           is_required: (cond as any).is_required !== false,
+                          model_ids: Array.isArray((cond as any).model_ids) ? (cond as any).model_ids : [],
+                          youtube_url: (cond as any).youtube_url ?? "",
                         });
                       }}
                     >
@@ -1289,7 +1337,7 @@ export function DefectsTab() {
           <Button
             size="sm"
             onClick={() => {
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
               setShowNewCatForParent("__root__");
             }}
             disabled={showNewCatForParent === "__root__"}
@@ -1346,7 +1394,7 @@ export function DefectsTab() {
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && rejectionName.trim()) {
-                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim() });
+                    saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube });
                   }
                 }}
               />
@@ -1356,7 +1404,7 @@ export function DefectsTab() {
                 size="sm"
                 variant="destructive"
                 onClick={() =>
-                  saveRejectionMutation.mutate({ condition_name: rejectionName.trim() })
+                  saveRejectionMutation.mutate({ condition_name: rejectionName.trim(), model_ids: rejectionModelIds, youtube_url: rejectionYoutube })
                 }
                 disabled={!rejectionName.trim() || saveRejectionMutation.isPending}
               >
@@ -1405,6 +1453,8 @@ export function DefectsTab() {
                         saveRejectionMutation.mutate({
                           id: rej.id,
                           condition_name: editRejName.trim(),
+                          model_ids: editRejModelIds,
+                          youtube_url: editRejYoutube,
                         })
                       }
                       disabled={!editRejName.trim()}

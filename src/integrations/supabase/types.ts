@@ -175,30 +175,42 @@ export type Database = {
       condition_discounts: {
         Row: {
           condition_name: string
+          discount_fixed: number
+          discount_mode: string
           discount_percentage: number
           display_order: number
           help_text: string | null
           id: string
           is_rejected: boolean
           is_required: boolean
+          model_ids: string[]
+          youtube_url: string | null
         }
         Insert: {
           condition_name: string
+          discount_fixed?: number
+          discount_mode?: string
           discount_percentage: number
           display_order?: number
           help_text?: string | null
           id?: string
           is_rejected?: boolean
           is_required?: boolean
+          model_ids?: string[]
+          youtube_url?: string | null
         }
         Update: {
           condition_name?: string
+          discount_fixed?: number
+          discount_mode?: string
           discount_percentage?: number
           display_order?: number
           help_text?: string | null
           id?: string
           is_rejected?: boolean
           is_required?: boolean
+          model_ids?: string[]
+          youtube_url?: string | null
         }
         Relationships: []
       }
@@ -211,9 +223,11 @@ export type Database = {
           help_text: string | null
           id: string
           is_required: boolean
+          model_ids: string[]
           name: string
           parent_id: string | null
           parent_option_id: string | null
+          youtube_url: string | null
         }
         Insert: {
           brand_ids?: string[]
@@ -223,9 +237,11 @@ export type Database = {
           help_text?: string | null
           id?: string
           is_required?: boolean
+          model_ids?: string[]
           name: string
           parent_id?: string | null
           parent_option_id?: string | null
+          youtube_url?: string | null
         }
         Update: {
           brand_ids?: string[]
@@ -235,9 +251,11 @@ export type Database = {
           help_text?: string | null
           id?: string
           is_required?: boolean
+          model_ids?: string[]
           name?: string
           parent_id?: string | null
           parent_option_id?: string | null
+          youtube_url?: string | null
         }
         Relationships: [
           {
@@ -260,6 +278,8 @@ export type Database = {
         Row: {
           created_at: string
           damage_category_id: string
+          deduction_mode: string
+          deduction_percent: number
           deduction_value: number
           display_order: number
           id: string
@@ -269,6 +289,8 @@ export type Database = {
         Insert: {
           created_at?: string
           damage_category_id: string
+          deduction_mode?: string
+          deduction_percent?: number
           deduction_value: number
           display_order?: number
           id?: string
@@ -278,6 +300,8 @@ export type Database = {
         Update: {
           created_at?: string
           damage_category_id?: string
+          deduction_mode?: string
+          deduction_percent?: number
           deduction_value?: number
           display_order?: number
           id?: string

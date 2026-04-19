@@ -1,13 +1,19 @@
 // Centralized pricing logic for the trade-in flow.
 // Shared between TradeInWizard (submit) and StepEvaluationChecklist (live preview).
 
+export type DiscountMode = "percent" | "fixed";
+
 export interface ConditionRow {
   id: string;
   condition_name: string;
   discount_percentage: number;
+  discount_fixed?: number;
+  discount_mode?: DiscountMode;
   is_rejected: boolean;
   help_text?: string | null;
   is_required?: boolean;
+  model_ids?: string[] | null;
+  youtube_url?: string | null;
 }
 
 export interface DamageOption {
@@ -15,6 +21,8 @@ export interface DamageOption {
   damage_category_id: string;
   option_name: string;
   deduction_value: number;
+  deduction_percent?: number;
+  deduction_mode?: DiscountMode;
   is_rejected: boolean;
 }
 
@@ -29,6 +37,11 @@ export interface DamageCategory {
    * Brands this category applies to. Empty array (or undefined) = global (all brands).
    */
   brand_ids?: string[] | null;
+  /**
+   * Models this category applies to. Empty array (or undefined) = global (all models).
+   */
+  model_ids?: string[] | null;
+  youtube_url?: string | null;
   /**
    * Conditional reveal: when set, this category is only shown after the user
    * selects the damage option with this id (in any other category). It's a
@@ -71,15 +84,20 @@ export function computePricing(
   let isRejected = false;
   let rejectionReason: string | null = null;
 
-  // Condition (Tela A)
+  // Condition (Tela A) — supports percent OR fixed
   if (answers.conditionId) {
     const cond = conditions.find((c) => c.id === answers.conditionId);
     if (cond && !cond.is_rejected) {
-      percentDiscount += Number(cond.discount_percentage) || 0;
+      const mode: DiscountMode = (cond.discount_mode as DiscountMode) || "percent";
+      if (mode === "fixed") {
+        fixedDeductions += Number(cond.discount_fixed) || 0;
+      } else {
+        percentDiscount += Number(cond.discount_percentage) || 0;
+      }
     }
   }
 
-  // Damage options (Tela B) — fixed deductions, but any is_rejected blocks
+  // Damage options (Tela B) — supports fixed OR percent; any is_rejected blocks
   for (const [catId, optId] of Object.entries(answers.damageOptionByCategory)) {
     if (!optId) continue;
     const opt = damageOptions.find((o) => o.id === optId);
@@ -89,7 +107,12 @@ export function computePricing(
       const cat = damageCategories.find((c) => c.id === catId);
       rejectionReason = `${cat?.name ?? "Defeito"}: ${opt.option_name}`;
     } else {
-      fixedDeductions += Number(opt.deduction_value) || 0;
+      const mode: DiscountMode = (opt.deduction_mode as DiscountMode) || "fixed";
+      if (mode === "percent") {
+        percentDiscount += Number(opt.deduction_percent) || 0;
+      } else {
+        fixedDeductions += Number(opt.deduction_value) || 0;
+      }
     }
   }
 

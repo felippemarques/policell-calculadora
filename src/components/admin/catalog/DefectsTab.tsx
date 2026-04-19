@@ -267,7 +267,7 @@ export function DefectsTab() {
       invalidateAll();
       setEditingCatId(null);
       setShowNewCatForParent(null);
-      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+      setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -602,7 +602,7 @@ export function DefectsTab() {
             variant="outline"
             onClick={() => {
               setShowNewCatForParent(null);
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
             }}
           >
             <X className="h-4 w-4" />
@@ -944,7 +944,7 @@ export function DefectsTab() {
                                   help_text: "",
                                   help_image_url: "",
                                   is_required: true,
-                                  brand_ids: [],
+                                  brand_ids: [], model_ids: [], youtube_url: "",
                                 });
                                 setShowNewCatForParent(`option:${opt.id}`);
                               }}
@@ -1070,7 +1070,7 @@ export function DefectsTab() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+                    setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
                     setShowNewCatForParent(cat.id);
                   }}
                   disabled={showNewCatForParent === cat.id}
@@ -1316,7 +1316,7 @@ export function DefectsTab() {
           <Button
             size="sm"
             onClick={() => {
-              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [] });
+              setNewCat({ name: "", help_text: "", help_image_url: "", is_required: true, brand_ids: [], model_ids: [], youtube_url: "" });
               setShowNewCatForParent("__root__");
             }}
             disabled={showNewCatForParent === "__root__"}

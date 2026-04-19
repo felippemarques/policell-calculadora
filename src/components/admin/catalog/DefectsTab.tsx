@@ -1649,39 +1649,57 @@ export function DefectsTab() {
             return (
               <div
                 key={rej.id}
-                className="flex items-center gap-3 px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors"
+                className="px-4 py-3 bg-destructive/5 hover:bg-destructive/10 transition-colors"
               >
-                <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
                 {isEditing ? (
-                  <>
-                    <Input
-                      value={editRejName}
-                      onChange={(e) => setEditRejName(e.target.value)}
-                      className="h-8 text-sm flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        saveRejectionMutation.mutate({
-                          id: rej.id,
-                          condition_name: editRejName.trim(),
-                          model_ids: editRejModelIds,
-                          youtube_url: editRejYoutube,
-                        })
-                      }
-                      disabled={!editRejName.trim()}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
+                      <Input
+                        value={editRejName}
+                        onChange={(e) => setEditRejName(e.target.value)}
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          saveRejectionMutation.mutate({
+                            id: rej.id,
+                            condition_name: editRejName.trim(),
+                            model_ids: editRejModelIds,
+                            youtube_url: editRejYoutube,
+                          })
+                        }
+                        disabled={!editRejName.trim()}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingRejId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
+                      <ModelMultiSelect
+                        selected={editRejModelIds}
+                        onChange={setEditRejModelIds}
+                      />
+                      <YouTubeUrlInput
+                        value={editRejYoutube}
+                        onChange={setEditRejYoutube}
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex items-center gap-3">
+                    <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
                     <span className="font-medium text-foreground flex-1">{rej.condition_name}</span>
+                    {Array.isArray((rej as any).model_ids) && (rej as any).model_ids.length > 0 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {(rej as any).model_ids.length} modelo(s)
+                      </Badge>
+                    )}
                     <Badge variant="destructive" className="text-xs">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Hard Stop
@@ -1692,6 +1710,8 @@ export function DefectsTab() {
                       onClick={() => {
                         setEditingRejId(rej.id);
                         setEditRejName(rej.condition_name);
+                        setEditRejModelIds(Array.isArray((rej as any).model_ids) ? (rej as any).model_ids : []);
+                        setEditRejYoutube((rej as any).youtube_url ?? "");
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -1707,7 +1727,7 @@ export function DefectsTab() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             );

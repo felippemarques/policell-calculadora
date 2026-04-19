@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Ticket,
   ClipboardList,
+  Briefcase,
 } from "lucide-react";
 import { AdminTour } from "@/components/admin/AdminTour";
 import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
@@ -25,6 +26,7 @@ const navItems = [
   { to: "/admin/clientes", icon: Users, label: "Clientes" },
   { to: "/admin/avaliacoes", icon: ClipboardList, label: "Cupons Criados" },
   { to: "/admin/cupom", icon: Ticket, label: "Configurações de Cupom" },
+  { to: "/admin/negocio", icon: Briefcase, label: "Configurações de Negócio" },
   { to: "/admin/administradores", icon: ShieldCheck, label: "Administradores" },
 ];
 

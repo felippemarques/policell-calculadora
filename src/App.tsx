@@ -18,6 +18,7 @@ import AdminCatalog from "./pages/admin/AdminCatalog";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminEvaluations from "./pages/admin/AdminEvaluations";
 import AdminCouponSettings from "./pages/admin/AdminCouponSettings";
+import AdminBusinessSettings from "./pages/admin/AdminBusinessSettings";
 import AdminHeader from "./pages/admin/AdminHeader";
 import AdminUsers from "./pages/admin/AdminUsers";
 import { RequireAdmin } from "./components/admin/RequireAdmin";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="clientes" element={<AdminCustomers />} />
               <Route path="avaliacoes" element={<AdminEvaluations />} />
               <Route path="cupom" element={<AdminCouponSettings />} />
+              <Route path="negocio" element={<AdminBusinessSettings />} />
               <Route path="header" element={<AdminHeader />} />
               <Route path="administradores" element={<AdminUsers />} />
             </Route>

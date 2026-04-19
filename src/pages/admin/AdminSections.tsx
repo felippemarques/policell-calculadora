@@ -2046,18 +2046,37 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
 
       <SectionCard
         icon={<Palette className="h-4 w-4" />}
-        title="Botão CTA (Call to Action)"
-        description="Botão principal que leva o visitante à calculadora."
+        title="Botão Principal — Vender / Avaliar"
+        description="Botão primário do hero. Por padrão leva à calculadora com intenção de venda."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <LabelWithHint label="Texto do botão" hint="Texto curto e direto. Ex: 'Calcular agora'" />
+            <LabelWithHint label="Texto do botão" hint="Texto curto e direto. Ex: 'Quero vender'" />
             <Input
               value={form.cta_text || ""}
               onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
               className="mt-1"
-              placeholder="Ex: Calcular agora"
+              placeholder="Ex: Quero vender meu aparelho"
             />
+          </div>
+          <div>
+            <LabelWithHint
+              label="Intenção / Destino"
+              hint="Define o parâmetro mode= enviado para a calculadora, permitindo bifurcar o fluxo."
+            />
+            <Select
+              value={(layoutData.cta1_intent as string) || "sell"}
+              onValueChange={(v) => setLayoutField("cta1_intent", v)}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sell">Vender (mode=sell)</SelectItem>
+                <SelectItem value="upgrade">Trocar/Upgrade (mode=upgrade)</SelectItem>
+                <SelectItem value="none">Calculadora padrão (sem tag)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <LabelWithHint label="Border Radius (px)" hint="0 = quadrado, 25 = arredondado, 50 = pílula." />
@@ -2068,6 +2087,18 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
               value={form.cta_border_radius ?? 8}
               onChange={(e) => setForm({ ...form, cta_border_radius: Number(e.target.value) })}
               className="mt-1"
+            />
+          </div>
+          <div>
+            <LabelWithHint
+              label="URL customizada (opcional)"
+              hint="Sobrescreve o destino padrão. Use https://... para externo ou /caminho para interno."
+            />
+            <Input
+              value={(layoutData.cta1_url as string) || ""}
+              onChange={(e) => setLayoutField("cta1_url", e.target.value)}
+              className="mt-1"
+              placeholder="(em branco usa /calculadora)"
             />
           </div>
           <div>
@@ -2101,18 +2132,162 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
             </div>
           </div>
         </div>
-        <div className="mt-3">
-          <p className="text-xs text-muted-foreground mb-2">Pré-visualização do botão:</p>
-          <button
-            className="px-6 py-2.5 text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: form.cta_bg_color || "#7c3aed",
-              color: form.cta_text_color || "#ffffff",
-              borderRadius: `${form.cta_border_radius ?? 8}px`,
-            }}
-          >
-            {form.cta_text || "Botão CTA"}
-          </button>
+      </SectionCard>
+
+      <SectionCard
+        icon={<MousePointerClick className="h-4 w-4" />}
+        title="Botão Secundário — Trocar / Upgrade"
+        description="Botão opcional ao lado do principal, focado em troca/upgrade. Aparece apenas quando ativado."
+      >
+        <div className="flex items-center justify-between rounded-lg border p-3 mb-4">
+          <div>
+            <Label className="text-sm font-medium">Exibir botão secundário</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Quando ativo, o hero exibe dois botões lado a lado.
+            </p>
+          </div>
+          <Switch
+            checked={!!layoutData.cta2_enabled}
+            onCheckedChange={(checked) => setLayoutField("cta2_enabled", checked ? 1 : 0)}
+          />
+        </div>
+
+        {!!layoutData.cta2_enabled && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <LabelWithHint label="Texto do botão" hint="Ex: 'Quero trocar por um novo'" />
+              <Input
+                value={(layoutData.cta2?.text as string) || ""}
+                onChange={(e) =>
+                  setLayoutField("cta2", { ...(layoutData.cta2 || {}), text: e.target.value } as any)
+                }
+                className="mt-1"
+                placeholder="Ex: Quero trocar / fazer upgrade"
+              />
+            </div>
+            <div>
+              <LabelWithHint
+                label="Intenção / Destino"
+                hint="Define o parâmetro mode= enviado para a calculadora."
+              />
+              <Select
+                value={(layoutData.cta2?.intent as string) || "upgrade"}
+                onValueChange={(v) =>
+                  setLayoutField("cta2", { ...(layoutData.cta2 || {}), intent: v } as any)
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upgrade">Trocar/Upgrade (mode=upgrade)</SelectItem>
+                  <SelectItem value="sell">Vender (mode=sell)</SelectItem>
+                  <SelectItem value="none">Calculadora padrão (sem tag)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <LabelWithHint label="Border Radius (px)" hint="0 = quadrado, 25 = arredondado, 50 = pílula." />
+              <Input
+                type="number"
+                min={0}
+                max={50}
+                value={(layoutData.cta2?.radius as number) ?? 8}
+                onChange={(e) =>
+                  setLayoutField("cta2", { ...(layoutData.cta2 || {}), radius: Number(e.target.value) } as any)
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <LabelWithHint
+                label="URL customizada (opcional)"
+                hint="Sobrescreve o destino padrão."
+              />
+              <Input
+                value={(layoutData.cta2?.url as string) || ""}
+                onChange={(e) =>
+                  setLayoutField("cta2", { ...(layoutData.cta2 || {}), url: e.target.value } as any)
+                }
+                className="mt-1"
+                placeholder="(em branco usa /calculadora?mode=upgrade)"
+              />
+            </div>
+            <div>
+              <LabelWithHint label="Cor de fundo do botão" hint="Sugerimos um tom diferente do principal." />
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={(layoutData.cta2?.bg as string) || "#10b981"}
+                  onChange={(e) =>
+                    setLayoutField("cta2", { ...(layoutData.cta2 || {}), bg: e.target.value } as any)
+                  }
+                  className="w-10 h-10 rounded border cursor-pointer"
+                />
+                <Input
+                  value={(layoutData.cta2?.bg as string) || ""}
+                  onChange={(e) =>
+                    setLayoutField("cta2", { ...(layoutData.cta2 || {}), bg: e.target.value } as any)
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <LabelWithHint label="Cor do texto do botão" hint="Garanta contraste suficiente." />
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={(layoutData.cta2?.color as string) || "#ffffff"}
+                  onChange={(e) =>
+                    setLayoutField("cta2", { ...(layoutData.cta2 || {}), color: e.target.value } as any)
+                  }
+                  className="w-10 h-10 rounded border cursor-pointer"
+                />
+                <Input
+                  value={(layoutData.cta2?.color as string) || ""}
+                  onChange={(e) =>
+                    setLayoutField("cta2", { ...(layoutData.cta2 || {}), color: e.target.value } as any)
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        icon={<Eye className="h-4 w-4" />}
+        title="Pré-visualização dos Botões"
+        description="Veja como ficam os botões com as configurações atuais."
+      >
+        <div className="flex flex-wrap gap-3">
+          {form.cta_text && (
+            <button
+              className="px-6 py-2.5 text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: form.cta_bg_color || "#7c3aed",
+                color: form.cta_text_color || "#ffffff",
+                borderRadius: `${form.cta_border_radius ?? 8}px`,
+              }}
+            >
+              {form.cta_text}
+            </button>
+          )}
+          {!!layoutData.cta2_enabled && layoutData.cta2?.text && (
+            <button
+              className="px-6 py-2.5 text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: (layoutData.cta2?.bg as string) || "#10b981",
+                color: (layoutData.cta2?.color as string) || "#ffffff",
+                borderRadius: `${(layoutData.cta2?.radius as number) ?? 8}px`,
+              }}
+            >
+              {layoutData.cta2.text}
+            </button>
+          )}
+          {!form.cta_text && !layoutData.cta2_enabled && (
+            <p className="text-xs text-muted-foreground">Configure ao menos um botão acima.</p>
+          )}
         </div>
       </SectionCard>
     </>

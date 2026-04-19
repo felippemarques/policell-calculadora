@@ -26,6 +26,21 @@ const textAlignClass = {
   right: "text-right items-end",
 } as const;
 
+const ctaJustifyClass = {
+  left: "justify-start",
+  center: "justify-center",
+  right: "justify-end",
+} as const;
+
+interface HeroCta {
+  text?: string;
+  bg?: string;
+  color?: string;
+  radius?: number;
+  intent?: "sell" | "upgrade" | "none";
+  url?: string;
+}
+
 const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const layoutData = (() => {
     try {
@@ -41,9 +56,76 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const bgPosX = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
   const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
 
+  // CTA 1: legacy fields on the section (preserves backward compatibility)
+  const cta1: HeroCta = {
+    text: section.cta_text || undefined,
+    bg: section.cta_bg_color || undefined,
+    color: section.cta_text_color || undefined,
+    radius: section.cta_border_radius ?? undefined,
+    intent: (layoutData.cta1_intent as HeroCta["intent"]) || "sell",
+    url: layoutData.cta1_url || undefined,
+  };
+
+  // CTA 2: stored entirely in layout JSON
+  const cta2Raw = layoutData.cta2 || {};
+  const cta2Enabled = !!layoutData.cta2_enabled && !!cta2Raw.text;
+  const cta2: HeroCta = {
+    text: cta2Raw.text,
+    bg: cta2Raw.bg,
+    color: cta2Raw.color,
+    radius: typeof cta2Raw.radius === "number" ? cta2Raw.radius : 8,
+    intent: (cta2Raw.intent as HeroCta["intent"]) || "upgrade",
+    url: cta2Raw.url || undefined,
+  };
+
+  const buildCtaTarget = (cta: HeroCta): string => {
+    if (cta.url && cta.url.trim()) return cta.url.trim();
+    if (cta.intent === "upgrade") return "/calculadora?mode=upgrade";
+    if (cta.intent === "sell") return "/calculadora?mode=sell";
+    return "/calculadora";
+  };
+
+  const renderCta = (cta: HeroCta, key: string, primary: boolean) => {
+    if (!cta.text) return null;
+    const target = buildCtaTarget(cta);
+    const isExternal = /^https?:\/\//i.test(target);
+    const inner = (
+      <>
+        {cta.text} <ArrowRight className="ml-2 h-4 w-4" />
+      </>
+    );
+    return (
+      <Button
+        key={key}
+        size="lg"
+        className={cn(
+          "rounded-full shadow-sm transition-shadow hover:shadow-md",
+          previewMode ? "h-10 px-5 text-sm" : "h-12 px-8 text-base",
+        )}
+        style={{
+          backgroundColor: cta.bg || undefined,
+          color: cta.color || undefined,
+          borderRadius: typeof cta.radius === "number" ? `${cta.radius}px` : undefined,
+        }}
+        variant={primary ? "default" : "secondary"}
+        asChild
+      >
+        {isExternal ? (
+          <a href={target} target="_blank" rel="noopener noreferrer">
+            {inner}
+          </a>
+        ) : (
+          <Link to={target}>{inner}</Link>
+        )}
+      </Button>
+    );
+  };
+
+  // Outer banner-link is suppressed if any CTA is configured (avoid swallowing button clicks)
   const rawLink: string | undefined = section.link_url?.trim() || undefined;
   const isExternalLink = !!rawLink && /^https?:\/\//i.test(rawLink);
-  const isClickable = !!rawLink && !previewMode;
+  const hasAnyCta = !!cta1.text || cta2Enabled;
+  const isClickable = !!rawLink && !previewMode && !hasAnyCta;
 
   return (
     <section
@@ -116,26 +198,17 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
             </p>
           )}
 
-          {section.cta_text && (
-            <Button
-              size="lg"
+          {(cta1.text || cta2Enabled) && (
+            <div
               className={cn(
-                "rounded-full shadow-sm transition-shadow hover:shadow-md",
-                previewMode ? "mt-2 h-10 px-5 text-sm" : "mt-4 h-12 px-8 text-base",
+                "flex flex-wrap gap-3",
+                previewMode ? "mt-2" : "mt-4",
+                ctaJustifyClass[textAlign],
               )}
-              style={{
-                backgroundColor: section.cta_bg_color || undefined,
-                color: section.cta_text_color || undefined,
-                borderRadius: section.cta_border_radius
-                  ? `${section.cta_border_radius}px`
-                  : undefined,
-              }}
-              asChild
             >
-              <Link to="/calculadora">
-                {section.cta_text} <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+              {renderCta(cta1, "cta1", true)}
+              {cta2Enabled && renderCta(cta2, "cta2", false)}
+            </div>
           )}
         </div>
       </div>

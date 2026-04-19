@@ -1093,7 +1093,7 @@ export function DefectsTab() {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Adicionar nova opção
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_140px_auto] gap-2 items-end">
                 <div>
                   <Label className="text-xs text-muted-foreground">Nome da opção</Label>
                   <Input
@@ -1106,15 +1106,47 @@ export function DefectsTab() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Dedução (R$)</Label>
-                  <CurrencyInput
-                    value={draft.deduction_value}
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <ToggleGroup
+                    type="single"
+                    size="sm"
+                    value={draft.deduction_mode}
                     onValueChange={(v) =>
-                      updateNewOptionDraft(cat.id, { deduction_value: v })
+                      v && updateNewOptionDraft(cat.id, { deduction_mode: v as DiscountMode })
                     }
-                    disabled={draft.is_rejected}
-                    className="mt-1 h-9 text-sm"
-                  />
+                    className="mt-1 h-9"
+                  >
+                    <ToggleGroupItem value="fixed" className="h-9 px-3 text-xs">R$</ToggleGroupItem>
+                    <ToggleGroupItem value="percent" className="h-9 px-3 text-xs">%</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    {draft.deduction_mode === "fixed" ? "Dedução (R$)" : "Dedução (%)"}
+                  </Label>
+                  {draft.deduction_mode === "fixed" ? (
+                    <CurrencyInput
+                      value={draft.deduction_value}
+                      onValueChange={(v) =>
+                        updateNewOptionDraft(cat.id, { deduction_value: v })
+                      }
+                      disabled={draft.is_rejected}
+                      className="mt-1 h-9 text-sm"
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={draft.deduction_percent}
+                      onChange={(e) =>
+                        updateNewOptionDraft(cat.id, { deduction_percent: Number(e.target.value) })
+                      }
+                      disabled={draft.is_rejected}
+                      className="mt-1 h-9 text-sm"
+                      placeholder="%"
+                    />
+                  )}
                 </div>
                 <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
                   <Label className="text-xs text-muted-foreground whitespace-nowrap">
@@ -1128,6 +1160,17 @@ export function DefectsTab() {
                   />
                 </div>
               </div>
+              {!draft.is_rejected && (
+                <DiscountImpactSimulator
+                  mode={draft.deduction_mode}
+                  value={
+                    draft.deduction_mode === "fixed"
+                      ? draft.deduction_value
+                      : draft.deduction_percent
+                  }
+                  title="Impacto desta opção"
+                />
+              )}
               <Button
                 size="sm"
                 onClick={() =>
@@ -1135,6 +1178,8 @@ export function DefectsTab() {
                     damage_category_id: cat.id,
                     option_name: draft.option_name.trim(),
                     deduction_value: draft.is_rejected ? 0 : draft.deduction_value,
+                    deduction_percent: draft.is_rejected ? 0 : draft.deduction_percent,
+                    deduction_mode: draft.deduction_mode,
                     is_rejected: draft.is_rejected,
                   })
                 }

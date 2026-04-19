@@ -84,6 +84,7 @@ export function StepEvaluationChecklist({
   onResetAll,
   isSubmitting,
   selectedBrandId,
+  selectedModelId,
 }: Props) {
   const [subScreen, setSubScreen] = useState<SubScreen>("condition");
   const [rejectionModal, setRejectionModal] = useState<{

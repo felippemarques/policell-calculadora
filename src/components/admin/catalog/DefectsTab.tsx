@@ -1251,7 +1251,7 @@ export function DefectsTab() {
 
         {showNewCondition && (
           <div className="bg-card border rounded-lg p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_180px] gap-3 items-end">
               <div>
                 <Label className="text-sm">Nome</Label>
                 <Input
@@ -1263,19 +1263,52 @@ export function DefectsTab() {
                 />
               </div>
               <div>
-                <Label className="text-sm">Desconto (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={condForm.discount_percentage}
-                  onChange={(e) =>
-                    setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })
+                <Label className="text-sm">Tipo</Label>
+                <ToggleGroup
+                  type="single"
+                  size="sm"
+                  value={condForm.discount_mode}
+                  onValueChange={(v) =>
+                    v && setCondForm({ ...condForm, discount_mode: v as DiscountMode })
                   }
-                  className="mt-1"
-                />
+                  className="mt-1 h-10"
+                >
+                  <ToggleGroupItem value="percent" className="h-10 px-3 text-xs">%</ToggleGroupItem>
+                  <ToggleGroupItem value="fixed" className="h-10 px-3 text-xs">R$</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div>
+                <Label className="text-sm">
+                  {condForm.discount_mode === "percent" ? "Desconto (%)" : "Desconto (R$)"}
+                </Label>
+                {condForm.discount_mode === "percent" ? (
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={condForm.discount_percentage}
+                    onChange={(e) =>
+                      setCondForm({ ...condForm, discount_percentage: Number(e.target.value) })
+                    }
+                    className="mt-1"
+                  />
+                ) : (
+                  <CurrencyInput
+                    value={condForm.discount_fixed}
+                    onValueChange={(v) => setCondForm({ ...condForm, discount_fixed: v })}
+                    className="mt-1"
+                  />
+                )}
               </div>
             </div>
+            <DiscountImpactSimulator
+              mode={condForm.discount_mode}
+              value={
+                condForm.discount_mode === "percent"
+                  ? condForm.discount_percentage
+                  : condForm.discount_fixed
+              }
+            />
             <div>
               <Label className="text-sm">Texto de ajuda (opcional)</Label>
               <Textarea
@@ -1284,6 +1317,16 @@ export function DefectsTab() {
                 placeholder="Ex: Sem riscos visíveis, todas as funções operando perfeitamente."
                 className="mt-1 text-sm"
                 rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ModelMultiSelect
+                selected={condForm.model_ids}
+                onChange={(ids) => setCondForm({ ...condForm, model_ids: ids })}
+              />
+              <YouTubeUrlInput
+                value={condForm.youtube_url}
+                onChange={(v) => setCondForm({ ...condForm, youtube_url: v })}
               />
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">

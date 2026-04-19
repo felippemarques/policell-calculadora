@@ -14,6 +14,11 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { OrderArrows } from "@/components/admin/catalog/OrderArrows";
+import { ModelMultiSelect } from "@/components/admin/catalog/ModelMultiSelect";
+import { YouTubeUrlInput } from "@/components/admin/catalog/YouTubeUrlInput";
+import { DiscountImpactSimulator } from "@/components/admin/catalog/DiscountImpactSimulator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { DiscountMode } from "@/lib/trade-in-pricing";
 import { toast } from "sonner";
 
 type DamageOption = {

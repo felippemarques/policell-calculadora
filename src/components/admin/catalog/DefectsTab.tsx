@@ -63,6 +63,8 @@ export function DefectsTab() {
     help_image_url: "",
     is_required: true,
     brand_ids: [] as string[],
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   // String forms:
   //   "__root__"         → new top-level category
@@ -75,17 +77,21 @@ export function DefectsTab() {
     help_image_url: "",
     is_required: true,
     brand_ids: [] as string[],
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
-    Record<string, { option_name: string; deduction_value: number; is_rejected: boolean }>
+    Record<string, { option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean }>
   >({});
   const [editingOptId, setEditingOptId] = useState<string | null>(null);
   const [editOptForm, setEditOptForm] = useState({
     option_name: "",
     deduction_value: 0,
+    deduction_percent: 0,
+    deduction_mode: "fixed" as DiscountMode,
     is_rejected: false,
   });
 
@@ -94,22 +100,34 @@ export function DefectsTab() {
   const [condForm, setCondForm] = useState({
     condition_name: "",
     discount_percentage: 0,
+    discount_fixed: 0,
+    discount_mode: "percent" as DiscountMode,
     help_text: "",
     is_required: true,
+    model_ids: [] as string[],
+    youtube_url: "",
   });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
   const [editCondForm, setEditCondForm] = useState({
     condition_name: "",
     discount_percentage: 0,
+    discount_fixed: 0,
+    discount_mode: "percent" as DiscountMode,
     help_text: "",
     is_required: true,
+    model_ids: [] as string[],
+    youtube_url: "",
   });
 
   // ── Rejection reason state ──
   const [showNewRejection, setShowNewRejection] = useState(false);
   const [rejectionName, setRejectionName] = useState("");
+  const [rejectionModelIds, setRejectionModelIds] = useState<string[]>([]);
+  const [rejectionYoutube, setRejectionYoutube] = useState("");
   const [editingRejId, setEditingRejId] = useState<string | null>(null);
   const [editRejName, setEditRejName] = useState("");
+  const [editRejModelIds, setEditRejModelIds] = useState<string[]>([]);
+  const [editRejYoutube, setEditRejYoutube] = useState("");
 
   // ── Queries ──
   const { data: categories = [], isLoading } = useQuery({

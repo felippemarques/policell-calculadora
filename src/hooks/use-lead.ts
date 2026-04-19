@@ -57,10 +57,6 @@ export function useLead() {
   /**
    * Either reuse an existing lead matching the email (and patch with new
    * name/phone) or insert a fresh one. Returns the lead id either way.
-   */
-  /**
-   * Either reuse an existing lead matching the email (and patch with new
-   * name/phone) or insert a fresh one. Returns the lead id either way.
    * Uses a SECURITY DEFINER RPC so anonymous visitors don't need SELECT
    * access to the leads table.
    */
@@ -116,6 +112,20 @@ export function useLead() {
     [updateLead],
   );
 
+  /**
+   * Persist the chosen flow (trade/sale) into the lead's assessment_responses
+   * (anonymous public users can't UPDATE leads directly; the RPC bypasses RLS).
+   * The flow_type column is also written via the regular evaluation insert.
+   */
+  const setFlowType = useCallback(
+    async (id: string, flowType: "trade" | "sale", currentResponses: Record<string, any> = {}) => {
+      await updateLead(id, {
+        assessment_responses: { ...currentResponses, flow_type: flowType },
+      });
+    },
+    [updateLead],
+  );
+
   return {
     leadId,
     setLeadId,
@@ -125,6 +135,7 @@ export function useLead() {
     updateLead,
     updateAssessment,
     markRejected,
+    setFlowType,
     creating,
   };
 }

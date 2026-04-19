@@ -78,3 +78,24 @@ export function useColorsByBrand(brandId: string | null | undefined) {
     },
   });
 }
+
+/**
+ * Resolve the public-facing base price for a device based on the chosen flow.
+ * Falls back to `base_price` (legacy) when the flow-specific price is zero.
+ */
+export function resolveBasePrice(
+  device: { base_price?: number | null; trade_price?: number | null; sale_price?: number | null } | null | undefined,
+  flowType: "trade" | "sale" | null | undefined,
+): number {
+  if (!device) return 0;
+  const base = Number(device.base_price ?? 0);
+  if (flowType === "trade") {
+    const tp = Number(device.trade_price ?? 0);
+    return tp > 0 ? tp : base;
+  }
+  if (flowType === "sale") {
+    const sp = Number(device.sale_price ?? 0);
+    return sp > 0 ? sp : base;
+  }
+  return base;
+}

@@ -13,6 +13,7 @@ export interface EvaluationData {
   totalDeductions: number;
   finalValue: number;
   leadId?: string | null;
+  flowType?: "trade" | "sale";
 }
 
 async function fetchCouponSettings(): Promise<Record<string, string>> {
@@ -102,7 +103,8 @@ export function useSubmitEvaluation() {
           final_value: data.finalValue,
           coupon_code: null,
           status: "pending",
-        })
+          flow_type: data.flowType ?? "trade",
+        } as any)
         .select("id")
         .single();
       if (error) throw error;

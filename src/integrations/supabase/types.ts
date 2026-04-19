@@ -599,6 +599,48 @@ export type Database = {
         }
         Relationships: []
       }
+      model_storages: {
+        Row: {
+          base_price: number
+          created_at: string
+          display_order: number
+          id: string
+          model_id: string
+          storage_id: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          model_id: string
+          storage_id: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          model_id?: string
+          storage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_storages_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "device_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_storages_storage_id_fkey"
+            columns: ["storage_id"]
+            isOneToOne: false
+            referencedRelation: "storages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -668,6 +710,45 @@ export type Database = {
         }
         Relationships: []
       }
+      variant_colors: {
+        Row: {
+          color_id: string
+          created_at: string
+          display_order: number
+          id: string
+          model_storage_id: string
+        }
+        Insert: {
+          color_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          model_storage_id: string
+        }
+        Update: {
+          color_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          model_storage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variant_colors_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_colors_model_storage_id_fkey"
+            columns: ["model_storage_id"]
+            isOneToOne: false
+            referencedRelation: "model_storages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -683,6 +764,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      sync_device_for_model_storage: {
+        Args: { _ms_id: string }
+        Returns: undefined
       }
       update_lead_progress: {
         Args: {

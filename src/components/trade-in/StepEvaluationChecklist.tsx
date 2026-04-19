@@ -62,6 +62,8 @@ interface Props {
   basePrice: number;
   /** Brand id of the currently selected device — used to filter damage categories */
   selectedBrandId?: string | null;
+  /** Model id of the currently selected device — used to filter rules by model */
+  selectedModelId?: string | null;
 }
 
 export type SubScreen = "condition" | "damages" | "rejection";

@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DevicesTab } from "@/components/admin/catalog/DevicesTab";
+import { CatalogTreeTab } from "@/components/admin/catalog/CatalogTreeTab";
 import { DefectsTab } from "@/components/admin/catalog/DefectsTab";
 import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
 import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
@@ -9,18 +9,18 @@ const AdminCatalog = () => (
   <div className="p-6 space-y-6">
     <div>
       <h2 className="text-2xl font-bold text-foreground">Produtos e Parâmetros</h2>
-      <p className="text-sm text-muted-foreground">Gerencie aparelhos, marcas, modelos, armazenamento, cores e defeitos</p>
+      <p className="text-sm text-muted-foreground">Gerencie o catálogo hierárquico (Marca → Modelo → Capacidade → Cor) e bibliotecas auxiliares</p>
     </div>
-    <Tabs defaultValue="devices">
+    <Tabs defaultValue="catalog">
       <TabsList className="flex-wrap h-auto gap-1">
-        <TabsTrigger value="devices">Aparelhos</TabsTrigger>
+        <TabsTrigger value="catalog">Catálogo</TabsTrigger>
         <TabsTrigger value="brands">Marcas</TabsTrigger>
         <TabsTrigger value="models">Modelos</TabsTrigger>
         <TabsTrigger value="storages">Armazenamento</TabsTrigger>
         <TabsTrigger value="colors">Cores</TabsTrigger>
         <TabsTrigger value="defects">Critérios de Avaliação</TabsTrigger>
       </TabsList>
-      <TabsContent value="devices" className="mt-4"><DevicesTab /></TabsContent>
+      <TabsContent value="catalog" className="mt-4"><CatalogTreeTab /></TabsContent>
       <TabsContent value="brands" className="mt-4">
         <AuxCrudTab table="brands" label="Marcas" fieldName="name" fieldLabel="Nome da Marca" defaultFormatRule="capitalize" />
       </TabsContent>

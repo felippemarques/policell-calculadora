@@ -39,7 +39,6 @@ async function callN8n(
   const n8nUrl = settings["coupon_n8n_url"];
   if (!n8nUrl) return null;
 
-  const startsAtMode = settings["coupon_starts_at_mode"] ?? "immediate";
   const payload = {
     evaluation_id: evaluationId,
     customer_name: data.customerName,
@@ -48,8 +47,8 @@ async function callN8n(
     description: settings["coupon_description"] ?? "",
     type: settings["coupon_type"] ?? "real",
     value: data.finalValue,
-    starts_at: startsAtMode === "immediate" ? null : (settings["coupon_starts_at"] ?? null),
-    ends_at: settings["coupon_expires"] === "1" ? (settings["coupon_ends_at"] ?? null) : null,
+    starts_at: Number(settings["coupon_starts_at_days"] ?? "0"),
+    ends_at: Number(settings["coupon_ends_at"] ?? "0"),
     value_start: settings["coupon_value_start"] ? Number(settings["coupon_value_start"]) : null,
     value_end: settings["coupon_value_end"] ? Number(settings["coupon_value_end"]) : null,
     usage_sum_limit: settings["coupon_usage_sum_limit"] ? Number(settings["coupon_usage_sum_limit"]) : null,

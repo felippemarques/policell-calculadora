@@ -26,6 +26,8 @@ type DamageOption = {
   damage_category_id: string;
   option_name: string;
   deduction_value: number;
+  deduction_percent: number;
+  deduction_mode: DiscountMode;
   is_rejected: boolean;
   display_order: number;
 };
@@ -40,6 +42,8 @@ type DamageCategory = {
   parent_option_id: string | null;
   display_order: number;
   brand_ids: string[];
+  model_ids: string[];
+  youtube_url: string | null;
 };
 
 type Brand = { id: string; name: string };

@@ -834,6 +834,16 @@ export function DefectsTab() {
                 onChange={(ids) => setCatForm({ ...catForm, brand_ids: ids })}
               />
             )}
+            <ModelMultiSelect
+              selected={catForm.model_ids}
+              onChange={(ids) => setCatForm({ ...catForm, model_ids: ids })}
+              label="Modelos aplicáveis (opcional)"
+              compact
+            />
+            <YouTubeUrlInput
+              value={catForm.youtube_url}
+              onChange={(v) => setCatForm({ ...catForm, youtube_url: v })}
+            />
             <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
               <Checkbox
                 checked={catForm.is_required}

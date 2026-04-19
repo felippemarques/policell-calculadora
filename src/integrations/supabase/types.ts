@@ -362,7 +362,9 @@ export type Database = {
           created_at: string
           id: string
           model: string
+          sale_price: number
           storage: string
+          trade_price: number
         }
         Insert: {
           base_price: number
@@ -372,7 +374,9 @@ export type Database = {
           created_at?: string
           id?: string
           model: string
+          sale_price?: number
           storage: string
+          trade_price?: number
         }
         Update: {
           base_price?: number
@@ -382,7 +386,9 @@ export type Database = {
           created_at?: string
           id?: string
           model?: string
+          sale_price?: number
           storage?: string
+          trade_price?: number
         }
         Relationships: [
           {
@@ -408,6 +414,7 @@ export type Database = {
           device_condition: string
           device_id: string | null
           final_value: number
+          flow_type: string
           id: string
           status: string
           total_deductions: number
@@ -425,6 +432,7 @@ export type Database = {
           device_condition: string
           device_id?: string | null
           final_value: number
+          flow_type?: string
           id?: string
           status?: string
           total_deductions?: number
@@ -442,6 +450,7 @@ export type Database = {
           device_condition?: string
           device_id?: string | null
           final_value?: number
+          flow_type?: string
           id?: string
           status?: string
           total_deductions?: number
@@ -464,6 +473,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           device_id: string | null
+          flow_type: string
           id: string
           rejection_reason: string | null
           status: string
@@ -476,6 +486,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           device_id?: string | null
+          flow_type?: string
           id?: string
           rejection_reason?: string | null
           status?: string
@@ -488,6 +499,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           device_id?: string | null
+          flow_type?: string
           id?: string
           rejection_reason?: string | null
           status?: string
@@ -630,7 +642,9 @@ export type Database = {
           display_order: number
           id: string
           model_id: string
+          sale_price: number
           storage_id: string
+          trade_price: number
         }
         Insert: {
           base_price?: number
@@ -638,7 +652,9 @@ export type Database = {
           display_order?: number
           id?: string
           model_id: string
+          sale_price?: number
           storage_id: string
+          trade_price?: number
         }
         Update: {
           base_price?: number
@@ -646,7 +662,9 @@ export type Database = {
           display_order?: number
           id?: string
           model_id?: string
+          sale_price?: number
           storage_id?: string
+          trade_price?: number
         }
         Relationships: [
           {

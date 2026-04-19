@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X, ArrowRightLeft, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,13 +31,20 @@ export function ModelStorageRow({ brandId, storage }: Props) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [priceDraft, setPriceDraft] = useState(storage.base_price);
+  const [tradeDraft, setTradeDraft] = useState(storage.trade_price ?? storage.base_price);
+  const [saleDraft, setSaleDraft] = useState(storage.sale_price ?? storage.base_price);
 
   const updatePrice = useMutation({
-    mutationFn: async (newPrice: number) => {
+    mutationFn: async () => {
       const { error } = await supabase
         .from("model_storages")
-        .update({ base_price: newPrice })
+        .update({
+          trade_price: tradeDraft,
+          sale_price: saleDraft,
+          // Keep legacy base_price aligned with the higher of the two so
+          // anything that still reads it has a sensible value.
+          base_price: Math.max(tradeDraft, saleDraft),
+        })
         .eq("id", storage.model_storage_id);
       if (error) throw error;
     },
@@ -44,7 +52,7 @@ export function ModelStorageRow({ brandId, storage }: Props) {
       qc.invalidateQueries({ queryKey: CATALOG_TREE_KEY });
       qc.invalidateQueries({ queryKey: ["devices"] });
       setEditing(false);
-      toast({ title: "Preço atualizado" });
+      toast({ title: "Preços atualizados" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -65,6 +73,9 @@ export function ModelStorageRow({ brandId, storage }: Props) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const tradePrice = storage.trade_price ?? storage.base_price;
+  const salePrice = storage.sale_price ?? storage.base_price;
+
   return (
     <div className="rounded-md border border-border bg-card/50">
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
@@ -80,13 +91,28 @@ export function ModelStorageRow({ brandId, storage }: Props) {
         <span className="text-muted-foreground">·</span>
 
         {editing ? (
-          <div className="flex items-center gap-1">
-            <CurrencyInput
-              value={priceDraft}
-              onValueChange={setPriceDraft}
-              className="h-8 w-32 text-sm"
-            />
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updatePrice.mutate(priceDraft)}>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-primary flex items-center gap-1">
+                <ArrowRightLeft className="h-3 w-3" /> Troca
+              </Label>
+              <CurrencyInput
+                value={tradeDraft}
+                onValueChange={setTradeDraft}
+                className="h-8 w-32 text-sm"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-accent-foreground flex items-center gap-1">
+                <Banknote className="h-3 w-3" /> Venda
+              </Label>
+              <CurrencyInput
+                value={saleDraft}
+                onValueChange={setSaleDraft}
+                className="h-8 w-32 text-sm"
+              />
+            </div>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updatePrice.mutate()}>
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -94,7 +120,8 @@ export function ModelStorageRow({ brandId, storage }: Props) {
               variant="ghost"
               className="h-7 w-7"
               onClick={() => {
-                setPriceDraft(storage.base_price);
+                setTradeDraft(tradePrice);
+                setSaleDraft(salePrice);
                 setEditing(false);
               }}
             >
@@ -102,9 +129,16 @@ export function ModelStorageRow({ brandId, storage }: Props) {
             </Button>
           </div>
         ) : (
-          <span className="text-sm font-semibold text-foreground">
-            {formatBRLWithSymbol(storage.base_price)}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+            <span className="inline-flex items-center gap-1 text-primary font-semibold">
+              <ArrowRightLeft className="h-3 w-3" />
+              {formatBRLWithSymbol(tradePrice)}
+            </span>
+            <span className="inline-flex items-center gap-1 text-accent-foreground font-semibold">
+              <Banknote className="h-3 w-3" />
+              {formatBRLWithSymbol(salePrice)}
+            </span>
+          </div>
         )}
 
         <div className="ml-auto flex items-center gap-1">

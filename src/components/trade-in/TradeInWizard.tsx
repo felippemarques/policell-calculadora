@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useDevices } from "@/hooks/use-trade-in-data";
+import { useDevices, resolveBasePrice } from "@/hooks/use-trade-in-data";
+import { useFlowSettings } from "@/hooks/use-flow-settings";
 import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
+import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
 import {
@@ -25,6 +27,7 @@ import { validateTradeInState } from "@/lib/trade-in-sanity";
 import { toast } from "sonner";
 
 export interface WizardData {
+  flowType: FlowType | null;
   name: string;
   email: string;
   phone: string;
@@ -35,10 +38,7 @@ export interface WizardData {
 }
 
 // ── Persistence ──
-// Saves the wizard progress (step + sub-screen + data + leadId) in localStorage
-// so the user can refresh the page or come back later and resume exactly
-// where they were. Cleared on submit success or reset.
-const STORAGE_KEY = "pollicell.tradein.progress.v1";
+const STORAGE_KEY = "pollicell.tradein.progress.v2";
 
 interface PersistedState {
   step: number;
@@ -55,11 +55,12 @@ function loadPersisted(): PersistedState | null {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
     // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 3) return null;
+    if (parsed.step >= 4) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",
       data: {
+        flowType: (parsed.data?.flowType as FlowType | null) ?? null,
         name: parsed.data?.name ?? "",
         email: parsed.data?.email ?? "",
         phone: parsed.data?.phone ?? "",
@@ -90,6 +91,7 @@ export function TradeInWizard() {
   const [subScreen, setSubScreen] = useState<SubScreen>(persisted?.subScreen ?? "condition");
   const [data, setData] = useState<WizardData>(
     persisted?.data ?? {
+      flowType: null,
       name: "",
       email: "",
       phone: "",
@@ -100,6 +102,7 @@ export function TradeInWizard() {
   );
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
+  const { data: flowSettings, isLoading: loadingFlowSettings } = useFlowSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected } = useLead();
 
@@ -111,11 +114,18 @@ export function TradeInWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Catalog-sync guard ──
-  // The wizard persists the user's progress in localStorage. If the catalog
-  // changed (e.g. an admin deleted the device the user had selected), the
-  // restored deviceId may no longer exist. Detect this on mount and clear
-  // the stale selection so the user starts cleanly at brand selection.
+  // Auto-skip flow choice when only one flow is enabled (or none).
+  useEffect(() => {
+    if (!flowSettings) return;
+    if (step !== 0) return;
+    if (data.flowType) return;
+    if (flowSettings.onlyEnabled) {
+      setData((prev) => ({ ...prev, flowType: flowSettings.onlyEnabled }));
+      setStep(1);
+    }
+  }, [flowSettings, step, data.flowType]);
+
+  // Catalog-sync guard
   useEffect(() => {
     if (!devices || devices.length === 0) return;
     if (!data.deviceId) return;
@@ -127,8 +137,7 @@ export function TradeInWizard() {
         colorId: null,
         answers: emptyAnswers(),
       }));
-      // If the user was past device selection, send them back to it
-      if (step > 1) setStep(1);
+      if (step > 2) setStep(2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devices]);
@@ -136,16 +145,14 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // Don't persist the result step — it's a terminal screen
-    if (step >= 3) return;
+    if (step >= 4) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     } catch {
-      /* quota exceeded or private mode — silently ignore */
+      /* quota exceeded — silently ignore */
     }
   }, [step, subScreen, data, leadId]);
-
 
   // Pull dynamic catalog for live pricing
   const { data: conditions = [] } = useQuery({
@@ -184,19 +191,18 @@ export function TradeInWizard() {
     },
   });
 
-  const isLoading = loadingDevices;
+  const isLoading = loadingDevices || loadingFlowSettings;
 
-  const steps = ["Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
+  // Step labels — Passo 0 = escolha do fluxo
+  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),
     [devices, data.deviceId],
   );
-  const basePrice = selectedDevice?.base_price ?? 0;
+  const basePrice = resolveBasePrice(selectedDevice as any, data.flowType);
 
-  // Resolve the model_id of the selected device by looking up the
-  // model_storages row whose id matches the device id (devices are
-  // synced 1:1 from model_storages by the catalog trigger).
+  // Resolve the model_id of the selected device
   const { data: selectedModelId = null } = useQuery({
     queryKey: ["selected-device-model-id", data.deviceId],
     enabled: !!data.deviceId,
@@ -211,11 +217,20 @@ export function TradeInWizard() {
     },
   });
 
-  // ── Live pricing breakdown ──
+  // Live pricing breakdown
   const pricing = useMemo(
     () => computePricing(basePrice, data.answers, conditions, damageOptions, damageCategories),
     [basePrice, data.answers, conditions, damageOptions, damageCategories],
   );
+
+  // ── Flow handler (Passo 0) ──
+  const handleChooseFlow = (type: FlowType) => {
+    setData((prev) => ({ ...prev, flowType: type }));
+    if (leadId) {
+      updateAssessment(leadId, { ...(data.answers as any), flow_type: type });
+    }
+    setStep(1);
+  };
 
   // ── Lead handlers ──
   const handleCreateLead = async () => {
@@ -224,12 +239,12 @@ export function TradeInWizard() {
       customer_email: data.email,
       customer_phone: data.phone,
     });
+    if (id && data.flowType) {
+      await updateAssessment(id, { ...(data.answers as any), flow_type: data.flowType });
+    }
     return id;
   };
 
-  // Called by StepPersonalInfo when an OAuth login auto-filled the form.
-  // Reuses an existing lead matching the email (so we don't duplicate) and
-  // advances the wizard to the device-selection step.
   const handleSocialAutofill = async (info: { name: string; email: string; phone: string }) => {
     const id = await upsertLeadByEmail({
       customer_name: info.name,
@@ -238,39 +253,38 @@ export function TradeInWizard() {
     });
     if (!id) return;
     setData((prev) => ({ ...prev, name: info.name, email: info.email, phone: info.phone }));
-    setStep(1);
+    setStep(2);
   };
 
   const handleDeviceSelected = async () => {
     if (leadId && data.deviceId) {
       await updateLead(leadId, { device_id: data.deviceId });
-      // Persist informational color choice into the lead's assessment_responses JSON
       await updateAssessment(leadId, {
         ...(data.answers as any),
         selectedColorId: data.colorId ?? null,
+        flow_type: data.flowType,
       });
     }
-    setStep(2);
+    setStep(3);
   };
 
-  // Silent assessment update on every answers change (debounced via useEffect)
+  // Silent assessment update on every answers change
   useEffect(() => {
-    if (!leadId || step !== 2) return;
+    if (!leadId || step !== 3) return;
     const timer = setTimeout(() => {
-      updateAssessment(leadId, data.answers as any);
+      updateAssessment(leadId, { ...(data.answers as any), flow_type: data.flowType });
     }, 400);
     return () => clearTimeout(timer);
-  }, [leadId, step, data.answers, updateAssessment]);
+  }, [leadId, step, data.answers, data.flowType, updateAssessment]);
 
-  // Force-flush the lead snapshot at every sub-screen transition
   const handleSubScreenChange = useCallback(
     (next: SubScreen) => {
       setSubScreen(next);
       if (leadId) {
-        updateAssessment(leadId, data.answers as any);
+        updateAssessment(leadId, { ...(data.answers as any), flow_type: data.flowType });
       }
     },
-    [leadId, data.answers, updateAssessment],
+    [leadId, data.answers, data.flowType, updateAssessment],
   );
 
   const handleAnswersChange = (next: ChecklistAnswers) => {
@@ -282,8 +296,6 @@ export function TradeInWizard() {
     await markRejected(leadId, reason);
   };
 
-  // Live sanity check — recomputed on every state change so the price footer
-  // and the result screen always reflect catalog truth.
   const sanity = useMemo(
     () =>
       validateTradeInState({
@@ -300,18 +312,15 @@ export function TradeInWizard() {
   const handleSubmit = async () => {
     if (!selectedDevice) return;
 
-    // Last line of defense: refuse to persist if data is inconsistent.
     if (!sanity.ok) {
       toast.error(
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      // Move to the result screen so the user sees the inconsistency banner + reset CTA
-      setStep(3);
+      setStep(4);
       return;
     }
 
-    // Build legacy "damages" string array for evaluations table
     const damageStrings: string[] = [];
     if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
     for (const [catId, optId] of Object.entries(data.answers.damageOptionByCategory)) {
@@ -330,6 +339,7 @@ export function TradeInWizard() {
       totalDeductions: pricing.fixedDeductions,
       finalValue: pricing.finalValue,
       leadId,
+      flowType: data.flowType ?? "trade",
     });
 
     if (leadId) {
@@ -337,12 +347,20 @@ export function TradeInWizard() {
     }
 
     clearPersisted();
-    setStep(3);
+    setStep(4);
   };
 
   const handleReset = () => {
     clearPersisted();
-    setData({ name: "", email: "", phone: "", deviceId: "", colorId: null, answers: emptyAnswers() });
+    setData({
+      flowType: null,
+      name: "",
+      email: "",
+      phone: "",
+      deviceId: "",
+      colorId: null,
+      answers: emptyAnswers(),
+    });
     setResult(null);
     setLeadId(null);
     setStep(0);
@@ -357,12 +375,24 @@ export function TradeInWizard() {
     );
   }
 
-  const totalSteps = 3;
-  const progressPct = step >= 3 ? 100 : Math.round(((step + 1) / (totalSteps + 1)) * 100);
+  // If no flows enabled, render a simple message
+  if (flowSettings && !flowSettings.anyEnabled) {
+    return (
+      <div className="w-full max-w-2xl mx-auto px-4 md:px-0 py-10 text-center">
+        <p className="text-muted-foreground">A calculadora está temporariamente indisponível.</p>
+      </div>
+    );
+  }
 
-  // Show sticky price footer on Telas A and B (not on rejection screen, and only on step 2)
+  // When only one flow is enabled, the choice screen is hidden — adjust display.
+  const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
+  const visibleStepsCount = flowChoiceHidden ? 4 : 5; // 5 incluindo passo 0
+  const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
+  const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
+  const progressPct = step >= 4 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+
   const showPriceFooter =
-    step === 2 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
+    step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">
@@ -377,7 +407,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 3 && (
+        {step < 4 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -388,39 +418,41 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 3 && (
+          {step < 4 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Passo {step + 1} de {totalSteps}
+                Passo {displayStepIndex + 1} de {totalProgressSteps}
               </span>
               <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
             </div>
           )}
 
-          {step === 0 && (
+          {step === 0 && <StepChooseFlow onChoose={handleChooseFlow} />}
+
+          {step === 1 && (
             <StepPersonalInfo
               data={data}
               onChange={(d) => setData({ ...data, ...d })}
-              onNext={() => setStep(1)}
+              onNext={() => setStep(2)}
               onCreateLead={handleCreateLead}
               onSocialAutofill={handleSocialAutofill}
             />
           )}
-          {step === 1 && (
+          {step === 2 && (
             <StepSelectDevice
               data={data as any}
               devices={devices || []}
               onChange={(d) => setData({ ...data, ...d })}
               onNext={handleDeviceSelected}
-              onBack={() => setStep(0)}
+              onBack={() => (flowChoiceHidden ? setStep(1) : setStep(1))}
             />
           )}
-          {step === 2 && (
+          {step === 3 && (
             <StepEvaluationChecklist
               answers={data.answers}
               onAnswersChange={handleAnswersChange}
               onSubmit={handleSubmit}
-              onBack={() => setStep(1)}
+              onBack={() => setStep(2)}
               onSubScreenChange={handleSubScreenChange}
               onReject={handleReject}
               onResetAll={handleReset}
@@ -430,18 +462,25 @@ export function TradeInWizard() {
               selectedModelId={selectedModelId}
             />
           )}
-          {step === 3 && (
+          {step === 4 && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}
                 onReset={handleReset}
                 sanity={sanity}
+                flowType={data.flowType}
+                customerName={data.name}
+                deviceLabel={
+                  selectedDevice
+                    ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
+                    : ""
+                }
               />
             </div>
           )}
         </div>
 
-        {/* ───── Sticky price footer (telas A e B do checklist) ───── */}
+        {/* Sticky price footer */}
         {showPriceFooter && (
           <div className="sticky bottom-0 left-0 right-0 border-t border-border/60 bg-card/95 backdrop-blur-md px-4 sm:px-6 md:px-10 py-3 md:py-4 animate-fade-in">
             <div className="flex items-center justify-between gap-3 md:gap-4">
@@ -454,7 +493,7 @@ export function TradeInWizard() {
                     Valor Estimado
                   </p>
                   <p className="text-xs text-muted-foreground truncate hidden sm:block">
-                    Atualiza conforme você responde
+                    {data.flowType === "sale" ? "Em dinheiro" : "Em crédito para troca"}
                   </p>
                 </div>
               </div>

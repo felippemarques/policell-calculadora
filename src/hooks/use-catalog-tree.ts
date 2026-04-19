@@ -14,6 +14,8 @@ export interface CatalogStorage {
   storage_id: string;
   capacity: string;
   base_price: number;
+  trade_price: number;
+  sale_price: number;
   display_order: number;
   colors: CatalogColor[];
 }
@@ -43,7 +45,7 @@ export function useCatalogTree() {
         supabase.from("device_models").select("id, name, brand_id, display_order").order("display_order").order("name"),
         supabase.from("storages").select("id, capacity, display_order").order("display_order").order("capacity"),
         supabase.from("colors").select("id, name, hex_code, brand_ids, display_order").order("display_order").order("name"),
-        supabase.from("model_storages").select("id, model_id, storage_id, base_price, display_order"),
+        supabase.from("model_storages").select("id, model_id, storage_id, base_price, trade_price, sale_price, display_order"),
         supabase.from("variant_colors").select("id, model_storage_id, color_id, display_order"),
       ]);
 
@@ -82,6 +84,8 @@ export function useCatalogTree() {
           storage_id: ms.storage_id,
           capacity: s.capacity,
           base_price: Number(ms.base_price),
+          trade_price: Number((ms as any).trade_price ?? ms.base_price),
+          sale_price: Number((ms as any).sale_price ?? ms.base_price),
           display_order: ms.display_order,
           colors: colorsByMs.get(ms.id) || [],
         });

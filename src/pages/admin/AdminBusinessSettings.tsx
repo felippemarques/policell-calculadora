@@ -8,12 +8,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, FileText, Percent, Eye } from "lucide-react";
+import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote } from "lucide-react";
+import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
 
 const BUSINESS_KEYS = [
   "business_contract_terms",
   "business_upgrade_bonus_percent",
   "business_show_realtime_deductions",
+  // Flow choice screen settings
+  "flow_trade_enabled",
+  "flow_trade_title",
+  "flow_trade_description",
+  "flow_trade_cta_text",
+  "flow_sale_enabled",
+  "flow_sale_title",
+  "flow_sale_description",
+  "flow_sale_cta_text",
+  "flow_sale_whatsapp",
 ] as const;
 
 type BusinessKey = (typeof BUSINESS_KEYS)[number];
@@ -23,6 +34,17 @@ const DEFAULTS: FormState = {
   business_contract_terms: "",
   business_upgrade_bonus_percent: "0",
   business_show_realtime_deductions: "true",
+  flow_trade_enabled: "true",
+  flow_trade_title: "Trocar por outro aparelho",
+  flow_trade_description:
+    "Use o valor do seu aparelho como crédito para comprar um novo na nossa loja.",
+  flow_trade_cta_text: "Quero trocar",
+  flow_sale_enabled: "true",
+  flow_sale_title: "Vender por dinheiro",
+  flow_sale_description:
+    "Receba o valor do seu aparelho em dinheiro via PIX ou transferência.",
+  flow_sale_cta_text: "Quero vender",
+  flow_sale_whatsapp: "",
 };
 
 async function upsertSettings(entries: { key: string; value: string }[]) {
@@ -73,6 +95,7 @@ const AdminBusinessSettings = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["business-settings"] });
+      qc.invalidateQueries({ queryKey: FLOW_SETTINGS_KEY });
       toast.success("Configurações de negócio salvas.");
     },
     onError: (e: any) => toast.error(e?.message || "Erro ao salvar."),
@@ -94,9 +117,120 @@ const AdminBusinessSettings = () => {
       <div>
         <h2 className="text-2xl font-bold text-foreground">Configurações de Negócio</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Parâmetros gerais que controlam contrato, bônus de upgrade e transparência da calculadora.
+          Parâmetros gerais que controlam contrato, bônus de upgrade, fluxos e transparência da calculadora.
         </p>
       </div>
+
+      {/* ── Fluxos da Calculadora ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Fluxos da Calculadora</CardTitle>
+          </div>
+          <CardDescription>
+            Escolha quais opções o cliente vê no início da avaliação. Se apenas um fluxo estiver ativo,
+            a tela de escolha é pulada automaticamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Trade flow */}
+          <div className="rounded-lg border p-4 space-y-3 bg-primary/5">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 text-primary" /> Fluxo: Trocar por outro aparelho
+              </Label>
+              <Switch
+                checked={form.flow_trade_enabled === "true"}
+                onCheckedChange={(c) => set("flow_trade_enabled", c ? "true" : "false")}
+              />
+            </div>
+            {form.flow_trade_enabled === "true" && (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Título</Label>
+                  <Input
+                    value={form.flow_trade_title}
+                    onChange={(e) => set("flow_trade_title", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Descrição curta</Label>
+                  <Textarea
+                    value={form.flow_trade_description}
+                    onChange={(e) => set("flow_trade_description", e.target.value)}
+                    rows={2}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Texto do botão (CTA)</Label>
+                  <Input
+                    value={form.flow_trade_cta_text}
+                    onChange={(e) => set("flow_trade_cta_text", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sale flow */}
+          <div className="rounded-lg border p-4 space-y-3 bg-accent/10">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-accent-foreground" /> Fluxo: Vender por dinheiro
+              </Label>
+              <Switch
+                checked={form.flow_sale_enabled === "true"}
+                onCheckedChange={(c) => set("flow_sale_enabled", c ? "true" : "false")}
+              />
+            </div>
+            {form.flow_sale_enabled === "true" && (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Título</Label>
+                  <Input
+                    value={form.flow_sale_title}
+                    onChange={(e) => set("flow_sale_title", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Descrição curta</Label>
+                  <Textarea
+                    value={form.flow_sale_description}
+                    onChange={(e) => set("flow_sale_description", e.target.value)}
+                    rows={2}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Texto do botão (CTA)</Label>
+                  <Input
+                    value={form.flow_sale_cta_text}
+                    onChange={(e) => set("flow_sale_cta_text", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">WhatsApp para venda</Label>
+                  <Input
+                    value={form.flow_sale_whatsapp}
+                    onChange={(e) => set("flow_sale_whatsapp", e.target.value)}
+                    placeholder="Ex.: 11999999999 ou https://wa.me/55..."
+                    className="mt-1"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Pode ser apenas o número (com DDD) ou um link wa.me completo.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -598,6 +598,16 @@ export function DefectsTab() {
             onChange={(ids) => setNewCat({ ...newCat, brand_ids: ids })}
           />
         )}
+        <ModelMultiSelect
+          selected={newCat.model_ids}
+          onChange={(ids) => setNewCat({ ...newCat, model_ids: ids })}
+          label="Modelos aplicáveis (opcional)"
+          compact
+        />
+        <YouTubeUrlInput
+          value={newCat.youtube_url}
+          onChange={(v) => setNewCat({ ...newCat, youtube_url: v })}
+        />
         <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
           <Checkbox
             checked={newCat.is_required}

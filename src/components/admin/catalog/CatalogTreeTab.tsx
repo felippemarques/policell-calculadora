@@ -51,6 +51,8 @@ function ModelNode({ brandId, model }: { brandId: string; model: CatalogModel })
         model_id: model.model_id,
         storage_id: storageId,
         base_price: price,
+        trade_price: price,
+        sale_price: price,
       });
       if (error) throw error;
     },

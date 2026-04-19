@@ -33,7 +33,7 @@ export function StepChooseFlow({ onChoose }: Props) {
     iconBg: string;
   }> = [
     {
-      type: "trade",
+      type: "trade" as FlowType,
       show: settings.trade.enabled,
       icon: ArrowRightLeft,
       title: settings.trade.title,
@@ -43,7 +43,7 @@ export function StepChooseFlow({ onChoose }: Props) {
       iconBg: "bg-primary/10 text-primary",
     },
     {
-      type: "sale",
+      type: "sale" as FlowType,
       show: settings.sale.enabled,
       icon: Banknote,
       title: settings.sale.title,

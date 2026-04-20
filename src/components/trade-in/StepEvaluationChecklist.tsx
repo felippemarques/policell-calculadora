@@ -253,15 +253,16 @@ export function StepEvaluationChecklist({
       const rootId = findRootId(c.id);
       return rootId ? rootVisibility.get(rootId) === true : false;
     });
-  }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId]);
+  }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId, validBrandIds, validModelIds]);
 
-  // Conditions (Tela A + rejections) filtered by model_ids (brand filter not used here today)
+  // Conditions (Tela A + rejections) filtered by model_ids (stale ids ignored)
   const filteredConditions = useMemo(() => {
+    const validModelSet = new Set(validModelIds);
     return conditions.filter((c) => {
-      const ids = c.model_ids ?? [];
+      const ids = (c.model_ids ?? []).filter((id) => validModelSet.has(id));
       return ids.length === 0 || (!!selectedModelId && ids.includes(selectedModelId));
     });
-  }, [conditions, selectedModelId]);
+  }, [conditions, selectedModelId, validModelIds]);
 
   const normalConditions = useMemo(() => filteredConditions.filter((c) => !c.is_rejected), [filteredConditions]);
   const rejectionReasons = useMemo(() => filteredConditions.filter((c) => c.is_rejected), [filteredConditions]);

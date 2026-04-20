@@ -6,6 +6,7 @@ import { useFlowSettings } from "@/hooks/use-flow-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
 import { StepImei } from "./StepImei";
+import { StepTerms } from "./StepTerms";
 import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";

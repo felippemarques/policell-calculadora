@@ -512,7 +512,10 @@ export function TradeInWizard() {
   const progressPct = step >= 6 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
-    step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
+    (businessSettings?.showRealtimeDeductions ?? true) &&
+    step === 3 &&
+    (subScreen === "condition" || subScreen === "damages") &&
+    basePrice > 0;
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">

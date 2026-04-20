@@ -4,6 +4,7 @@ import { DefectsTab } from "@/components/admin/catalog/DefectsTab";
 import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
 import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
 import { ColorsTab } from "@/components/admin/catalog/ColorsTab";
+import { EvaluationGroupsOrder } from "@/components/admin/catalog/EvaluationGroupsOrder";
 
 const AdminCatalog = () => (
   <div className="p-6 space-y-6">
@@ -33,9 +34,13 @@ const AdminCatalog = () => (
       <TabsContent value="colors" className="mt-4">
         <ColorsTab />
       </TabsContent>
-      <TabsContent value="defects" className="mt-4"><DefectsTab /></TabsContent>
+      <TabsContent value="defects" className="mt-4 space-y-6">
+        <EvaluationGroupsOrder />
+        <DefectsTab />
+      </TabsContent>
     </Tabs>
   </div>
 );
 
 export default AdminCatalog;
+

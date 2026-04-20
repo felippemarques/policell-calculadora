@@ -1238,10 +1238,10 @@ export function DefectsTab() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Percent className="h-5 w-5 text-primary" /> Condições do Aparelho
+              <Percent className="h-5 w-5 text-primary" /> Categorias de Defeitos
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Descontos percentuais aplicados ao preço base conforme a condição geral.
+              Itens com desconto fixo ou percentual aplicados ao preço base.
             </p>
           </div>
           <Button size="sm" onClick={() => { setShowNewCondition(true); setEditingCondId(null); }}>
@@ -1535,7 +1535,7 @@ export function DefectsTab() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-amber-500" /> Categorias de Defeitos
+              <DollarSign className="h-5 w-5 text-amber-500" /> Condições do Aparelho
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Cada categoria pode ter opções de resposta e subcategorias (ex: "É Tela Original?").

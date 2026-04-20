@@ -68,11 +68,11 @@ interface Props {
 
 export type SubScreen = "condition" | "damages" | "rejection";
 
-const SUB_SCREENS: { key: SubScreen; label: string; icon: typeof Sparkles }[] = [
-  { key: "condition", label: "Estado Geral", icon: Sparkles },
-  { key: "damages", label: "Defeitos", icon: Wrench },
-  { key: "rejection", label: "Impedimentos", icon: ShieldAlert },
-];
+const SUB_SCREEN_META: Record<SubScreen, { label: string; icon: typeof Sparkles }> = {
+  condition: { label: "Categorias de Defeitos", icon: Sparkles },
+  damages: { label: "Condições do Aparelho", icon: Wrench },
+  rejection: { label: "Impedimentos", icon: ShieldAlert },
+};
 
 export function StepEvaluationChecklist({
   answers,

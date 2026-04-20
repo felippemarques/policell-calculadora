@@ -852,6 +852,14 @@ export type Database = {
         Args: { _lead_id: string; _version: string }
         Returns: undefined
       }
+      attach_evaluation_coupon: {
+        Args: {
+          _coupon_code: string
+          _coupon_id: string
+          _evaluation_id: string
+        }
+        Returns: undefined
+      }
       create_lead: {
         Args: { _email: string; _name: string; _phone: string }
         Returns: string

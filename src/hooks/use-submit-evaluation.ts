@@ -95,37 +95,31 @@ export function useSubmitEvaluation() {
   const submit = async (data: EvaluationData) => {
     setIsSubmitting(true);
     try {
-      // 1. Insert evaluation first (coupon_code will be updated after n8n call)
-      const { data: inserted, error } = await supabase
-        .from("evaluations")
-        .insert({
-          customer_name: data.customerName,
-          customer_email: data.customerEmail,
-          customer_phone: data.customerPhone,
-          device_id: data.deviceId,
-          device_condition: data.deviceCondition,
-          damages: data.damages,
-          base_price: data.basePrice,
-          condition_discount: data.conditionDiscount,
-          total_deductions: data.totalDeductions,
-          final_value: data.finalValue,
-          coupon_code: null,
-          status: "pending",
-          flow_type: data.flowType ?? "trade",
-          imei: data.imei ?? null,
-        } as any)
-        .select("id")
-        .single();
+      // 1. Create evaluation via SECURITY DEFINER RPC so the public flow
+      // does not depend on INSERT+SELECT permissions under RLS.
+      const { data: evaluationId, error } = await (supabase.rpc as any)(
+        "create_public_evaluation",
+        {
+          _customer_name: data.customerName,
+          _customer_email: data.customerEmail,
+          _customer_phone: data.customerPhone,
+          _device_id: data.deviceId,
+          _device_condition: data.deviceCondition,
+          _damages: data.damages,
+          _base_price: data.basePrice,
+          _condition_discount: data.conditionDiscount,
+          _total_deductions: data.totalDeductions,
+          _final_value: data.finalValue,
+          _flow_type: data.flowType ?? "trade",
+          _imei: data.imei ?? null,
+        },
+      );
       if (error) {
-        // Postgres unique violation when the same IMEI already has an active
-        // evaluation in this flow.
         if ((error as any).code === "23505") {
           throw new DuplicateImeiError();
         }
         throw error;
       }
-
-      const evaluationId = inserted.id;
 
       // 2. Call n8n to generate coupon in the store
       const settings = await fetchCouponSettings();

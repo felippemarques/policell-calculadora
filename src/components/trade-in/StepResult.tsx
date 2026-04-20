@@ -62,6 +62,17 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
     settings[s.key] = s.value;
   });
 
+  const bonusPercent = Number(settings["business_upgrade_bonus_percent"] ?? "0") || 0;
+  const isSale = flowType === "sale";
+  const showBonus = !inconsistent && !isSale && bonusPercent > 0 && !!result;
+
+  const [bonusVisible, setBonusVisible] = useState(false);
+  useEffect(() => {
+    if (!showBonus) return;
+    const t = setTimeout(() => setBonusVisible(true), 450);
+    return () => clearTimeout(t);
+  }, [showBonus]);
+
   const copyToClipboard = async () => {
     if (!result?.couponCode) return;
     await navigator.clipboard.writeText(result.couponCode);

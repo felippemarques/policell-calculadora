@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote, Sparkles, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
 import type { SanityResult } from "@/lib/trade-in-sanity";
@@ -61,6 +61,17 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
   settingsRaw?.forEach((s: any) => {
     settings[s.key] = s.value;
   });
+
+  const bonusPercent = Number(settings["business_upgrade_bonus_percent"] ?? "0") || 0;
+  const isSale = flowType === "sale";
+  const showBonus = !inconsistent && !isSale && bonusPercent > 0 && !!result;
+
+  const [bonusVisible, setBonusVisible] = useState(false);
+  useEffect(() => {
+    if (!showBonus) return;
+    const t = setTimeout(() => setBonusVisible(true), 450);
+    return () => clearTimeout(t);
+  }, [showBonus]);
 
   const copyToClipboard = async () => {
     if (!result?.couponCode) return;
@@ -126,8 +137,6 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
     );
   }
 
-  const isSale = flowType === "sale";
-
   return (
     <div className="space-y-6">
       <Card className="border-primary/20 bg-primary/5">
@@ -173,6 +182,39 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
           )}
         </CardContent>
       </Card>
+
+      {showBonus && (
+        <div
+          className={`relative overflow-hidden rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-primary/10 to-accent/15 p-5 transition-all duration-700 ${
+            bonusVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
+          }`}
+        >
+          <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-accent/20 blur-2xl animate-pulse" />
+          <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-primary/20 blur-2xl animate-pulse" />
+
+          <div className="relative flex items-start gap-3">
+            <div className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-full bg-accent/25 animate-bounce">
+              <Gift className="h-5 w-5 text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Bônus exclusivo de troca</span>
+              </div>
+              <p className="mt-1 text-base font-bold text-foreground leading-snug">
+                Você ganhou{" "}
+                <span className="text-2xl text-accent">
+                  +{bonusPercent.toLocaleString("pt-BR")}%
+                </span>{" "}
+                extra para trocar agora seu celular!
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aplicado automaticamente ao usar o cupom para um upgrade.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {isSale ? (

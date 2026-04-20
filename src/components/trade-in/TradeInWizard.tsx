@@ -560,6 +560,14 @@ export function TradeInWizard() {
             />
           )}
           {step === 5 && (
+            <StepTerms
+              isSubmitting={isSubmitting}
+              onBack={() => setStep(4)}
+              onAccept={handleAcceptTerms}
+              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+            />
+          )}
+          {step === 6 && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}

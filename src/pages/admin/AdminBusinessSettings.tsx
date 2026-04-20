@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote } from "lucide-react";
+import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
 
 const BUSINESS_KEYS = [

@@ -490,6 +490,8 @@ export type Database = {
           imei: string | null
           rejection_reason: string | null
           status: string
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
         }
         Insert: {
@@ -504,6 +506,8 @@ export type Database = {
           imei?: string | null
           rejection_reason?: string | null
           status?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Update: {
@@ -518,6 +522,8 @@ export type Database = {
           imei?: string | null
           rejection_reason?: string | null
           status?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -811,6 +817,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_lead_terms: {
+        Args: { _lead_id: string; _version: string }
+        Returns: undefined
+      }
       create_lead: {
         Args: { _email: string; _name: string; _phone: string }
         Returns: string

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote } from "lucide-react";
+import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
 
 const BUSINESS_KEYS = [
@@ -25,10 +25,24 @@ const BUSINESS_KEYS = [
   "flow_sale_description",
   "flow_sale_cta_text",
   "flow_sale_whatsapp",
+  // LGPD / Termos de aceite
+  "terms_title",
+  "terms_text",
+  "terms_version",
+  "terms_policy_url",
 ] as const;
 
 type BusinessKey = (typeof BUSINESS_KEYS)[number];
 type FormState = Record<BusinessKey, string>;
+
+const DEFAULT_TERMS_TEXT = `Ao prosseguir, você declara que:
+
+1. As informações fornecidas (incluindo IMEI e estado do aparelho) são verdadeiras.
+2. O valor estimado pela calculadora é uma proposta inicial e está sujeito a inspeção física do aparelho.
+3. Autoriza o tratamento dos seus dados pessoais (nome, e-mail, telefone, IMEI) para fins de avaliação, contato comercial e cumprimento de obrigações legais, conforme a LGPD (Lei nº 13.709/2018).
+4. O cupom gerado tem validade conforme as regras da loja e está vinculado a este IMEI.
+
+Você pode solicitar a exclusão dos seus dados a qualquer momento entrando em contato conosco.`;
 
 const DEFAULTS: FormState = {
   business_contract_terms: "",
@@ -45,6 +59,10 @@ const DEFAULTS: FormState = {
     "Receba o valor do seu aparelho em dinheiro via PIX ou transferência.",
   flow_sale_cta_text: "Quero vender",
   flow_sale_whatsapp: "",
+  terms_title: "Termos e Política de Privacidade",
+  terms_text: DEFAULT_TERMS_TEXT,
+  terms_version: "v1",
+  terms_policy_url: "",
 };
 
 async function upsertSettings(entries: { key: string; value: string }[]) {
@@ -228,6 +246,68 @@ const AdminBusinessSettings = () => {
                 </div>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Termos de Aceite (LGPD) na calculadora ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Termos de Aceite (LGPD)</CardTitle>
+          </div>
+          <CardDescription>
+            Texto exibido na calculadora entre a confirmação do IMEI e a geração do cupom. O aceite e a versão são salvos no lead com data/hora.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="terms_title">Título da tela</Label>
+            <Input
+              id="terms_title"
+              value={form.terms_title}
+              onChange={(e) => set("terms_title", e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="terms_text">Texto dos termos</Label>
+            <Textarea
+              id="terms_text"
+              value={form.terms_text}
+              onChange={(e) => set("terms_text", e.target.value)}
+              rows={10}
+              className="mt-1 font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {form.terms_text.length.toLocaleString("pt-BR")} caracteres. Suporta quebras de linha.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="terms_version">Versão</Label>
+              <Input
+                id="terms_version"
+                value={form.terms_version}
+                onChange={(e) => set("terms_version", e.target.value)}
+                placeholder="v1"
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Atualize sempre que mudar o texto, para auditoria.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="terms_policy_url">Link da política completa (opcional)</Label>
+              <Input
+                id="terms_policy_url"
+                value={form.terms_policy_url}
+                onChange={(e) => set("terms_policy_url", e.target.value)}
+                placeholder="https://..."
+                className="mt-1"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

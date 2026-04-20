@@ -107,8 +107,10 @@ export function StepEvaluationChecklist({
 
   const { data: groupsConfig } = useEvaluationGroupsConfig();
 
-  // Ordered + visible sub-screens (drives the wizard navigation)
-  const orderedSubScreens = useMemo<SubScreen[]>(() => {
+  // Ordered + visible sub-screens (drives the wizard navigation).
+  // First pass uses only admin config; the data-aware version below also
+  // auto-skips empty screens (e.g. no conditions cadastradas).
+  const adminOrderedSubScreens = useMemo<SubScreen[]>(() => {
     const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];
     const visible = groupsConfig?.visible ?? { conditions: true, defects: true, rejection: true };
     return order.filter((g) => visible[g]).map((g) => GROUP_TO_SUB_SCREEN[g]);
@@ -121,13 +123,7 @@ export function StepEvaluationChecklist({
     label: string;
   }>({ open: false, title: "", label: "" });
 
-  // Sync initial sub-screen with the first visible one (in case admin disabled it)
-  useEffect(() => {
-    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
-      setSubScreen(orderedSubScreens[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderedSubScreens]);
+  // Sync moved below `orderedSubScreens` declaration to avoid TDZ.
 
   // Validation: which required ids (condition or damage category) are missing
   const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
@@ -180,19 +176,37 @@ export function StepEvaluationChecklist({
     },
   });
 
+  // Live catalog of valid brand/model IDs — used to ignore stale references in
+  // damage_categories.brand_ids/model_ids that point to deleted records.
+  const { data: validBrandIds = [] } = useQuery({
+    queryKey: ["valid_brand_ids"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brands").select("id");
+      if (error) throw error;
+      return (data ?? []).map((b: any) => b.id as string);
+    },
+  });
+  const { data: validModelIds = [] } = useQuery({
+    queryKey: ["valid_model_ids"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("device_models").select("id");
+      if (error) throw error;
+      return (data ?? []).map((m: any) => m.id as string);
+    },
+  });
+
   // ── Filter categories by selected device's brand AND model ──
-  // Rules:
-  //  - Root categories (parent_id null AND parent_option_id null): visible if
-  //      brand_ids empty (global) OR contains selectedBrandId, AND
-  //      model_ids empty (global) OR contains selectedModelId
-  //  - Subcategories (parent_id): inherit visibility from their root ancestor
-  //  - Conditional sub-questions (parent_option_id): inherit visibility from the category that owns the trigger option
+  // Stale brand_ids/model_ids (pointing to deleted records) are ignored, so a
+  // category whose only references no longer exist is treated as global.
   const damageCategories = useMemo(() => {
     if (damageCategoriesAll.length === 0) return [];
 
+    const validBrandSet = new Set(validBrandIds);
+    const validModelSet = new Set(validModelIds);
+
     const matchesScope = (c: DamageCategory) => {
-      const brandIds = c.brand_ids ?? [];
-      const modelIds = c.model_ids ?? [];
+      const brandIds = (c.brand_ids ?? []).filter((id) => validBrandSet.has(id));
+      const modelIds = (c.model_ids ?? []).filter((id) => validModelSet.has(id));
       const brandOk = brandIds.length === 0 || (!!selectedBrandId && brandIds.includes(selectedBrandId));
       const modelOk = modelIds.length === 0 || (!!selectedModelId && modelIds.includes(selectedModelId));
       return brandOk && modelOk;
@@ -235,18 +249,51 @@ export function StepEvaluationChecklist({
       const rootId = findRootId(c.id);
       return rootId ? rootVisibility.get(rootId) === true : false;
     });
-  }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId]);
+  }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId, validBrandIds, validModelIds]);
 
-  // Conditions (Tela A + rejections) filtered by model_ids (brand filter not used here today)
+  // Conditions (Tela A + rejections) filtered by model_ids (stale ids ignored)
   const filteredConditions = useMemo(() => {
+    const validModelSet = new Set(validModelIds);
     return conditions.filter((c) => {
-      const ids = c.model_ids ?? [];
+      const ids = (c.model_ids ?? []).filter((id) => validModelSet.has(id));
       return ids.length === 0 || (!!selectedModelId && ids.includes(selectedModelId));
     });
-  }, [conditions, selectedModelId]);
+  }, [conditions, selectedModelId, validModelIds]);
 
   const normalConditions = useMemo(() => filteredConditions.filter((c) => !c.is_rejected), [filteredConditions]);
   const rejectionReasons = useMemo(() => filteredConditions.filter((c) => c.is_rejected), [filteredConditions]);
+
+  // Data-aware ordered sub-screens: skip a screen entirely when it has no items
+  // to show. This avoids dead-end "Nenhuma X cadastrada" screens.
+  const orderedSubScreens = useMemo<SubScreen[]>(() => {
+    return adminOrderedSubScreens.filter((s) => {
+      if (s === "condition") return normalConditions.length > 0;
+      if (s === "damages") return damageCategories.length > 0;
+      if (s === "rejection") return rejectionReasons.length > 0;
+      return true;
+    });
+  }, [adminOrderedSubScreens, normalConditions, damageCategories, rejectionReasons]);
+
+  // Sync current sub-screen with the first visible/non-empty one
+  useEffect(() => {
+    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
+      setSubScreen(orderedSubScreens[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubScreens]);
+
+  // If literally nothing is cadastrado, skip the whole checklist
+  useEffect(() => {
+    if (
+      adminOrderedSubScreens.length > 0 &&
+      orderedSubScreens.length === 0 &&
+      conditions.length === 0 &&
+      damageCategoriesAll.length === 0
+    ) {
+      onSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubScreens, adminOrderedSubScreens, conditions, damageCategoriesAll]);
 
   // ── Selection helpers ──
   const selectCondition = (id: string) => {

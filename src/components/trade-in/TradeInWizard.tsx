@@ -6,6 +6,7 @@ import { useFlowSettings } from "@/hooks/use-flow-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
 import { StepImei } from "./StepImei";
+import { StepTerms } from "./StepTerms";
 import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
@@ -58,7 +59,7 @@ function loadPersisted(): PersistedState | null {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
     // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 5) return null;
+    if (parsed.step >= 6) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",
@@ -170,7 +171,7 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (step >= 5) return;
+    if (step >= 6) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -219,7 +220,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — Passo 0 = escolha do fluxo
-  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Resultado"];
+  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Termos", "Resultado"];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),
@@ -335,7 +336,7 @@ export function TradeInWizard() {
   );
 
   // After the checklist: just advance to the IMEI step. The actual evaluation
-  // submission happens after the IMEI is validated.
+  // submission happens after the IMEI is validated AND the terms are accepted.
   const handleChecklistDone = () => {
     if (!selectedDevice) return;
     if (!sanity.ok) {
@@ -343,7 +344,7 @@ export function TradeInWizard() {
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      setStep(5);
+      setStep(6);
       return;
     }
     setImeiServerError(null);
@@ -368,6 +369,26 @@ export function TradeInWizard() {
     }
 
     setData((prev) => ({ ...prev, imei }));
+    // Advance to the LGPD/terms screen — the actual evaluation submission
+    // (which generates the coupon) happens only after explicit acceptance.
+    setStep(5);
+  };
+
+  const handleAcceptTerms = async () => {
+    if (!selectedDevice) return;
+
+    // Register acceptance on the lead first (idempotent — server stamps now()).
+    if (leadId) {
+      try {
+        const { error } = await (supabase.rpc as any)("accept_lead_terms", {
+          _lead_id: leadId,
+          _version: "v1",
+        });
+        if (error) console.warn("Falha ao registrar aceite dos termos:", error);
+      } catch (err) {
+        console.warn("Falha ao registrar aceite dos termos:", err);
+      }
+    }
 
     const damageStrings: string[] = [];
     if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
@@ -389,7 +410,7 @@ export function TradeInWizard() {
         finalValue: pricing.finalValue,
         leadId,
         flowType: data.flowType ?? "trade",
-        imei,
+        imei: data.imei,
       });
     } catch (e: any) {
       if (e instanceof DuplicateImeiError) {
@@ -398,6 +419,7 @@ export function TradeInWizard() {
             data.flowType === "sale" ? "venda" : "troca"
           }. Use outro aparelho ou fale com um especialista.`,
         );
+        setStep(4);
         return;
       }
       toast.error("Não foi possível concluir a proposta. Tente novamente.");
@@ -409,7 +431,7 @@ export function TradeInWizard() {
     }
 
     clearPersisted();
-    setStep(5);
+    setStep(6);
   };
 
   const handleReset = () => {
@@ -450,10 +472,10 @@ export function TradeInWizard() {
 
   // When only one flow is enabled, the choice screen is hidden — adjust display.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  const visibleStepsCount = flowChoiceHidden ? 5 : 6; // inclui passo 0 (Negociação) e IMEI
+  const visibleStepsCount = flowChoiceHidden ? 6 : 7; // inclui passo 0 (Negociação), IMEI e Termos
   const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
   const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
-  const progressPct = step >= 5 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+  const progressPct = step >= 6 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
     step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
@@ -471,7 +493,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 5 && (
+        {step < 6 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -482,7 +504,7 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 5 && (
+          {step < 6 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {displayStepIndex + 1} de {totalProgressSteps}
@@ -538,6 +560,14 @@ export function TradeInWizard() {
             />
           )}
           {step === 5 && (
+            <StepTerms
+              isSubmitting={isSubmitting}
+              onBack={() => setStep(4)}
+              onAccept={handleAcceptTerms}
+              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+            />
+          )}
+          {step === 6 && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}

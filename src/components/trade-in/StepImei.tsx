@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
-import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone } from "lucide-react";
+import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { digitsOnly, formatImei, isValidImei } from "@/lib/imei";
+import { formatBRL } from "@/lib/trade-in-pricing";
+import type { FlowType } from "./StepChooseFlow";
 
 interface Props {
   initialValue: string;
@@ -16,6 +18,12 @@ interface Props {
   /** Limpa erro do servidor ao digitar. */
   onClearServerError?: () => void;
   flowLabel: "Trocar" | "Vender";
+  /** Valor estimado parcial calculado pela checklist. */
+  estimatedValue?: number;
+  /** Fluxo atual (para decidir se mostra o bônus de troca). */
+  flowType?: FlowType | null;
+  /** % do bônus de upgrade configurado em Negócio. */
+  upgradeBonusPercent?: number;
 }
 
 export function StepImei({
@@ -26,6 +34,9 @@ export function StepImei({
   serverError,
   onClearServerError,
   flowLabel,
+  estimatedValue,
+  flowType,
+  upgradeBonusPercent = 0,
 }: Props) {
   const [raw, setRaw] = useState(initialValue);
   const [touched, setTouched] = useState(false);

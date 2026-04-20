@@ -406,25 +406,11 @@ export function TradeInWizard() {
     }
 
     setData((prev) => ({ ...prev, imei }));
-    // Avança para Termos (LGPD)
-    setStep(6);
-  };
-
-  // Termos LGPD aceitos -> avança para coleta de endereço (NÃO submete ainda)
-  const handleAcceptTerms = async () => {
-    if (leadId) {
-      try {
-        const { error } = await (supabase.rpc as any)("accept_lead_terms", {
-          _lead_id: leadId,
-          _version: "v1",
-        });
-        if (error) console.warn("Falha ao registrar aceite dos termos:", error);
-      } catch (err) {
-        console.warn("Falha ao registrar aceite dos termos:", err);
-      }
-    }
+    // Pula direto para o endereço — termos LGPD foram unificados ao contrato.
     setStep(7);
   };
+
+  // (deprecated) handleAcceptTerms — termos foram unificados ao contrato.
 
   // Endereço salvo -> avança para Contrato
   const handleAddressConfirmed = async (address: AddressData) => {

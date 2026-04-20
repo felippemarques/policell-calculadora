@@ -269,6 +269,17 @@ export function StepEvaluationChecklist({
   const normalConditions = useMemo(() => filteredConditions.filter((c) => !c.is_rejected), [filteredConditions]);
   const rejectionReasons = useMemo(() => filteredConditions.filter((c) => c.is_rejected), [filteredConditions]);
 
+  // Data-aware ordered sub-screens: skip a screen entirely when it has no items
+  // to show. This avoids dead-end "Nenhuma X cadastrada" screens.
+  const orderedSubScreens = useMemo<SubScreen[]>(() => {
+    return adminOrderedSubScreens.filter((s) => {
+      if (s === "condition") return normalConditions.length > 0;
+      if (s === "damages") return damageCategories.length > 0;
+      if (s === "rejection") return rejectionReasons.length > 0;
+      return true;
+    });
+  }, [adminOrderedSubScreens, normalConditions, damageCategories, rejectionReasons]);
+
   // ── Selection helpers ──
   const selectCondition = (id: string) => {
     onAnswersChange({ ...answers, conditionId: id });

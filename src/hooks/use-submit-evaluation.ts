@@ -112,10 +112,18 @@ export function useSubmitEvaluation() {
           coupon_code: null,
           status: "pending",
           flow_type: data.flowType ?? "trade",
+          imei: data.imei ?? null,
         } as any)
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) {
+        // Postgres unique violation when the same IMEI already has an active
+        // evaluation in this flow.
+        if ((error as any).code === "23505") {
+          throw new DuplicateImeiError();
+        }
+        throw error;
+      }
 
       const evaluationId = inserted.id;
 

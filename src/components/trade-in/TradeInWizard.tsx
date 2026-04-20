@@ -241,7 +241,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — IMPORTANTE: índices alinhados com setStep abaixo.
-  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 Termos · 7 Endereço · 8 Contrato · 9 Resultado
+  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 (DEPRECATED) · 7 Endereço · 8 Contrato · 9 Resultado
   const steps = [
     "Negociação",
     "Seus Dados",
@@ -249,7 +249,7 @@ export function TradeInWizard() {
     "Avaliação",
     "Cupom Especial",
     "IMEI",
-    "Termos",
+    "—",
     "Endereço",
     "Contrato",
     "Resultado",

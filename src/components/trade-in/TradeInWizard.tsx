@@ -15,6 +15,7 @@ import {
   type SubScreen,
 } from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
+import { RestartProposalButton } from "./RestartProposalButton";
 import { Smartphone, TrendingUp } from "lucide-react";
 import {
   ChecklistAnswers,
@@ -463,6 +464,24 @@ export function TradeInWizard() {
     setSubScreen("condition");
   };
 
+  /**
+   * "Refazer proposta" — mantém nome, email e telefone (e o leadId já criado),
+   * mas zera aparelho, IMEI e respostas. Volta para a escolha do aparelho.
+   */
+  const handleRestartProposal = () => {
+    setData((prev) => ({
+      ...prev,
+      deviceId: "",
+      colorId: null,
+      imei: "",
+      answers: emptyAnswers(),
+    }));
+    setResult(null);
+    setImeiServerError(null);
+    setSubScreen("condition");
+    setStep(2);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -515,11 +534,16 @@ export function TradeInWizard() {
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
           {step < 6 && (
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {displayStepIndex + 1} de {totalProgressSteps}
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
+              <div className="flex items-center gap-2">
+                {step >= 2 && step <= 5 && data.name && data.email && (
+                  <RestartProposalButton onConfirm={handleRestartProposal} />
+                )}
+                <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
+              </div>
             </div>
           )}
 

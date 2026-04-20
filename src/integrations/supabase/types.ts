@@ -864,6 +864,23 @@ export type Database = {
         Args: { _email: string; _name: string; _phone: string }
         Returns: string
       }
+      create_public_evaluation: {
+        Args: {
+          _base_price: number
+          _condition_discount: number
+          _customer_email: string
+          _customer_name: string
+          _customer_phone: string
+          _damages: Json
+          _device_condition: string
+          _device_id: string
+          _final_value: number
+          _flow_type: string
+          _imei?: string
+          _total_deductions: number
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

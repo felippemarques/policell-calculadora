@@ -97,7 +97,15 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
       const { data: rows, error } = await supabase
         .from("lp_settings")
         .select("key,value")
-        .in("key", ["business_contract_template", "business_store_name"]);
+        .in("key", [
+          "business_contract_terms",
+          "business_contract_template",
+          "business_store_name",
+          "terms_title",
+          "terms_text",
+          "terms_version",
+          "terms_policy_url",
+        ]);
       if (error) throw error;
       const map: Record<string, string> = {};
       (rows ?? []).forEach((r: any) => (map[r.key] = r.value));
@@ -105,13 +113,24 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
     },
   });
 
-  const template =
-    settings?.business_contract_template?.trim() || DEFAULT_TEMPLATE;
   const storeName = settings?.business_store_name?.trim() || data.storeName;
+  const lgpdTitle = settings?.terms_title?.trim() || "Termos e Política de Privacidade";
+  const lgpdText = settings?.terms_text?.trim() || "";
+  const contractTerms =
+    settings?.business_contract_terms?.trim() ||
+    settings?.business_contract_template?.trim() ||
+    DEFAULT_TEMPLATE;
+  const contractVersion = settings?.terms_version?.trim() || "v1";
+  const policyUrl = settings?.terms_policy_url?.trim() || "";
+
+  const unifiedTemplate = useMemo(() => {
+    if (!lgpdText) return contractTerms;
+    return `${lgpdTitle}\n\n${lgpdText}\n\n${contractTerms}`;
+  }, [lgpdTitle, lgpdText, contractTerms]);
 
   const renderedText = useMemo(
-    () => renderContractText(template, { ...data, storeName }),
-    [template, data, storeName],
+    () => renderContractText(unifiedTemplate, { ...data, storeName }),
+    [unifiedTemplate, data, storeName],
   );
 
   const handleDownload = () => {
@@ -128,7 +147,7 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
           Contrato e Termo LGPD
         </h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Documento único com a proposta comercial, declarações e o consentimento LGPD.
+          Documento único com os dizeres configurados no admin para LGPD e contrato.
           Você pode baixar uma cópia em PDF antes de aceitar.
         </p>
       </div>
@@ -138,7 +157,7 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Contrato unificado
+              Contrato unificado · versão {contractVersion}
             </span>
           </div>
           <Button
@@ -155,6 +174,16 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
           <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans">
             {renderedText}
           </pre>
+          {policyUrl && (
+            <a
+              href={policyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-xs text-primary underline underline-offset-2"
+            >
+              Ver política completa
+            </a>
+          )}
         </ScrollArea>
       </div>
 

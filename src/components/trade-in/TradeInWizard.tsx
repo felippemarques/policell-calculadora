@@ -441,9 +441,15 @@ export function TradeInWizard() {
 
     if (leadId) {
       try {
+        const { data: versionRow } = await supabase
+          .from("lp_settings")
+          .select("value")
+          .eq("key", "terms_version")
+          .maybeSingle();
+
         const { error } = await (supabase.rpc as any)("accept_lead_contract", {
           _lead_id: leadId,
-          _version: "v1",
+          _version: versionRow?.value?.trim() || "v1",
         });
         if (error) console.warn("Falha ao registrar aceite do contrato:", error);
       } catch (err) {

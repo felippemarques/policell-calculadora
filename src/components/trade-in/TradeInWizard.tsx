@@ -7,7 +7,7 @@ import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
 import { StepImei } from "./StepImei";
-import { StepTerms } from "./StepTerms";
+// StepTerms foi unificado ao StepContractPreview (LGPD + contrato em um único documento).
 import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
@@ -241,7 +241,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — IMPORTANTE: índices alinhados com setStep abaixo.
-  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 Termos · 7 Endereço · 8 Contrato · 9 Resultado
+  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 (DEPRECATED) · 7 Endereço · 8 Contrato · 9 Resultado
   const steps = [
     "Negociação",
     "Seus Dados",
@@ -249,7 +249,7 @@ export function TradeInWizard() {
     "Avaliação",
     "Cupom Especial",
     "IMEI",
-    "Termos",
+    "—",
     "Endereço",
     "Contrato",
     "Resultado",
@@ -406,25 +406,11 @@ export function TradeInWizard() {
     }
 
     setData((prev) => ({ ...prev, imei }));
-    // Avança para Termos (LGPD)
-    setStep(6);
-  };
-
-  // Termos LGPD aceitos -> avança para coleta de endereço (NÃO submete ainda)
-  const handleAcceptTerms = async () => {
-    if (leadId) {
-      try {
-        const { error } = await (supabase.rpc as any)("accept_lead_terms", {
-          _lead_id: leadId,
-          _version: "v1",
-        });
-        if (error) console.warn("Falha ao registrar aceite dos termos:", error);
-      } catch (err) {
-        console.warn("Falha ao registrar aceite dos termos:", err);
-      }
-    }
+    // Pula direto para o endereço — termos LGPD foram unificados ao contrato.
     setStep(7);
   };
+
+  // (deprecated) handleAcceptTerms — termos foram unificados ao contrato.
 
   // Endereço salvo -> avança para Contrato
   const handleAddressConfirmed = async (address: AddressData) => {
@@ -565,14 +551,15 @@ export function TradeInWizard() {
 
   // Quando só um fluxo está habilitado, esconde passo 0 -> total visível diminui em 1.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  // Total possível: 9 (0 a 8 antes do resultado). Sem escolha = 8.
-  const baseTotal = flowChoiceHidden ? 8 : 9;
-  // Se NÃO houver oferta especial, descontamos 1 (passo 4 some).
+  // Total possível: 8 visíveis (0..8 menos o passo 6 desativado).
+  // Sem escolha de fluxo: -1. Sem oferta especial (passo 4): -1.
+  const baseTotal = flowChoiceHidden ? 7 : 8;
   const visibleStepsCount = baseTotal - (showSpecialOffer ? 0 : 1);
   const displayStepIndex = (() => {
     let s = step;
     if (flowChoiceHidden && s > 0) s -= 1;
     if (!showSpecialOffer && step > 4) s -= 1;
+    if (step > 6) s -= 1; // passo 6 (Termos) foi removido
     return Math.max(0, s);
   })();
   const totalProgressSteps = visibleStepsCount; // resultado fica de fora
@@ -703,19 +690,12 @@ export function TradeInWizard() {
               upgradeBonusPercent={upgradeBonusPercent}
             />
           )}
-          {step === 6 && (
-            <StepTerms
-              isSubmitting={false}
-              onBack={() => setStep(5)}
-              onAccept={handleAcceptTerms}
-              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
-            />
-          )}
+          {/* Step 6 (Termos) foi unificado ao Contrato (step 8). */}
           {step === 7 && (
             <StepAddress
               initial={data.address}
               isSubmitting={false}
-              onBack={() => setStep(6)}
+              onBack={() => setStep(5)}
               onConfirm={handleAddressConfirmed}
             />
           )}

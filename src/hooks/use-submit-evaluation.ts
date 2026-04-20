@@ -131,16 +131,17 @@ export function useSubmitEvaluation() {
       const settings = await fetchCouponSettings();
       const couponCode = await callN8n(settings, evaluationId, data);
 
-      // 3. Update evaluation with coupon code + id (or keep null if n8n failed)
+      // 3. Attach coupon via SECURITY DEFINER RPC (anon can't UPDATE directly)
       if (couponCode) {
-        await supabase
-          .from("evaluations")
-          .update({
-            coupon_code: couponCode.coupon_code,
-            coupon_id: couponCode.coupon_id,
-            status: "completed",
-          })
-          .eq("id", evaluationId);
+        const { error: attachErr } = await (supabase.rpc as any)(
+          "attach_evaluation_coupon",
+          {
+            _evaluation_id: evaluationId,
+            _coupon_code: couponCode.coupon_code,
+            _coupon_id: couponCode.coupon_id,
+          },
+        );
+        if (attachErr) console.warn("Falha ao anexar cupom:", attachErr);
       }
 
       setResult({ finalValue: data.finalValue, couponCode: couponCode?.coupon_code ?? null });

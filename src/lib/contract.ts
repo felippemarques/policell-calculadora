@@ -32,6 +32,8 @@ const DEFAULTS = {
   bonus_percent: "0",
   final_value: "0,00",
   flow_label: "Troca",
+  flow_label_upper: "TROCA",
+  flow_label_lower: "troca",
   accepted_at: "—",
 };
 
@@ -51,6 +53,7 @@ function fmtDate(date: Date) {
 
 /** Aplica os tokens {{...}} no template. */
 export function renderContractText(template: string, data: ContractData): string {
+  const flowLabel = data.flowLabel || DEFAULTS.flow_label;
   const map: Record<string, string> = {
     ...DEFAULTS,
     store_name: data.storeName || DEFAULTS.store_name,
@@ -64,7 +67,9 @@ export function renderContractText(template: string, data: ContractData): string
     deductions: fmtMoneyPlain(data.deductions),
     bonus_percent: String(data.bonusPercent ?? 0),
     final_value: fmtMoneyPlain(data.finalValue),
-    flow_label: data.flowLabel || DEFAULTS.flow_label,
+    flow_label: flowLabel,
+    flow_label_upper: flowLabel.toUpperCase(),
+    flow_label_lower: flowLabel.toLowerCase(),
     accepted_at: fmtDate(data.acceptedAt ?? new Date()),
   };
   return template.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_m, key) => map[key] ?? `{{${key}}}`);

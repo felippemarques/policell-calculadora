@@ -16,6 +16,9 @@ import {
   type SubScreen,
 } from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
+import { StepSpecialOffer } from "./StepSpecialOffer";
+import { StepAddress, type AddressData } from "./StepAddress";
+import { StepContractPreview } from "./StepContractPreview";
 import { RestartProposalButton } from "./RestartProposalButton";
 import { Smartphone, TrendingUp } from "lucide-react";
 import {
@@ -41,10 +44,22 @@ export interface WizardData {
   /** IMEI (15 digits, validated locally + server-side). */
   imei: string;
   answers: ChecklistAnswers;
+  address: AddressData;
 }
 
+const emptyAddress = (): AddressData => ({
+  zip: "",
+  street: "",
+  number: "",
+  complement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+});
+
 // ── Persistence ──
-const STORAGE_KEY = "pollicell.tradein.progress.v2";
+const STORAGE_KEY = "pollicell.tradein.progress.v3";
+const RESULT_STEP = 9;
 
 interface PersistedState {
   step: number;
@@ -60,8 +75,7 @@ function loadPersisted(): PersistedState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
-    // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 6) return null;
+    if (parsed.step >= RESULT_STEP) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",
@@ -74,6 +88,7 @@ function loadPersisted(): PersistedState | null {
         colorId: parsed.data?.colorId ?? null,
         imei: parsed.data?.imei ?? "",
         answers: parsed.data?.answers ?? emptyAnswers(),
+        address: parsed.data?.address ?? emptyAddress(),
       },
       leadId: parsed.leadId ?? null,
     };
@@ -106,6 +121,7 @@ export function TradeInWizard() {
       colorId: null,
       imei: "",
       answers: emptyAnswers(),
+      address: emptyAddress(),
     },
   );
 
@@ -126,10 +142,6 @@ export function TradeInWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync flow state with current settings.
-  // - When only one flow is enabled → auto-pick it and skip step 0.
-  // - When both flows are enabled → garante a tela de escolha (step 0) apenas
-  //   quando NÃO há fluxo escolhido ainda. Após a escolha, respeita o avanço.
   useEffect(() => {
     if (!flowSettings) return;
 
@@ -141,7 +153,6 @@ export function TradeInWizard() {
       return;
     }
 
-    // Ambos os fluxos habilitados — só força step 0 se ainda não há escolha.
     if (
       flowSettings.trade.enabled &&
       flowSettings.sale.enabled &&
@@ -172,7 +183,7 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (step >= 6) return;
+    if (step >= RESULT_STEP) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -229,8 +240,20 @@ export function TradeInWizard() {
 
   const isLoading = loadingDevices || loadingFlowSettings;
 
-  // Step labels — Passo 0 = escolha do fluxo
-  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Termos", "Resultado"];
+  // Step labels — IMPORTANTE: índices alinhados com setStep abaixo.
+  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 Termos · 7 Endereço · 8 Contrato · 9 Resultado
+  const steps = [
+    "Negociação",
+    "Seus Dados",
+    "Seu Aparelho",
+    "Avaliação",
+    "Cupom Especial",
+    "IMEI",
+    "Termos",
+    "Endereço",
+    "Contrato",
+    "Resultado",
+  ];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),
@@ -238,7 +261,6 @@ export function TradeInWizard() {
   );
   const basePrice = resolveBasePrice(selectedDevice as any, data.flowType);
 
-  // Resolve the model_id of the selected device
   const { data: selectedModelId = null } = useQuery({
     queryKey: ["selected-device-model-id", data.deviceId],
     enabled: !!data.deviceId,
@@ -253,13 +275,17 @@ export function TradeInWizard() {
     },
   });
 
-  // Live pricing breakdown
   const pricing = useMemo(
     () => computePricing(basePrice, data.answers, conditions, damageOptions, damageCategories),
     [basePrice, data.answers, conditions, damageOptions, damageCategories],
   );
 
-  // ── Flow handler (Passo 0) ──
+  // Define se a tela "Cupom Especial" deve aparecer.
+  const upgradeBonusPercent = businessSettings?.upgradeBonusPercent ?? 0;
+  const showSpecialOffer =
+    data.flowType === "trade" && upgradeBonusPercent > 0 && pricing.finalValue > 0 && !pricing.isRejected;
+
+  // ── Handlers ──
   const handleChooseFlow = (type: FlowType) => {
     setData((prev) => ({ ...prev, flowType: type }));
     if (leadId) {
@@ -268,7 +294,6 @@ export function TradeInWizard() {
     setStep(1);
   };
 
-  // ── Lead handlers ──
   const handleCreateLead = async () => {
     const id = await createLead({
       customer_name: data.name,
@@ -304,7 +329,6 @@ export function TradeInWizard() {
     setStep(3);
   };
 
-  // Silent assessment update on every answers change
   useEffect(() => {
     if (!leadId || step !== 3) return;
     const timer = setTimeout(() => {
@@ -346,8 +370,7 @@ export function TradeInWizard() {
     [selectedDevice, data.answers, conditions, damageOptions, damageCategories, validBrandIds],
   );
 
-  // After the checklist: just advance to the IMEI step. The actual evaluation
-  // submission happens after the IMEI is validated AND the terms are accepted.
+  // Após o checklist, decide se vai para Cupom Especial (4) ou direto para IMEI (5).
   const handleChecklistDone = () => {
     if (!selectedDevice) return;
     if (!sanity.ok) {
@@ -355,18 +378,21 @@ export function TradeInWizard() {
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      setStep(6);
+      setStep(RESULT_STEP);
       return;
     }
     setImeiServerError(null);
-    setStep(4);
+    if (showSpecialOffer) {
+      setStep(4);
+    } else {
+      setStep(5);
+    }
   };
 
   const handleConfirmImei = async (imei: string) => {
     if (!selectedDevice) return;
     setImeiServerError(null);
 
-    // Persist IMEI on the lead (server validates Luhn + bypasses RLS).
     if (leadId) {
       try {
         await setImei(leadId, imei);
@@ -380,15 +406,12 @@ export function TradeInWizard() {
     }
 
     setData((prev) => ({ ...prev, imei }));
-    // Advance to the LGPD/terms screen — the actual evaluation submission
-    // (which generates the coupon) happens only after explicit acceptance.
-    setStep(5);
+    // Avança para Termos (LGPD)
+    setStep(6);
   };
 
+  // Termos LGPD aceitos -> avança para coleta de endereço (NÃO submete ainda)
   const handleAcceptTerms = async () => {
-    if (!selectedDevice) return;
-
-    // Register acceptance on the lead first (idempotent — server stamps now()).
     if (leadId) {
       try {
         const { error } = await (supabase.rpc as any)("accept_lead_terms", {
@@ -398,6 +421,47 @@ export function TradeInWizard() {
         if (error) console.warn("Falha ao registrar aceite dos termos:", error);
       } catch (err) {
         console.warn("Falha ao registrar aceite dos termos:", err);
+      }
+    }
+    setStep(7);
+  };
+
+  // Endereço salvo -> avança para Contrato
+  const handleAddressConfirmed = async (address: AddressData) => {
+    setData((prev) => ({ ...prev, address }));
+    if (leadId) {
+      try {
+        const { error } = await (supabase.rpc as any)("update_lead_address", {
+          _lead_id: leadId,
+          _zip: address.zip,
+          _street: address.street,
+          _number: address.number,
+          _complement: address.complement,
+          _neighborhood: address.neighborhood,
+          _city: address.city,
+          _state: address.state,
+        });
+        if (error) console.warn("Falha ao salvar endereço:", error);
+      } catch (err) {
+        console.warn("Falha ao salvar endereço:", err);
+      }
+    }
+    setStep(8);
+  };
+
+  // Contrato aceito -> registra aceite + submete avaliação (gera cupom)
+  const handleAcceptContract = async () => {
+    if (!selectedDevice) return;
+
+    if (leadId) {
+      try {
+        const { error } = await (supabase.rpc as any)("accept_lead_contract", {
+          _lead_id: leadId,
+          _version: "v1",
+        });
+        if (error) console.warn("Falha ao registrar aceite do contrato:", error);
+      } catch (err) {
+        console.warn("Falha ao registrar aceite do contrato:", err);
       }
     }
 
@@ -430,7 +494,7 @@ export function TradeInWizard() {
             data.flowType === "sale" ? "venda" : "troca"
           }. Use outro aparelho ou fale com um especialista.`,
         );
-        setStep(4);
+        setStep(5);
         return;
       }
       toast.error("Não foi possível concluir a proposta. Tente novamente.");
@@ -442,7 +506,7 @@ export function TradeInWizard() {
     }
 
     clearPersisted();
-    setStep(6);
+    setStep(RESULT_STEP);
   };
 
   const handleReset = () => {
@@ -456,6 +520,7 @@ export function TradeInWizard() {
       colorId: null,
       imei: "",
       answers: emptyAnswers(),
+      address: emptyAddress(),
     });
     setResult(null);
     setLeadId(null);
@@ -464,12 +529,6 @@ export function TradeInWizard() {
     setSubScreen("condition");
   };
 
-  /**
-   * "Refazer proposta" — mantém nome, email e telefone (e o leadId já criado),
-   * mas zera fluxo, aparelho, IMEI e respostas. Volta para a escolha do fluxo
-   * (step 0) quando os dois estão habilitados; senão, volta para a escolha do
-   * aparelho.
-   */
   const handleRestartProposal = () => {
     const goToFlowChoice =
       !!flowSettings && flowSettings.trade.enabled && flowSettings.sale.enabled;
@@ -480,6 +539,7 @@ export function TradeInWizard() {
       colorId: null,
       imei: "",
       answers: emptyAnswers(),
+      address: emptyAddress(),
     }));
     setResult(null);
     setImeiServerError(null);
@@ -495,7 +555,6 @@ export function TradeInWizard() {
     );
   }
 
-  // If no flows enabled, render a simple message
   if (flowSettings && !flowSettings.anyEnabled) {
     return (
       <div className="w-full max-w-2xl mx-auto px-4 md:px-0 py-10 text-center">
@@ -504,18 +563,43 @@ export function TradeInWizard() {
     );
   }
 
-  // When only one flow is enabled, the choice screen is hidden — adjust display.
+  // Quando só um fluxo está habilitado, esconde passo 0 -> total visível diminui em 1.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  const visibleStepsCount = flowChoiceHidden ? 6 : 7; // inclui passo 0 (Negociação), IMEI e Termos
-  const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
-  const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
-  const progressPct = step >= 6 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+  // Total possível: 9 (0 a 8 antes do resultado). Sem escolha = 8.
+  const baseTotal = flowChoiceHidden ? 8 : 9;
+  // Se NÃO houver oferta especial, descontamos 1 (passo 4 some).
+  const visibleStepsCount = baseTotal - (showSpecialOffer ? 0 : 1);
+  const displayStepIndex = (() => {
+    let s = step;
+    if (flowChoiceHidden && s > 0) s -= 1;
+    if (!showSpecialOffer && step > 4) s -= 1;
+    return Math.max(0, s);
+  })();
+  const totalProgressSteps = visibleStepsCount; // resultado fica de fora
+  const progressPct =
+    step >= RESULT_STEP
+      ? 100
+      : Math.round(((displayStepIndex + 1) / (visibleStepsCount + 1)) * 100);
 
   const showPriceFooter =
     (businessSettings?.showRealtimeDeductions ?? true) &&
     step === 3 &&
     (subScreen === "condition" || subScreen === "damages") &&
     basePrice > 0;
+
+  // Build contract data once (used by step 8)
+  const deviceLabel = selectedDevice
+    ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
+    : "";
+  const addrLine = (() => {
+    const a = data.address;
+    if (!a.street) return "—";
+    const line1 = [a.street, a.number].filter(Boolean).join(", ");
+    const line2 = [a.complement, a.neighborhood].filter(Boolean).join(" — ");
+    const line3 = [a.city, a.state].filter(Boolean).join("/");
+    const cep = a.zip ? `CEP ${a.zip.replace(/(\d{5})(\d{3})/, "$1-$2")}` : "";
+    return [line1, line2, line3, cep].filter(Boolean).join(" · ");
+  })();
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">
@@ -530,7 +614,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 6 && (
+        {step < RESULT_STEP && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -541,7 +625,7 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 6 && (
+          {step < RESULT_STEP && (
             <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
               <div className="flex flex-col">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
@@ -551,7 +635,7 @@ export function TradeInWizard() {
                 </span>
                 <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
               </div>
-              {step >= 1 && step <= 5 && data.name && data.email && (
+              {step >= 1 && step <= 8 && data.name && data.email && (
                 <RestartProposalButton
                   prominent
                   onConfirm={handleRestartProposal}
@@ -578,7 +662,7 @@ export function TradeInWizard() {
               devices={devices || []}
               onChange={(d) => setData({ ...data, ...d })}
               onNext={handleDeviceSelected}
-              onBack={() => (flowChoiceHidden ? setStep(1) : setStep(1))}
+              onBack={() => setStep(1)}
             />
           )}
           {step === 3 && (
@@ -597,29 +681,68 @@ export function TradeInWizard() {
               onProgressChange={(current, total) => setChecklistProgress({ current, total })}
             />
           )}
-          {step === 4 && (
+          {step === 4 && showSpecialOffer && (
+            <StepSpecialOffer
+              baseValue={pricing.finalValue}
+              bonusPercent={upgradeBonusPercent}
+              onBack={() => setStep(3)}
+              onContinue={() => setStep(5)}
+            />
+          )}
+          {step === 5 && (
             <StepImei
               initialValue={data.imei}
               isSubmitting={isSubmitting}
-              onBack={() => setStep(3)}
+              onBack={() => setStep(showSpecialOffer ? 4 : 3)}
               onConfirm={handleConfirmImei}
               serverError={imeiServerError}
               onClearServerError={() => setImeiServerError(null)}
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
               estimatedValue={pricing.finalValue}
               flowType={data.flowType}
-              upgradeBonusPercent={businessSettings?.upgradeBonusPercent ?? 0}
+              upgradeBonusPercent={upgradeBonusPercent}
             />
           )}
-          {step === 5 && (
+          {step === 6 && (
             <StepTerms
-              isSubmitting={isSubmitting}
-              onBack={() => setStep(4)}
+              isSubmitting={false}
+              onBack={() => setStep(5)}
               onAccept={handleAcceptTerms}
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
             />
           )}
-          {step === 6 && (
+          {step === 7 && (
+            <StepAddress
+              initial={data.address}
+              isSubmitting={false}
+              onBack={() => setStep(6)}
+              onConfirm={handleAddressConfirmed}
+            />
+          )}
+          {step === 8 && (
+            <StepContractPreview
+              data={{
+                storeName: "Pollicell",
+                customerName: data.name,
+                customerEmail: data.email,
+                customerPhone: data.phone,
+                customerAddress: addrLine,
+                deviceLabel,
+                imei: data.imei,
+                basePrice: pricing.basePrice,
+                deductions:
+                  pricing.fixedDeductions +
+                  Math.round(pricing.basePrice * (pricing.percentDiscount / 100) * 100) / 100,
+                bonusPercent: data.flowType === "trade" ? upgradeBonusPercent : 0,
+                finalValue: pricing.finalValue,
+                flowLabel: data.flowType === "sale" ? "Venda" : "Troca",
+              }}
+              isSubmitting={isSubmitting}
+              onBack={() => setStep(7)}
+              onAccept={handleAcceptContract}
+            />
+          )}
+          {step === RESULT_STEP && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}
@@ -627,11 +750,7 @@ export function TradeInWizard() {
                 sanity={sanity}
                 flowType={data.flowType}
                 customerName={data.name}
-                deviceLabel={
-                  selectedDevice
-                    ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
-                    : ""
-                }
+                deviceLabel={deviceLabel}
               />
             </div>
           )}

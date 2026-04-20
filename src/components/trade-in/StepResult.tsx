@@ -183,6 +183,39 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
         </CardContent>
       </Card>
 
+      {showBonus && (
+        <div
+          className={`relative overflow-hidden rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-primary/10 to-accent/15 p-5 transition-all duration-700 ${
+            bonusVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
+          }`}
+        >
+          <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-accent/20 blur-2xl animate-pulse" />
+          <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-primary/20 blur-2xl animate-pulse" />
+
+          <div className="relative flex items-start gap-3">
+            <div className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-full bg-accent/25 animate-bounce">
+              <Gift className="h-5 w-5 text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Bônus exclusivo de troca</span>
+              </div>
+              <p className="mt-1 text-base font-bold text-foreground leading-snug">
+                Você ganhou{" "}
+                <span className="text-2xl text-accent">
+                  +{bonusPercent.toLocaleString("pt-BR")}%
+                </span>{" "}
+                extra para trocar agora seu celular!
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aplicado automaticamente ao usar o cupom para um upgrade.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {isSale ? (
           <>

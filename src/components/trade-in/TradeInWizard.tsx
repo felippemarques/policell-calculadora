@@ -116,12 +116,11 @@ export function TradeInWizard() {
 
   // Sync flow state with current settings.
   // - When only one flow is enabled → auto-pick it and skip step 0.
-  // - When both flows are enabled but the user has a stale `flowType` from a
-  //   previous session (when only one was enabled), send them back to step 0
-  //   so they can actually choose.
+  // - When both flows are enabled → keep the user's explicit choice.
+  //   Only clear a stale early-session selection restored from persistence.
   useEffect(() => {
     if (!flowSettings) return;
-    // Single-flow mode → auto-select.
+
     if (flowSettings.onlyEnabled) {
       if (data.flowType !== flowSettings.onlyEnabled) {
         setData((prev) => ({ ...prev, flowType: flowSettings.onlyEnabled }));
@@ -129,22 +128,20 @@ export function TradeInWizard() {
       if (step === 0) setStep(1);
       return;
     }
-    // Both flows enabled → user MUST pick.
-    if (flowSettings.trade.enabled && flowSettings.sale.enabled) {
-      // Never chose anything → make sure we're on the choice screen.
-      if (!data.flowType && step !== 0) {
-        setStep(0);
-        return;
-      }
-      // Stale auto-selection from a previous single-flow session: user has a
-      // `flowType` saved but never created a lead and is still at the very
-      // start. Clear it and force the choice screen.
-      if (data.flowType && step <= 1 && !leadId) {
-        setData((prev) => ({ ...prev, flowType: null }));
-        setStep(0);
-      }
+
+    if (
+      flowSettings.trade.enabled &&
+      flowSettings.sale.enabled &&
+      persisted?.data?.flowType &&
+      (persisted.step ?? 0) <= 1 &&
+      !persisted?.leadId &&
+      data.flowType === persisted.data.flowType &&
+      step === (persisted.step ?? 0)
+    ) {
+      setData((prev) => ({ ...prev, flowType: null }));
+      setStep(0);
     }
-  }, [flowSettings, step, data.flowType, leadId]);
+  }, [flowSettings, step, data.flowType, persisted]);
 
   // Catalog-sync guard
   useEffect(() => {

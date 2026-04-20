@@ -59,7 +59,7 @@ function loadPersisted(): PersistedState | null {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
     // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 5) return null;
+    if (parsed.step >= 6) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",

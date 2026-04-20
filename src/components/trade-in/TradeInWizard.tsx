@@ -15,6 +15,7 @@ import {
   type SubScreen,
 } from "./StepEvaluationChecklist";
 import { StepResult } from "./StepResult";
+import { RestartProposalButton } from "./RestartProposalButton";
 import { Smartphone, TrendingUp } from "lucide-react";
 import {
   ChecklistAnswers,

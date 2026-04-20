@@ -16,6 +16,7 @@ import AdminVideos from "./pages/admin/AdminVideos";
 import AdminCatalog from "./pages/admin/AdminCatalog";
 
 import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminCustomerView from "./pages/admin/AdminCustomerView";
 import AdminEvaluations from "./pages/admin/AdminEvaluations";
 import AdminCouponSettings from "./pages/admin/AdminCouponSettings";
 import AdminBusinessSettings from "./pages/admin/AdminBusinessSettings";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="catalogo" element={<AdminCatalog />} />
               
               <Route path="clientes" element={<AdminCustomers />} />
+              <Route path="visao-cliente" element={<AdminCustomerView />} />
               <Route path="avaliacoes" element={<AdminEvaluations />} />
               <Route path="cupom" element={<AdminCouponSettings />} />
               <Route path="negocio" element={<AdminBusinessSettings />} />

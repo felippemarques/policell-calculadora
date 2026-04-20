@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
-import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone } from "lucide-react";
+import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { digitsOnly, formatImei, isValidImei } from "@/lib/imei";
+import { formatBRL } from "@/lib/trade-in-pricing";
+import type { FlowType } from "./StepChooseFlow";
 
 interface Props {
   initialValue: string;
@@ -16,6 +18,12 @@ interface Props {
   /** Limpa erro do servidor ao digitar. */
   onClearServerError?: () => void;
   flowLabel: "Trocar" | "Vender";
+  /** Valor estimado parcial calculado pela checklist. */
+  estimatedValue?: number;
+  /** Fluxo atual (para decidir se mostra o bônus de troca). */
+  flowType?: FlowType | null;
+  /** % do bônus de upgrade configurado em Negócio. */
+  upgradeBonusPercent?: number;
 }
 
 export function StepImei({
@@ -26,6 +34,9 @@ export function StepImei({
   serverError,
   onClearServerError,
   flowLabel,
+  estimatedValue,
+  flowType,
+  upgradeBonusPercent = 0,
 }: Props) {
   const [raw, setRaw] = useState(initialValue);
   const [touched, setTouched] = useState(false);
@@ -83,6 +94,49 @@ export function StepImei({
           </div>
         </div>
       </Card>
+
+      {typeof estimatedValue === "number" && estimatedValue > 0 && (
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/10 p-4 md:p-5 animate-fade-in">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">
+                  Sua proposta até aqui
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {flowType === "sale" ? "Em dinheiro" : "Em crédito para troca"}
+                </p>
+              </div>
+            </div>
+            <p className="text-2xl md:text-3xl font-bold tabular-nums text-foreground">
+              {formatBRL(estimatedValue)}
+            </p>
+          </div>
+
+          {flowType === "trade" && upgradeBonusPercent > 0 && (
+            <div className="mt-4 pt-4 border-t border-primary/15 flex items-start gap-3">
+              <div className="h-9 w-9 rounded-full bg-accent/25 flex items-center justify-center flex-shrink-0 animate-bounce">
+                <Gift className="h-4 w-4 text-accent" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-accent">
+                  <Sparkles className="h-3 w-3" /> Bônus de troca
+                </div>
+                <p className="text-sm font-semibold text-foreground leading-snug mt-0.5">
+                  Confirme agora e ganhe{" "}
+                  <span className="text-accent font-bold">
+                    +{upgradeBonusPercent.toLocaleString("pt-BR")}%
+                  </span>{" "}
+                  extra para trocar seu celular!
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="imei" className="text-sm font-medium">

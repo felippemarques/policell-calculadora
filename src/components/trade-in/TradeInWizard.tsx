@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDevices, resolveBasePrice } from "@/hooks/use-trade-in-data";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
+import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
 import { StepImei } from "./StepImei";
@@ -110,6 +111,7 @@ export function TradeInWizard() {
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { data: flowSettings, isLoading: loadingFlowSettings } = useFlowSettings();
+  const { data: businessSettings } = useBusinessSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();
 
@@ -510,7 +512,10 @@ export function TradeInWizard() {
   const progressPct = step >= 6 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
-    step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
+    (businessSettings?.showRealtimeDeductions ?? true) &&
+    step === 3 &&
+    (subScreen === "condition" || subScreen === "damages") &&
+    basePrice > 0;
 
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">
@@ -601,6 +606,9 @@ export function TradeInWizard() {
               serverError={imeiServerError}
               onClearServerError={() => setImeiServerError(null)}
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+              estimatedValue={pricing.finalValue}
+              flowType={data.flowType}
+              upgradeBonusPercent={businessSettings?.upgradeBonusPercent ?? 0}
             />
           )}
           {step === 5 && (

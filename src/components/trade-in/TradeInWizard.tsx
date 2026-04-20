@@ -171,7 +171,7 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (step >= 5) return;
+    if (step >= 6) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));

@@ -114,14 +114,27 @@ export function TradeInWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-skip flow choice when only one flow is enabled (or none).
+  // Sync flow state with current settings.
+  // - When only one flow is enabled → auto-pick it and skip step 0.
+  // - When both flows are enabled but the user has a stale `flowType` from a
+  //   previous session (when only one was enabled), send them back to step 0
+  //   so they can actually choose.
   useEffect(() => {
     if (!flowSettings) return;
-    if (step !== 0) return;
-    if (data.flowType) return;
+    // Single-flow mode → auto-select.
     if (flowSettings.onlyEnabled) {
-      setData((prev) => ({ ...prev, flowType: flowSettings.onlyEnabled }));
-      setStep(1);
+      if (data.flowType !== flowSettings.onlyEnabled) {
+        setData((prev) => ({ ...prev, flowType: flowSettings.onlyEnabled }));
+      }
+      if (step === 0) setStep(1);
+      return;
+    }
+    // Both flows enabled → user must pick. If they were auto-routed previously
+    // (flowType set but they're still very early in the funnel), reset to step 0.
+    if (flowSettings.trade.enabled && flowSettings.sale.enabled) {
+      if (!data.flowType && step !== 0) {
+        setStep(0);
+      }
     }
   }, [flowSettings, step, data.flowType]);
 

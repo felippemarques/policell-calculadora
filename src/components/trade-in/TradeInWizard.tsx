@@ -541,18 +541,22 @@ export function TradeInWizard() {
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
           {step < 6 && (
-            <div className="flex items-center justify-between mb-6 gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                {step === 3 && checklistProgress.total > 0
-                  ? `Pergunta ${checklistProgress.current} de ${checklistProgress.total}`
-                  : `Passo ${displayStepIndex + 1} de ${totalProgressSteps}`}
-              </span>
-              <div className="flex items-center gap-2">
-                {step >= 2 && step <= 5 && data.name && data.email && (
-                  <RestartProposalButton onConfirm={handleRestartProposal} />
-                )}
+            <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                  {step === 3 && checklistProgress.total > 0
+                    ? `Pergunta ${checklistProgress.current} de ${checklistProgress.total}`
+                    : `Passo ${displayStepIndex + 1} de ${totalProgressSteps}`}
+                </span>
                 <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
               </div>
+              {step >= 1 && step <= 5 && data.name && data.email && (
+                <RestartProposalButton
+                  prominent
+                  onConfirm={handleRestartProposal}
+                  onFullReset={handleReset}
+                />
+              )}
             </div>
           )}
 

@@ -58,7 +58,7 @@ function loadPersisted(): PersistedState | null {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
     // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 4) return null;
+    if (parsed.step >= 5) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",
@@ -170,7 +170,7 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (step >= 4) return;
+    if (step >= 5) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -219,7 +219,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — Passo 0 = escolha do fluxo
-  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
+  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Resultado"];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),
@@ -334,17 +334,40 @@ export function TradeInWizard() {
     [selectedDevice, data.answers, conditions, damageOptions, damageCategories],
   );
 
-  const handleSubmit = async () => {
+  // After the checklist: just advance to the IMEI step. The actual evaluation
+  // submission happens after the IMEI is validated.
+  const handleChecklistDone = () => {
     if (!selectedDevice) return;
-
     if (!sanity.ok) {
       toast.error(
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      setStep(4);
+      setStep(5);
       return;
     }
+    setImeiServerError(null);
+    setStep(4);
+  };
+
+  const handleConfirmImei = async (imei: string) => {
+    if (!selectedDevice) return;
+    setImeiServerError(null);
+
+    // Persist IMEI on the lead (server validates Luhn + bypasses RLS).
+    if (leadId) {
+      try {
+        await setImei(leadId, imei);
+      } catch (e: any) {
+        const msg = e?.message?.includes("IMEI inv")
+          ? "IMEI inválido. Confira os números e tente novamente."
+          : "Não foi possível registrar o IMEI agora. Tente novamente.";
+        setImeiServerError(msg);
+        return;
+      }
+    }
+
+    setData((prev) => ({ ...prev, imei }));
 
     const damageStrings: string[] = [];
     if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
@@ -352,27 +375,41 @@ export function TradeInWizard() {
       if (optId) damageStrings.push(`damage:${catId}:${optId}`);
     }
 
-    await submit({
-      customerName: data.name,
-      customerEmail: data.email,
-      customerPhone: data.phone,
-      deviceId: data.deviceId,
-      deviceCondition: pricing.isRejected ? "critical" : "normal",
-      damages: damageStrings,
-      basePrice: pricing.basePrice,
-      conditionDiscount: pricing.percentDiscount,
-      totalDeductions: pricing.fixedDeductions,
-      finalValue: pricing.finalValue,
-      leadId,
-      flowType: data.flowType ?? "trade",
-    });
+    try {
+      await submit({
+        customerName: data.name,
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        deviceId: data.deviceId,
+        deviceCondition: pricing.isRejected ? "critical" : "normal",
+        damages: damageStrings,
+        basePrice: pricing.basePrice,
+        conditionDiscount: pricing.percentDiscount,
+        totalDeductions: pricing.fixedDeductions,
+        finalValue: pricing.finalValue,
+        leadId,
+        flowType: data.flowType ?? "trade",
+        imei,
+      });
+    } catch (e: any) {
+      if (e instanceof DuplicateImeiError) {
+        setImeiServerError(
+          `Já existe uma proposta ativa para este IMEI no fluxo de ${
+            data.flowType === "sale" ? "venda" : "troca"
+          }. Use outro aparelho ou fale com um especialista.`,
+        );
+        return;
+      }
+      toast.error("Não foi possível concluir a proposta. Tente novamente.");
+      return;
+    }
 
     if (leadId) {
       await updateLead(leadId, { status: "completed" });
     }
 
     clearPersisted();
-    setStep(4);
+    setStep(5);
   };
 
   const handleReset = () => {

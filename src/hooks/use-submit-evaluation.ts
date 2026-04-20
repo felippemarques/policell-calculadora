@@ -14,6 +14,14 @@ export interface EvaluationData {
   finalValue: number;
   leadId?: string | null;
   flowType?: "trade" | "sale";
+  imei?: string | null;
+}
+
+export class DuplicateImeiError extends Error {
+  constructor() {
+    super("Já existe uma proposta ativa para este IMEI neste tipo de negociação.");
+    this.name = "DuplicateImeiError";
+  }
 }
 
 async function fetchCouponSettings(): Promise<Record<string, string>> {
@@ -104,10 +112,18 @@ export function useSubmitEvaluation() {
           coupon_code: null,
           status: "pending",
           flow_type: data.flowType ?? "trade",
+          imei: data.imei ?? null,
         } as any)
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) {
+        // Postgres unique violation when the same IMEI already has an active
+        // evaluation in this flow.
+        if ((error as any).code === "23505") {
+          throw new DuplicateImeiError();
+        }
+        throw error;
+      }
 
       const evaluationId = inserted.id;
 

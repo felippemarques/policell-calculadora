@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDevices, resolveBasePrice } from "@/hooks/use-trade-in-data";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
-import { useSubmitEvaluation } from "@/hooks/use-submit-evaluation";
+import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
+import { StepImei } from "./StepImei";
 import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";
@@ -34,6 +35,8 @@ export interface WizardData {
   deviceId: string;
   /** Selected color id (informational only — does not affect price). null until chosen. */
   colorId: string | null;
+  /** IMEI (15 digits, validated locally + server-side). */
+  imei: string;
   answers: ChecklistAnswers;
 }
 
@@ -55,7 +58,7 @@ function loadPersisted(): PersistedState | null {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     if (typeof parsed?.step !== "number") return null;
     // Never resume on the result screen — that one belongs to a finished flow.
-    if (parsed.step >= 4) return null;
+    if (parsed.step >= 5) return null;
     return {
       step: parsed.step,
       subScreen: (parsed.subScreen as SubScreen) ?? "condition",
@@ -66,6 +69,7 @@ function loadPersisted(): PersistedState | null {
         phone: parsed.data?.phone ?? "",
         deviceId: parsed.data?.deviceId ?? "",
         colorId: parsed.data?.colorId ?? null,
+        imei: parsed.data?.imei ?? "",
         answers: parsed.data?.answers ?? emptyAnswers(),
       },
       leadId: parsed.leadId ?? null,
@@ -97,6 +101,7 @@ export function TradeInWizard() {
       phone: "",
       deviceId: "",
       colorId: null,
+      imei: "",
       answers: emptyAnswers(),
     },
   );
@@ -104,7 +109,9 @@ export function TradeInWizard() {
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { data: flowSettings, isLoading: loadingFlowSettings } = useFlowSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
-  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected } = useLead();
+  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();
+
+  const [imeiServerError, setImeiServerError] = useState<string | null>(null);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {
@@ -163,7 +170,7 @@ export function TradeInWizard() {
   // Persist progress on every meaningful change
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (step >= 4) return;
+    if (step >= 5) return;
     try {
       const snapshot: PersistedState = { step, subScreen, data, leadId };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -212,7 +219,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — Passo 0 = escolha do fluxo
-  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "Resultado"];
+  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Resultado"];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),
@@ -327,17 +334,40 @@ export function TradeInWizard() {
     [selectedDevice, data.answers, conditions, damageOptions, damageCategories],
   );
 
-  const handleSubmit = async () => {
+  // After the checklist: just advance to the IMEI step. The actual evaluation
+  // submission happens after the IMEI is validated.
+  const handleChecklistDone = () => {
     if (!selectedDevice) return;
-
     if (!sanity.ok) {
       toast.error(
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      setStep(4);
+      setStep(5);
       return;
     }
+    setImeiServerError(null);
+    setStep(4);
+  };
+
+  const handleConfirmImei = async (imei: string) => {
+    if (!selectedDevice) return;
+    setImeiServerError(null);
+
+    // Persist IMEI on the lead (server validates Luhn + bypasses RLS).
+    if (leadId) {
+      try {
+        await setImei(leadId, imei);
+      } catch (e: any) {
+        const msg = e?.message?.includes("IMEI inv")
+          ? "IMEI inválido. Confira os números e tente novamente."
+          : "Não foi possível registrar o IMEI agora. Tente novamente.";
+        setImeiServerError(msg);
+        return;
+      }
+    }
+
+    setData((prev) => ({ ...prev, imei }));
 
     const damageStrings: string[] = [];
     if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
@@ -345,27 +375,41 @@ export function TradeInWizard() {
       if (optId) damageStrings.push(`damage:${catId}:${optId}`);
     }
 
-    await submit({
-      customerName: data.name,
-      customerEmail: data.email,
-      customerPhone: data.phone,
-      deviceId: data.deviceId,
-      deviceCondition: pricing.isRejected ? "critical" : "normal",
-      damages: damageStrings,
-      basePrice: pricing.basePrice,
-      conditionDiscount: pricing.percentDiscount,
-      totalDeductions: pricing.fixedDeductions,
-      finalValue: pricing.finalValue,
-      leadId,
-      flowType: data.flowType ?? "trade",
-    });
+    try {
+      await submit({
+        customerName: data.name,
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        deviceId: data.deviceId,
+        deviceCondition: pricing.isRejected ? "critical" : "normal",
+        damages: damageStrings,
+        basePrice: pricing.basePrice,
+        conditionDiscount: pricing.percentDiscount,
+        totalDeductions: pricing.fixedDeductions,
+        finalValue: pricing.finalValue,
+        leadId,
+        flowType: data.flowType ?? "trade",
+        imei,
+      });
+    } catch (e: any) {
+      if (e instanceof DuplicateImeiError) {
+        setImeiServerError(
+          `Já existe uma proposta ativa para este IMEI no fluxo de ${
+            data.flowType === "sale" ? "venda" : "troca"
+          }. Use outro aparelho ou fale com um especialista.`,
+        );
+        return;
+      }
+      toast.error("Não foi possível concluir a proposta. Tente novamente.");
+      return;
+    }
 
     if (leadId) {
       await updateLead(leadId, { status: "completed" });
     }
 
     clearPersisted();
-    setStep(4);
+    setStep(5);
   };
 
   const handleReset = () => {
@@ -377,10 +421,12 @@ export function TradeInWizard() {
       phone: "",
       deviceId: "",
       colorId: null,
+      imei: "",
       answers: emptyAnswers(),
     });
     setResult(null);
     setLeadId(null);
+    setImeiServerError(null);
     setStep(0);
     setSubScreen("condition");
   };
@@ -404,10 +450,10 @@ export function TradeInWizard() {
 
   // When only one flow is enabled, the choice screen is hidden — adjust display.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  const visibleStepsCount = flowChoiceHidden ? 4 : 5; // 5 incluindo passo 0
+  const visibleStepsCount = flowChoiceHidden ? 5 : 6; // inclui passo 0 (Negociação) e IMEI
   const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
   const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
-  const progressPct = step >= 4 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+  const progressPct = step >= 5 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
     step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
@@ -425,7 +471,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 4 && (
+        {step < 5 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -436,7 +482,7 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 4 && (
+          {step < 5 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {displayStepIndex + 1} de {totalProgressSteps}
@@ -469,7 +515,7 @@ export function TradeInWizard() {
             <StepEvaluationChecklist
               answers={data.answers}
               onAnswersChange={handleAnswersChange}
-              onSubmit={handleSubmit}
+              onSubmit={handleChecklistDone}
               onBack={() => setStep(2)}
               onSubScreenChange={handleSubScreenChange}
               onReject={handleReject}
@@ -481,6 +527,17 @@ export function TradeInWizard() {
             />
           )}
           {step === 4 && (
+            <StepImei
+              initialValue={data.imei}
+              isSubmitting={isSubmitting}
+              onBack={() => setStep(3)}
+              onConfirm={handleConfirmImei}
+              serverError={imeiServerError}
+              onClearServerError={() => setImeiServerError(null)}
+              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+            />
+          )}
+          {step === 5 && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}

@@ -129,14 +129,22 @@ export function ModelStorageRow({ brandId, storage }: Props) {
             </Button>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
-            <span className="inline-flex items-center gap-1 text-primary font-semibold">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary"
+              title="Preço pago ao cliente que TROCA o aparelho usado por um novo"
+            >
               <ArrowRightLeft className="h-3 w-3" />
-              {formatBRLWithSymbol(tradePrice)}
+              <span className="text-[10px] font-semibold uppercase tracking-wide">Troca</span>
+              <span className="font-bold tabular-nums">{formatBRLWithSymbol(tradePrice)}</span>
             </span>
-            <span className="inline-flex items-center gap-1 text-accent-foreground font-semibold">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400"
+              title="Preço de VENDA do aparelho na loja (sem troca)"
+            >
               <Banknote className="h-3 w-3" />
-              {formatBRLWithSymbol(salePrice)}
+              <span className="text-[10px] font-semibold uppercase tracking-wide">Venda</span>
+              <span className="font-bold tabular-nums">{formatBRLWithSymbol(salePrice)}</span>
             </span>
           </div>
         )}

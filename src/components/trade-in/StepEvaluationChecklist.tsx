@@ -49,6 +49,10 @@ import {
   DamageCategory,
   formatBRL,
 } from "@/lib/trade-in-pricing";
+import {
+  useEvaluationGroupsConfig,
+  type EvaluationGroupId,
+} from "@/hooks/use-evaluation-groups-config";
 
 interface Props {
   answers: ChecklistAnswers;
@@ -86,12 +90,44 @@ export function StepEvaluationChecklist({
   selectedBrandId,
   selectedModelId,
 }: Props) {
+  // Map between UI sub-screen ids and admin group ids (stored in lp_settings).
+  // Reminder: UI labels were swapped — "condition" sub-screen now visually shows
+  // "Categorias de Defeitos" (group `conditions`), and "damages" shows
+  // "Condições do Aparelho" (group `defects`). The data sources are unchanged.
+  const SUB_SCREEN_TO_GROUP: Record<SubScreen, EvaluationGroupId> = {
+    condition: "conditions",
+    damages: "defects",
+    rejection: "rejection",
+  };
+  const GROUP_TO_SUB_SCREEN: Record<EvaluationGroupId, SubScreen> = {
+    conditions: "condition",
+    defects: "damages",
+    rejection: "rejection",
+  };
+
+  const { data: groupsConfig } = useEvaluationGroupsConfig();
+
+  // Ordered + visible sub-screens (drives the wizard navigation)
+  const orderedSubScreens = useMemo<SubScreen[]>(() => {
+    const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];
+    const visible = groupsConfig?.visible ?? { conditions: true, defects: true, rejection: true };
+    return order.filter((g) => visible[g]).map((g) => GROUP_TO_SUB_SCREEN[g]);
+  }, [groupsConfig]);
+
   const [subScreen, setSubScreen] = useState<SubScreen>("condition");
   const [rejectionModal, setRejectionModal] = useState<{
     open: boolean;
     title: string;
     label: string;
   }>({ open: false, title: "", label: "" });
+
+  // Sync initial sub-screen with the first visible one (in case admin disabled it)
+  useEffect(() => {
+    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
+      setSubScreen(orderedSubScreens[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubScreens]);
 
   // Validation: which required ids (condition or damage category) are missing
   const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
@@ -109,6 +145,7 @@ export function StepEvaluationChecklist({
       const { data, error } = await supabase
         .from("condition_discounts")
         .select("*")
+        .eq("is_active", true)
         .order("display_order");
       if (error) throw error;
       return (data || []) as ConditionRow[];
@@ -121,6 +158,7 @@ export function StepEvaluationChecklist({
       const { data, error } = await supabase
         .from("damage_categories")
         .select("*")
+        .eq("is_active", true)
         .order("display_order");
       if (error) throw error;
       return (data || []).map((c: any) => ({
@@ -336,20 +374,17 @@ export function StepEvaluationChecklist({
   };
 
   const handleNextClick = () => {
+    // Validate current screen before moving to the next visible one.
     if (subScreen === "condition") {
       const requireCondition =
         normalConditions.length > 0 && normalConditions.some((c) => c.is_required !== false);
       if (requireCondition && !conditionAnswered) {
         setMissingIds(new Set(["__condition__"]));
-        toast.error("Selecione a condição geral do aparelho para continuar.");
+        toast.error("Selecione uma opção para continuar.");
         scrollToFirstMissing(["__condition__"]);
         return;
       }
-      setMissingIds(new Set());
-      setSubScreen("damages");
-      return;
-    }
-    if (subScreen === "damages") {
+    } else if (subScreen === "damages") {
       const missing = requiredDamageCategories
         .filter((c) => !answers.damageOptionByCategory[c.id])
         .map((c) => c.id);
@@ -363,9 +398,11 @@ export function StepEvaluationChecklist({
         scrollToFirstMissing(missing);
         return;
       }
-      setMissingIds(new Set());
-      setSubScreen("rejection");
     }
+    setMissingIds(new Set());
+    const idx = orderedSubScreens.indexOf(subScreen);
+    const nextScreen = orderedSubScreens[idx + 1];
+    if (nextScreen) setSubScreen(nextScreen);
   };
 
 
@@ -389,19 +426,17 @@ export function StepEvaluationChecklist({
     onResetAll?.();
   };
 
-  // ── Sub-screen navigation ──
-  const goNext = () => {
-    if (subScreen === "condition") setSubScreen("damages");
-    else if (subScreen === "damages") setSubScreen("rejection");
-  };
-
+  // ── Sub-screen navigation (dynamic based on admin order/visibility) ──
   const goPrev = () => {
-    if (subScreen === "rejection") setSubScreen("damages");
-    else if (subScreen === "damages") setSubScreen("condition");
+    const idx = orderedSubScreens.indexOf(subScreen);
+    const prevScreen = orderedSubScreens[idx - 1];
+    if (prevScreen) setSubScreen(prevScreen);
     else onBack();
   };
 
-  const currentIdx = SUB_SCREENS.findIndex((s) => s.key === subScreen);
+  const isLastSubScreen = orderedSubScreens[orderedSubScreens.length - 1] === subScreen;
+  const currentIdx = orderedSubScreens.indexOf(subScreen);
+  const visibleSubScreensMeta = orderedSubScreens.map((key) => ({ key, ...SUB_SCREEN_META[key] }));
 
   return (
     <>

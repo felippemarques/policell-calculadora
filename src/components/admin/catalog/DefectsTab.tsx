@@ -702,7 +702,14 @@ export function DefectsTab() {
           ) : (
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-foreground">{cat.name}</span>
+                <span className={`font-medium text-foreground ${(cat as any).is_active === false ? "line-through opacity-60" : ""}`}>
+                  {cat.name}
+                </span>
+                {(cat as any).is_active === false && (
+                  <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">
+                    oculto
+                  </Badge>
+                )}
                 {depth > 0 && (
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
                     sub
@@ -733,6 +740,25 @@ export function DefectsTab() {
               )}
             </div>
           )}
+
+          <Badge variant="secondary" className="text-xs flex-shrink-0">
+            {options.length} {options.length === 1 ? "opção" : "opções"}
+          </Badge>
+
+          <div
+            className="flex items-center gap-1 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            title="Mostrar/ocultar na calculadora"
+          >
+            <Switch
+              checked={(cat as any).is_active !== false}
+              onCheckedChange={(v) =>
+                toggleActiveMutation.mutate({ table: "damage_categories", id: cat.id, is_active: v })
+              }
+              disabled={toggleActiveMutation.isPending}
+              aria-label="Mostrar na calculadora"
+            />
+          </div>
 
           <Badge variant="secondary" className="text-xs flex-shrink-0">
             {options.length} {options.length === 1 ? "opção" : "opções"}

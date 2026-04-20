@@ -463,6 +463,24 @@ export function TradeInWizard() {
     setSubScreen("condition");
   };
 
+  /**
+   * "Refazer proposta" — mantém nome, email e telefone (e o leadId já criado),
+   * mas zera aparelho, IMEI e respostas. Volta para a escolha do aparelho.
+   */
+  const handleRestartProposal = () => {
+    setData((prev) => ({
+      ...prev,
+      deviceId: "",
+      colorId: null,
+      imei: "",
+      answers: emptyAnswers(),
+    }));
+    setResult(null);
+    setImeiServerError(null);
+    setSubScreen("condition");
+    setStep(2);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">

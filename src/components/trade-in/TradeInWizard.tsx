@@ -472,10 +472,10 @@ export function TradeInWizard() {
 
   // When only one flow is enabled, the choice screen is hidden — adjust display.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  const visibleStepsCount = flowChoiceHidden ? 5 : 6; // inclui passo 0 (Negociação) e IMEI
+  const visibleStepsCount = flowChoiceHidden ? 6 : 7; // inclui passo 0 (Negociação), IMEI e Termos
   const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
   const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
-  const progressPct = step >= 5 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+  const progressPct = step >= 6 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
     step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
@@ -493,7 +493,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 5 && (
+        {step < 6 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -504,7 +504,7 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 5 && (
+          {step < 6 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {displayStepIndex + 1} de {totalProgressSteps}

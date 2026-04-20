@@ -100,6 +100,7 @@ export function TradeInWizard() {
       phone: "",
       deviceId: "",
       colorId: null,
+      imei: "",
       answers: emptyAnswers(),
     },
   );
@@ -380,10 +381,12 @@ export function TradeInWizard() {
       phone: "",
       deviceId: "",
       colorId: null,
+      imei: "",
       answers: emptyAnswers(),
     });
     setResult(null);
     setLeadId(null);
+    setImeiServerError(null);
     setStep(0);
     setSubScreen("condition");
   };

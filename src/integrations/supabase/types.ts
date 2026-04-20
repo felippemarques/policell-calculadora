@@ -425,6 +425,7 @@ export type Database = {
           final_value: number
           flow_type: string
           id: string
+          imei: string | null
           status: string
           total_deductions: number
         }
@@ -443,6 +444,7 @@ export type Database = {
           final_value: number
           flow_type?: string
           id?: string
+          imei?: string | null
           status?: string
           total_deductions?: number
         }
@@ -461,6 +463,7 @@ export type Database = {
           final_value?: number
           flow_type?: string
           id?: string
+          imei?: string | null
           status?: string
           total_deductions?: number
         }
@@ -484,6 +487,7 @@ export type Database = {
           device_id: string | null
           flow_type: string
           id: string
+          imei: string | null
           rejection_reason: string | null
           status: string
           updated_at: string
@@ -497,6 +501,7 @@ export type Database = {
           device_id?: string | null
           flow_type?: string
           id?: string
+          imei?: string | null
           rejection_reason?: string | null
           status?: string
           updated_at?: string
@@ -510,6 +515,7 @@ export type Database = {
           device_id?: string | null
           flow_type?: string
           id?: string
+          imei?: string | null
           rejection_reason?: string | null
           status?: string
           updated_at?: string
@@ -816,8 +822,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_valid_imei: { Args: { _imei: string }; Returns: boolean }
+      normalize_phone: { Args: { _phone: string }; Returns: string }
       sync_device_for_model_storage: {
         Args: { _ms_id: string }
+        Returns: undefined
+      }
+      update_lead_imei: {
+        Args: { _imei: string; _lead_id: string }
         Returns: undefined
       }
       update_lead_progress: {

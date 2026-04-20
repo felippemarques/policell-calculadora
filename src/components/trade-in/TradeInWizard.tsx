@@ -109,7 +109,9 @@ export function TradeInWizard() {
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { data: flowSettings, isLoading: loadingFlowSettings } = useFlowSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
-  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected } = useLead();
+  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();
+
+  const [imeiServerError, setImeiServerError] = useState<string | null>(null);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {

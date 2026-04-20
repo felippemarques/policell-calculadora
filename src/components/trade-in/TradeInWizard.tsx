@@ -126,9 +126,8 @@ export function TradeInWizard() {
 
   // Sync flow state with current settings.
   // - When only one flow is enabled → auto-pick it and skip step 0.
-  // - When both flows are enabled → SEMPRE garantir a tela de escolha (step 0)
-  //   no início. Se a sessão restaurada já passou dos dados pessoais (>= step 2)
-  //   e tem um lead criado, respeitamos a escolha anterior.
+  // - When both flows are enabled → garante a tela de escolha (step 0) apenas
+  //   quando NÃO há fluxo escolhido ainda. Após a escolha, respeita o avanço.
   useEffect(() => {
     if (!flowSettings) return;
 
@@ -140,19 +139,16 @@ export function TradeInWizard() {
       return;
     }
 
-    // Ambos os fluxos habilitados — força a escolha para sessões iniciais.
+    // Ambos os fluxos habilitados — só força step 0 se ainda não há escolha.
     if (
       flowSettings.trade.enabled &&
       flowSettings.sale.enabled &&
-      step <= 1 &&
-      !leadId
+      data.flowType === null &&
+      step !== 0
     ) {
-      if (data.flowType !== null) {
-        setData((prev) => ({ ...prev, flowType: null }));
-      }
-      if (step !== 0) setStep(0);
+      setStep(0);
     }
-  }, [flowSettings, step, data.flowType, leadId]);
+  }, [flowSettings, step, data.flowType]);
 
   // Catalog-sync guard
   useEffect(() => {

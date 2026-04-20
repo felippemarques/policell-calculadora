@@ -274,6 +274,27 @@ export function StepEvaluationChecklist({
     });
   }, [adminOrderedSubScreens, normalConditions, damageCategories, rejectionReasons]);
 
+  // Sync current sub-screen with the first visible/non-empty one
+  useEffect(() => {
+    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
+      setSubScreen(orderedSubScreens[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubScreens]);
+
+  // If literally nothing is cadastrado, skip the whole checklist
+  useEffect(() => {
+    if (
+      adminOrderedSubScreens.length > 0 &&
+      orderedSubScreens.length === 0 &&
+      conditions.length === 0 &&
+      damageCategoriesAll.length === 0
+    ) {
+      onSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubScreens, adminOrderedSubScreens, conditions, damageCategoriesAll]);
+
   // ── Selection helpers ──
   const selectCondition = (id: string) => {
     onAnswersChange({ ...answers, conditionId: id });

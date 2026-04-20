@@ -129,14 +129,22 @@ export function TradeInWizard() {
       if (step === 0) setStep(1);
       return;
     }
-    // Both flows enabled → user must pick. If they were auto-routed previously
-    // (flowType set but they're still very early in the funnel), reset to step 0.
+    // Both flows enabled → user MUST pick.
     if (flowSettings.trade.enabled && flowSettings.sale.enabled) {
+      // Never chose anything → make sure we're on the choice screen.
       if (!data.flowType && step !== 0) {
+        setStep(0);
+        return;
+      }
+      // Stale auto-selection from a previous single-flow session: user has a
+      // `flowType` saved but never created a lead and is still at the very
+      // start. Clear it and force the choice screen.
+      if (data.flowType && step <= 1 && !leadId) {
+        setData((prev) => ({ ...prev, flowType: null }));
         setStep(0);
       }
     }
-  }, [flowSettings, step, data.flowType]);
+  }, [flowSettings, step, data.flowType, leadId]);
 
   // Catalog-sync guard
   useEffect(() => {

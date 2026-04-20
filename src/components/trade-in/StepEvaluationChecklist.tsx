@@ -450,7 +450,7 @@ export function StepEvaluationChecklist({
             </h2>
           </div>
           <div className="flex items-center gap-1.5">
-            {SUB_SCREENS.map((s, i) => {
+            {visibleSubScreensMeta.map((s, i) => {
               const Icon = s.icon;
               const isActive = i === currentIdx;
               const isDone = i < currentIdx;
@@ -729,7 +729,7 @@ export function StepEvaluationChecklist({
           <Button variant="outline" onClick={goPrev} className="flex-1 h-12 rounded-full">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
           </Button>
-          {subScreen !== "rejection" ? (
+          {!isLastSubScreen ? (
             <Button
               onClick={handleNextClick}
               className="flex-1 h-12 rounded-full shadow-sm"

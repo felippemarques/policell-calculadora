@@ -25,10 +25,24 @@ const BUSINESS_KEYS = [
   "flow_sale_description",
   "flow_sale_cta_text",
   "flow_sale_whatsapp",
+  // LGPD / Termos de aceite
+  "terms_title",
+  "terms_text",
+  "terms_version",
+  "terms_policy_url",
 ] as const;
 
 type BusinessKey = (typeof BUSINESS_KEYS)[number];
 type FormState = Record<BusinessKey, string>;
+
+const DEFAULT_TERMS_TEXT = `Ao prosseguir, você declara que:
+
+1. As informações fornecidas (incluindo IMEI e estado do aparelho) são verdadeiras.
+2. O valor estimado pela calculadora é uma proposta inicial e está sujeito a inspeção física do aparelho.
+3. Autoriza o tratamento dos seus dados pessoais (nome, e-mail, telefone, IMEI) para fins de avaliação, contato comercial e cumprimento de obrigações legais, conforme a LGPD (Lei nº 13.709/2018).
+4. O cupom gerado tem validade conforme as regras da loja e está vinculado a este IMEI.
+
+Você pode solicitar a exclusão dos seus dados a qualquer momento entrando em contato conosco.`;
 
 const DEFAULTS: FormState = {
   business_contract_terms: "",
@@ -45,6 +59,10 @@ const DEFAULTS: FormState = {
     "Receba o valor do seu aparelho em dinheiro via PIX ou transferência.",
   flow_sale_cta_text: "Quero vender",
   flow_sale_whatsapp: "",
+  terms_title: "Termos e Política de Privacidade",
+  terms_text: DEFAULT_TERMS_TEXT,
+  terms_version: "v1",
+  terms_policy_url: "",
 };
 
 async function upsertSettings(entries: { key: string; value: string }[]) {

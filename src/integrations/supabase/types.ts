@@ -479,7 +479,16 @@ export type Database = {
       }
       leads: {
         Row: {
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
           assessment_responses: Json
+          contract_accepted_at: string | null
+          contract_version: string | null
           created_at: string
           customer_email: string
           customer_name: string
@@ -495,7 +504,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           assessment_responses?: Json
+          contract_accepted_at?: string | null
+          contract_version?: string | null
           created_at?: string
           customer_email: string
           customer_name: string
@@ -511,7 +529,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           assessment_responses?: Json
+          contract_accepted_at?: string | null
+          contract_version?: string | null
           created_at?: string
           customer_email?: string
           customer_name?: string
@@ -817,6 +844,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_lead_contract: {
+        Args: { _lead_id: string; _version: string }
+        Returns: undefined
+      }
       accept_lead_terms: {
         Args: { _lead_id: string; _version: string }
         Returns: undefined
@@ -836,6 +867,19 @@ export type Database = {
       normalize_phone: { Args: { _phone: string }; Returns: string }
       sync_device_for_model_storage: {
         Args: { _ms_id: string }
+        Returns: undefined
+      }
+      update_lead_address: {
+        Args: {
+          _city: string
+          _complement: string
+          _lead_id: string
+          _neighborhood: string
+          _number: string
+          _state: string
+          _street: string
+          _zip: string
+        }
         Returns: undefined
       }
       update_lead_imei: {

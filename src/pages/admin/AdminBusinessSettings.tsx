@@ -250,6 +250,68 @@ const AdminBusinessSettings = () => {
         </CardContent>
       </Card>
 
+      {/* ── Termos de Aceite (LGPD) na calculadora ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Termos de Aceite (LGPD)</CardTitle>
+          </div>
+          <CardDescription>
+            Texto exibido na calculadora entre a confirmação do IMEI e a geração do cupom. O aceite e a versão são salvos no lead com data/hora.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="terms_title">Título da tela</Label>
+            <Input
+              id="terms_title"
+              value={form.terms_title}
+              onChange={(e) => set("terms_title", e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="terms_text">Texto dos termos</Label>
+            <Textarea
+              id="terms_text"
+              value={form.terms_text}
+              onChange={(e) => set("terms_text", e.target.value)}
+              rows={10}
+              className="mt-1 font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {form.terms_text.length.toLocaleString("pt-BR")} caracteres. Suporta quebras de linha.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="terms_version">Versão</Label>
+              <Input
+                id="terms_version"
+                value={form.terms_version}
+                onChange={(e) => set("terms_version", e.target.value)}
+                placeholder="v1"
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Atualize sempre que mudar o texto, para auditoria.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="terms_policy_url">Link da política completa (opcional)</Label>
+              <Input
+                id="terms_policy_url"
+                value={form.terms_policy_url}
+                onChange={(e) => set("terms_policy_url", e.target.value)}
+                placeholder="https://..."
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

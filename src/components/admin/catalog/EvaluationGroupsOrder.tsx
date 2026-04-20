@@ -135,7 +135,10 @@ export function EvaluationGroupsOrder() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const order = useMemo(() => data?.order ?? ["conditions", "defects", "rejection"], [data]);
+  const order = useMemo<EvaluationGroupId[]>(
+    () => data?.order ?? ["conditions", "defects", "rejection"],
+    [data],
+  );
   const visible = useMemo(
     () => data?.visible ?? { conditions: true, defects: true, rejection: true },
     [data],

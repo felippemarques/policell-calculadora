@@ -468,11 +468,16 @@ export function TradeInWizard() {
 
   /**
    * "Refazer proposta" — mantém nome, email e telefone (e o leadId já criado),
-   * mas zera aparelho, IMEI e respostas. Volta para a escolha do aparelho.
+   * mas zera fluxo, aparelho, IMEI e respostas. Volta para a escolha do fluxo
+   * (step 0) quando os dois estão habilitados; senão, volta para a escolha do
+   * aparelho.
    */
   const handleRestartProposal = () => {
+    const goToFlowChoice =
+      !!flowSettings && flowSettings.trade.enabled && flowSettings.sale.enabled;
     setData((prev) => ({
       ...prev,
+      flowType: goToFlowChoice ? null : prev.flowType,
       deviceId: "",
       colorId: null,
       imei: "",
@@ -481,7 +486,7 @@ export function TradeInWizard() {
     setResult(null);
     setImeiServerError(null);
     setSubScreen("condition");
-    setStep(2);
+    setStep(goToFlowChoice ? 0 : 2);
   };
 
   if (isLoading) {

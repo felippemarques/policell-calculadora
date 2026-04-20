@@ -450,10 +450,10 @@ export function TradeInWizard() {
 
   // When only one flow is enabled, the choice screen is hidden — adjust display.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  const visibleStepsCount = flowChoiceHidden ? 4 : 5; // 5 incluindo passo 0
+  const visibleStepsCount = flowChoiceHidden ? 5 : 6; // inclui passo 0 (Negociação) e IMEI
   const displayStepIndex = flowChoiceHidden ? Math.max(0, step - 1) : step;
   const totalProgressSteps = visibleStepsCount - 1; // sem o resultado
-  const progressPct = step >= 4 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
+  const progressPct = step >= 5 ? 100 : Math.round(((displayStepIndex + 1) / visibleStepsCount) * 100);
 
   const showPriceFooter =
     step === 3 && (subScreen === "condition" || subScreen === "damages") && basePrice > 0;
@@ -471,7 +471,7 @@ export function TradeInWizard() {
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">
-        {step < 4 && (
+        {step < 5 && (
           <div className="h-1 w-full bg-muted/60 overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-out"
@@ -482,7 +482,7 @@ export function TradeInWizard() {
         )}
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
-          {step < 4 && (
+          {step < 5 && (
             <div className="flex items-center justify-between mb-6">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Passo {displayStepIndex + 1} de {totalProgressSteps}
@@ -515,7 +515,7 @@ export function TradeInWizard() {
             <StepEvaluationChecklist
               answers={data.answers}
               onAnswersChange={handleAnswersChange}
-              onSubmit={handleSubmit}
+              onSubmit={handleChecklistDone}
               onBack={() => setStep(2)}
               onSubScreenChange={handleSubScreenChange}
               onReject={handleReject}
@@ -527,6 +527,17 @@ export function TradeInWizard() {
             />
           )}
           {step === 4 && (
+            <StepImei
+              initialValue={data.imei}
+              isSubmitting={isSubmitting}
+              onBack={() => setStep(3)}
+              onConfirm={handleConfirmImei}
+              serverError={imeiServerError}
+              onClearServerError={() => setImeiServerError(null)}
+              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+            />
+          )}
+          {step === 5 && (
             <div className="animate-fade-in">
               <StepResult
                 result={result}

@@ -34,6 +34,8 @@ export interface WizardData {
   deviceId: string;
   /** Selected color id (informational only — does not affect price). null until chosen. */
   colorId: string | null;
+  /** IMEI (15 digits, validated locally + server-side). */
+  imei: string;
   answers: ChecklistAnswers;
 }
 
@@ -66,6 +68,7 @@ function loadPersisted(): PersistedState | null {
         phone: parsed.data?.phone ?? "",
         deviceId: parsed.data?.deviceId ?? "",
         colorId: parsed.data?.colorId ?? null,
+        imei: parsed.data?.imei ?? "",
         answers: parsed.data?.answers ?? emptyAnswers(),
       },
       leadId: parsed.leadId ?? null,

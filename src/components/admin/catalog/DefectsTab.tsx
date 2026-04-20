@@ -746,7 +746,7 @@ export function DefectsTab() {
           </Badge>
 
           <div
-            className="flex items-center gap-1 flex-shrink-0"
+            className="flex items-center gap-1.5 flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
             title="Mostrar/ocultar na calculadora"
           >
@@ -759,10 +759,6 @@ export function DefectsTab() {
               aria-label="Mostrar na calculadora"
             />
           </div>
-
-          <Badge variant="secondary" className="text-xs flex-shrink-0">
-            {options.length} {options.length === 1 ? "opção" : "opções"}
-          </Badge>
 
           <div
             className="flex items-center gap-1 flex-shrink-0"

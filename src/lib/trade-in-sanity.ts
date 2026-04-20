@@ -34,8 +34,11 @@ export function validateTradeInState(args: {
   conditions: ConditionRow[];
   damageOptions: DamageOption[];
   damageCategories: DamageCategory[];
+  /** Live catalog brand ids — used to ignore stale brand_ids on categories. */
+  validBrandIds?: string[];
 }): SanityResult {
-  const { device, brandId, answers, conditions, damageOptions, damageCategories } = args;
+  const { device, brandId, answers, conditions, damageOptions, damageCategories, validBrandIds } = args;
+  const validBrandSet = new Set(validBrandIds ?? []);
 
   if (!device) {
     return { ok: false, reason: "Aparelho não encontrado no catálogo atual." };
@@ -78,9 +81,13 @@ export function validateTradeInState(args: {
       return { ok: false, reason: "Uma das categorias de defeito não está mais disponível." };
     }
     // Brand restriction: if the (root) category has brand_ids, the device's brand must be in it.
+    // Stale brand_ids (pointing to deleted brands) are ignored — same logic as the checklist UI.
     const rootCat = findRootCategory(cat, damageCategories);
     if (rootCat && rootCat.brand_ids && rootCat.brand_ids.length > 0) {
-      if (!brandId || !rootCat.brand_ids.includes(brandId)) {
+      const liveBrandIds = validBrandSet.size > 0
+        ? rootCat.brand_ids.filter((id) => validBrandSet.has(id))
+        : rootCat.brand_ids;
+      if (liveBrandIds.length > 0 && (!brandId || !liveBrandIds.includes(brandId))) {
         return {
           ok: false,
           reason: "Uma resposta refere-se a um critério que não se aplica à marca do aparelho.",

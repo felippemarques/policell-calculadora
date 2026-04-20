@@ -551,14 +551,15 @@ export function TradeInWizard() {
 
   // Quando só um fluxo está habilitado, esconde passo 0 -> total visível diminui em 1.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  // Total possível: 9 (0 a 8 antes do resultado). Sem escolha = 8.
-  const baseTotal = flowChoiceHidden ? 8 : 9;
-  // Se NÃO houver oferta especial, descontamos 1 (passo 4 some).
+  // Total possível: 8 visíveis (0..8 menos o passo 6 desativado).
+  // Sem escolha de fluxo: -1. Sem oferta especial (passo 4): -1.
+  const baseTotal = flowChoiceHidden ? 7 : 8;
   const visibleStepsCount = baseTotal - (showSpecialOffer ? 0 : 1);
   const displayStepIndex = (() => {
     let s = step;
     if (flowChoiceHidden && s > 0) s -= 1;
     if (!showSpecialOffer && step > 4) s -= 1;
+    if (step > 6) s -= 1; // passo 6 (Termos) foi removido
     return Math.max(0, s);
   })();
   const totalProgressSteps = visibleStepsCount; // resultado fica de fora
@@ -694,7 +695,7 @@ export function TradeInWizard() {
             <StepAddress
               initial={data.address}
               isSubmitting={false}
-              onBack={() => setStep(6)}
+              onBack={() => setStep(5)}
               onConfirm={handleAddressConfirmed}
             />
           )}

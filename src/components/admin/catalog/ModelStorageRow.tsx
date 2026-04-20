@@ -139,7 +139,7 @@ export function ModelStorageRow({ brandId, storage }: Props) {
               <span className="font-bold tabular-nums">{formatBRLWithSymbol(tradePrice)}</span>
             </span>
             <span
-              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-400"
+              className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 text-success"
               title="Preço de VENDA do aparelho na loja (sem troca)"
             >
               <Banknote className="h-3 w-3" />

@@ -7,7 +7,7 @@ import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";
 import { StepImei } from "./StepImei";
-import { StepTerms } from "./StepTerms";
+// StepTerms foi unificado ao StepContractPreview (LGPD + contrato em um único documento).
 import { StepChooseFlow, type FlowType } from "./StepChooseFlow";
 import { StepPersonalInfo } from "./StepPersonalInfo";
 import { StepSelectDevice } from "./StepSelectDevice";

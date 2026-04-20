@@ -336,7 +336,7 @@ export function TradeInWizard() {
   );
 
   // After the checklist: just advance to the IMEI step. The actual evaluation
-  // submission happens after the IMEI is validated.
+  // submission happens after the IMEI is validated AND the terms are accepted.
   const handleChecklistDone = () => {
     if (!selectedDevice) return;
     if (!sanity.ok) {
@@ -344,7 +344,7 @@ export function TradeInWizard() {
         sanity.reason ??
           "Detectamos uma mudança na sua seleção. Reinicie a avaliação para garantir o preço correto.",
       );
-      setStep(5);
+      setStep(6);
       return;
     }
     setImeiServerError(null);
@@ -369,6 +369,26 @@ export function TradeInWizard() {
     }
 
     setData((prev) => ({ ...prev, imei }));
+    // Advance to the LGPD/terms screen — the actual evaluation submission
+    // (which generates the coupon) happens only after explicit acceptance.
+    setStep(5);
+  };
+
+  const handleAcceptTerms = async () => {
+    if (!selectedDevice) return;
+
+    // Register acceptance on the lead first (idempotent — server stamps now()).
+    if (leadId) {
+      try {
+        const { error } = await (supabase.rpc as any)("accept_lead_terms", {
+          _lead_id: leadId,
+          _version: "v1",
+        });
+        if (error) console.warn("Falha ao registrar aceite dos termos:", error);
+      } catch (err) {
+        console.warn("Falha ao registrar aceite dos termos:", err);
+      }
+    }
 
     const damageStrings: string[] = [];
     if (data.answers.conditionId) damageStrings.push(`condition:${data.answers.conditionId}`);
@@ -390,7 +410,7 @@ export function TradeInWizard() {
         finalValue: pricing.finalValue,
         leadId,
         flowType: data.flowType ?? "trade",
-        imei,
+        imei: data.imei,
       });
     } catch (e: any) {
       if (e instanceof DuplicateImeiError) {
@@ -399,6 +419,7 @@ export function TradeInWizard() {
             data.flowType === "sale" ? "venda" : "troca"
           }. Use outro aparelho ou fale com um especialista.`,
         );
+        setStep(4);
         return;
       }
       toast.error("Não foi possível concluir a proposta. Tente novamente.");
@@ -410,7 +431,7 @@ export function TradeInWizard() {
     }
 
     clearPersisted();
-    setStep(5);
+    setStep(6);
   };
 
   const handleReset = () => {

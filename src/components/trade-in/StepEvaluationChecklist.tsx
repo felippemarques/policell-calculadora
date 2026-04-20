@@ -107,8 +107,10 @@ export function StepEvaluationChecklist({
 
   const { data: groupsConfig } = useEvaluationGroupsConfig();
 
-  // Ordered + visible sub-screens (drives the wizard navigation)
-  const orderedSubScreens = useMemo<SubScreen[]>(() => {
+  // Ordered + visible sub-screens (drives the wizard navigation).
+  // First pass uses only admin config; the data-aware version below also
+  // auto-skips empty screens (e.g. no conditions cadastradas).
+  const adminOrderedSubScreens = useMemo<SubScreen[]>(() => {
     const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];
     const visible = groupsConfig?.visible ?? { conditions: true, defects: true, rejection: true };
     return order.filter((g) => visible[g]).map((g) => GROUP_TO_SUB_SCREEN[g]);

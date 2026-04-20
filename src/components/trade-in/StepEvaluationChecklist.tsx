@@ -123,13 +123,7 @@ export function StepEvaluationChecklist({
     label: string;
   }>({ open: false, title: "", label: "" });
 
-  // Sync initial sub-screen with the first visible one (in case admin disabled it)
-  useEffect(() => {
-    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
-      setSubScreen(orderedSubScreens[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderedSubScreens]);
+  // Sync moved below `orderedSubScreens` declaration to avoid TDZ.
 
   // Validation: which required ids (condition or damage category) are missing
   const [missingIds, setMissingIds] = useState<Set<string>>(new Set());

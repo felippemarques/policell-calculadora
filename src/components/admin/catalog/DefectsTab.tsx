@@ -506,6 +506,26 @@ export function DefectsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Toggle is_active for any of the 3 evaluation tables (item-level visibility on calculator)
+  const toggleActiveMutation = useMutation({
+    mutationFn: async (params: {
+      table: "damage_categories" | "condition_discounts";
+      id: string;
+      is_active: boolean;
+    }) => {
+      const { error } = await supabase
+        .from(params.table)
+        .update({ is_active: params.is_active })
+        .eq("id", params.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidateAll();
+      toast.success(vars.is_active ? "Visível na calculadora" : "Oculto da calculadora");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const getOptionsForCat = (catId: string) =>
     deductions.filter((d) => d.damage_category_id === catId);
 

@@ -606,6 +606,9 @@ export function TradeInWizard() {
               serverError={imeiServerError}
               onClearServerError={() => setImeiServerError(null)}
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
+              estimatedValue={pricing.finalValue}
+              flowType={data.flowType}
+              upgradeBonusPercent={businessSettings?.upgradeBonusPercent ?? 0}
             />
           )}
           {step === 5 && (

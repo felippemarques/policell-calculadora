@@ -114,6 +114,7 @@ export function TradeInWizard() {
   const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();
 
   const [imeiServerError, setImeiServerError] = useState<string | null>(null);
+  const [checklistProgress, setChecklistProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {

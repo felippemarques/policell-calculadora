@@ -126,8 +126,9 @@ export function TradeInWizard() {
 
   // Sync flow state with current settings.
   // - When only one flow is enabled → auto-pick it and skip step 0.
-  // - When both flows are enabled → keep the user's explicit choice.
-  //   Only clear a stale early-session selection restored from persistence.
+  // - When both flows are enabled → SEMPRE garantir a tela de escolha (step 0)
+  //   no início. Se a sessão restaurada já passou dos dados pessoais (>= step 2)
+  //   e tem um lead criado, respeitamos a escolha anterior.
   useEffect(() => {
     if (!flowSettings) return;
 
@@ -139,19 +140,19 @@ export function TradeInWizard() {
       return;
     }
 
+    // Ambos os fluxos habilitados — força a escolha para sessões iniciais.
     if (
       flowSettings.trade.enabled &&
       flowSettings.sale.enabled &&
-      persisted?.data?.flowType &&
-      (persisted.step ?? 0) <= 1 &&
-      !persisted?.leadId &&
-      data.flowType === persisted.data.flowType &&
-      step === (persisted.step ?? 0)
+      step <= 1 &&
+      !leadId
     ) {
-      setData((prev) => ({ ...prev, flowType: null }));
-      setStep(0);
+      if (data.flowType !== null) {
+        setData((prev) => ({ ...prev, flowType: null }));
+      }
+      if (step !== 0) setStep(0);
     }
-  }, [flowSettings, step, data.flowType, persisted]);
+  }, [flowSettings, step, data.flowType, leadId]);
 
   // Catalog-sync guard
   useEffect(() => {
@@ -467,11 +468,16 @@ export function TradeInWizard() {
 
   /**
    * "Refazer proposta" — mantém nome, email e telefone (e o leadId já criado),
-   * mas zera aparelho, IMEI e respostas. Volta para a escolha do aparelho.
+   * mas zera fluxo, aparelho, IMEI e respostas. Volta para a escolha do fluxo
+   * (step 0) quando os dois estão habilitados; senão, volta para a escolha do
+   * aparelho.
    */
   const handleRestartProposal = () => {
+    const goToFlowChoice =
+      !!flowSettings && flowSettings.trade.enabled && flowSettings.sale.enabled;
     setData((prev) => ({
       ...prev,
+      flowType: goToFlowChoice ? null : prev.flowType,
       deviceId: "",
       colorId: null,
       imei: "",
@@ -480,7 +486,7 @@ export function TradeInWizard() {
     setResult(null);
     setImeiServerError(null);
     setSubScreen("condition");
-    setStep(2);
+    setStep(goToFlowChoice ? 0 : 2);
   };
 
   if (isLoading) {
@@ -535,18 +541,22 @@ export function TradeInWizard() {
 
         <div className="p-4 sm:p-6 md:p-10 pb-6">
           {step < 6 && (
-            <div className="flex items-center justify-between mb-6 gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                {step === 3 && checklistProgress.total > 0
-                  ? `Pergunta ${checklistProgress.current} de ${checklistProgress.total}`
-                  : `Passo ${displayStepIndex + 1} de ${totalProgressSteps}`}
-              </span>
-              <div className="flex items-center gap-2">
-                {step >= 2 && step <= 5 && data.name && data.email && (
-                  <RestartProposalButton onConfirm={handleRestartProposal} />
-                )}
+            <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                  {step === 3 && checklistProgress.total > 0
+                    ? `Pergunta ${checklistProgress.current} de ${checklistProgress.total}`
+                    : `Passo ${displayStepIndex + 1} de ${totalProgressSteps}`}
+                </span>
                 <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
               </div>
+              {step >= 1 && step <= 5 && data.name && data.email && (
+                <RestartProposalButton
+                  prominent
+                  onConfirm={handleRestartProposal}
+                  onFullReset={handleReset}
+                />
+              )}
             </div>
           )}
 

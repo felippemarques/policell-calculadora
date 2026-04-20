@@ -1500,8 +1500,15 @@ export function DefectsTab() {
                 ) : (
                   <div className="flex items-center gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{cond.condition_name}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-medium text-foreground ${(cond as any).is_active === false ? "line-through opacity-60" : ""}`}>
+                          {cond.condition_name}
+                        </span>
+                        {(cond as any).is_active === false && (
+                          <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">
+                            oculto
+                          </Badge>
+                        )}
                         {cond.is_required === false ? (
                           <Badge variant="outline" className="text-[10px]">opcional</Badge>
                         ) : (
@@ -1515,6 +1522,16 @@ export function DefectsTab() {
                           {cond.help_text}
                         </p>
                       )}
+                    </div>
+                    <div title="Mostrar/ocultar na calculadora" className="flex-shrink-0">
+                      <Switch
+                        checked={(cond as any).is_active !== false}
+                        onCheckedChange={(v) =>
+                          toggleActiveMutation.mutate({ table: "condition_discounts", id: cond.id, is_active: v })
+                        }
+                        disabled={toggleActiveMutation.isPending}
+                        aria-label="Mostrar na calculadora"
+                      />
                     </div>
                     {((cond as any).discount_mode === "fixed") ? (
                       <Badge variant="secondary" className="text-xs">
@@ -1736,7 +1753,14 @@ export function DefectsTab() {
                 ) : (
                   <div className="flex items-center gap-3">
                     <Ban className="h-4 w-4 text-destructive flex-shrink-0" />
-                    <span className="font-medium text-foreground flex-1">{rej.condition_name}</span>
+                    <span className={`font-medium text-foreground flex-1 ${(rej as any).is_active === false ? "line-through opacity-60" : ""}`}>
+                      {rej.condition_name}
+                    </span>
+                    {(rej as any).is_active === false && (
+                      <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">
+                        oculto
+                      </Badge>
+                    )}
                     {Array.isArray((rej as any).model_ids) && (rej as any).model_ids.length > 0 && (
                       <Badge variant="outline" className="text-[10px]">
                         {(rej as any).model_ids.length} modelo(s)
@@ -1746,6 +1770,16 @@ export function DefectsTab() {
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Hard Stop
                     </Badge>
+                    <div title="Mostrar/ocultar na calculadora" className="flex-shrink-0">
+                      <Switch
+                        checked={(rej as any).is_active !== false}
+                        onCheckedChange={(v) =>
+                          toggleActiveMutation.mutate({ table: "condition_discounts", id: rej.id, is_active: v })
+                        }
+                        disabled={toggleActiveMutation.isPending}
+                        aria-label="Mostrar na calculadora"
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"

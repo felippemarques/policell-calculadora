@@ -689,14 +689,7 @@ export function TradeInWizard() {
               upgradeBonusPercent={upgradeBonusPercent}
             />
           )}
-          {step === 6 && (
-            <StepTerms
-              isSubmitting={false}
-              onBack={() => setStep(5)}
-              onAccept={handleAcceptTerms}
-              flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
-            />
-          )}
+          {/* Step 6 (Termos) foi unificado ao Contrato (step 8). */}
           {step === 7 && (
             <StepAddress
               initial={data.address}

@@ -217,6 +217,15 @@ export function TradeInWizard() {
     },
   });
 
+  const { data: validBrandIds = [] } = useQuery({
+    queryKey: ["valid_brand_ids"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brands").select("id");
+      if (error) throw error;
+      return (data ?? []).map((b: any) => b.id as string);
+    },
+  });
+
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — Passo 0 = escolha do fluxo
@@ -331,8 +340,9 @@ export function TradeInWizard() {
         conditions,
         damageOptions,
         damageCategories,
+        validBrandIds,
       }),
-    [selectedDevice, data.answers, conditions, damageOptions, damageCategories],
+    [selectedDevice, data.answers, conditions, damageOptions, damageCategories, validBrandIds],
   );
 
   // After the checklist: just advance to the IMEI step. The actual evaluation

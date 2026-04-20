@@ -537,7 +537,9 @@ export function TradeInWizard() {
           {step < 6 && (
             <div className="flex items-center justify-between mb-6 gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Passo {displayStepIndex + 1} de {totalProgressSteps}
+                {step === 3 && checklistProgress.total > 0
+                  ? `Pergunta ${checklistProgress.current} de ${checklistProgress.total}`
+                  : `Passo ${displayStepIndex + 1} de ${totalProgressSteps}`}
               </span>
               <div className="flex items-center gap-2">
                 {step >= 2 && step <= 5 && data.name && data.email && (

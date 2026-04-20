@@ -220,7 +220,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — Passo 0 = escolha do fluxo
-  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Resultado"];
+  const steps = ["Negociação", "Seus Dados", "Seu Aparelho", "Avaliação", "IMEI", "Termos", "Resultado"];
 
   const selectedDevice = useMemo(
     () => devices?.find((d) => d.id === data.deviceId),

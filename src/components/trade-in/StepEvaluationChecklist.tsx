@@ -11,7 +11,6 @@ import {
   Sparkles,
   Wrench,
   ShieldAlert,
-  Check,
   HelpCircle,
   Info,
   ImageIcon,
@@ -31,7 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,18 +62,56 @@ interface Props {
   onResetAll?: () => void;
   isSubmitting: boolean;
   basePrice: number;
-  /** Brand id of the currently selected device — used to filter damage categories */
   selectedBrandId?: string | null;
-  /** Model id of the currently selected device — used to filter rules by model */
   selectedModelId?: string | null;
+  /** Optional callback so the wizard can show "Pergunta X de Y" in the global progress bar. */
+  onProgressChange?: (current: number, total: number) => void;
 }
 
 export type SubScreen = "condition" | "damages" | "rejection";
 
-const SUB_SCREEN_META: Record<SubScreen, { label: string; icon: typeof Sparkles }> = {
-  condition: { label: "Categorias de Defeitos", icon: Sparkles },
-  damages: { label: "Condições do Aparelho", icon: Wrench },
-  rejection: { label: "Impedimentos", icon: ShieldAlert },
+// ───────────────── Question model ─────────────────
+//
+// We flatten the entire checklist into a linear queue of "questions". Each
+// question is shown one at a time, auto-advances on selection, and conditional
+// sub-questions get inserted right after their parent the moment they become
+// relevant. This drives the gamified one-question-per-screen UX.
+
+type Question =
+  | {
+      kind: "condition";
+      id: string; // synthetic
+      group: SubScreen;
+      title: string;
+      subtitle: string;
+      icon: typeof Sparkles;
+      conditions: ConditionRow[];
+    }
+  | {
+      kind: "damage";
+      id: string; // damage_category id
+      group: SubScreen;
+      title: string;
+      subtitle: string;
+      icon: typeof Wrench;
+      category: DamageCategory;
+      options: DamageOption[];
+      depth: number;
+    }
+  | {
+      kind: "rejection";
+      id: string; // synthetic
+      group: SubScreen;
+      title: string;
+      subtitle: string;
+      icon: typeof ShieldAlert;
+      reasons: ConditionRow[];
+    };
+
+const GROUP_META: Record<SubScreen, { label: string; tone: string }> = {
+  condition: { label: "Estado Geral", tone: "text-primary" },
+  damages: { label: "Defeitos", tone: "text-amber-600" },
+  rejection: { label: "Impedimentos", tone: "text-destructive" },
 };
 
 export function StepEvaluationChecklist({
@@ -89,11 +125,8 @@ export function StepEvaluationChecklist({
   isSubmitting,
   selectedBrandId,
   selectedModelId,
+  onProgressChange,
 }: Props) {
-  // Map between UI sub-screen ids and admin group ids (stored in lp_settings).
-  // Reminder: UI labels were swapped — "condition" sub-screen now visually shows
-  // "Categorias de Defeitos" (group `conditions`), and "damages" shows
-  // "Condições do Aparelho" (group `defects`). The data sources are unchanged.
   const SUB_SCREEN_TO_GROUP: Record<SubScreen, EvaluationGroupId> = {
     condition: "conditions",
     damages: "defects",
@@ -107,32 +140,17 @@ export function StepEvaluationChecklist({
 
   const { data: groupsConfig } = useEvaluationGroupsConfig();
 
-  // Ordered + visible sub-screens (drives the wizard navigation).
-  // First pass uses only admin config; the data-aware version below also
-  // auto-skips empty screens (e.g. no conditions cadastradas).
   const adminOrderedSubScreens = useMemo<SubScreen[]>(() => {
     const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];
     const visible = groupsConfig?.visible ?? { conditions: true, defects: true, rejection: true };
     return order.filter((g) => visible[g]).map((g) => GROUP_TO_SUB_SCREEN[g]);
   }, [groupsConfig]);
 
-  const [subScreen, setSubScreen] = useState<SubScreen>("condition");
   const [rejectionModal, setRejectionModal] = useState<{
     open: boolean;
     title: string;
     label: string;
   }>({ open: false, title: "", label: "" });
-
-  // Sync moved below `orderedSubScreens` declaration to avoid TDZ.
-
-  // Validation: which required ids (condition or damage category) are missing
-  const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
-  // Refs to scroll to the first missing card
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  useEffect(() => {
-    onSubScreenChange?.(subScreen);
-  }, [subScreen, onSubScreenChange]);
 
   // ── Data ──
   const { data: conditions = [] } = useQuery({
@@ -176,8 +194,6 @@ export function StepEvaluationChecklist({
     },
   });
 
-  // Live catalog of valid brand/model IDs — used to ignore stale references in
-  // damage_categories.brand_ids/model_ids that point to deleted records.
   const { data: validBrandIds = [] } = useQuery({
     queryKey: ["valid_brand_ids"],
     queryFn: async () => {
@@ -195,15 +211,11 @@ export function StepEvaluationChecklist({
     },
   });
 
-  // ── Filter categories by selected device's brand AND model ──
-  // Stale brand_ids/model_ids (pointing to deleted records) are ignored, so a
-  // category whose only references no longer exist is treated as global.
+  // ── Filter categories by brand/model (stale ids ignored) ──
   const damageCategories = useMemo(() => {
     if (damageCategoriesAll.length === 0) return [];
-
     const validBrandSet = new Set(validBrandIds);
     const validModelSet = new Set(validModelIds);
-
     const matchesScope = (c: DamageCategory) => {
       const brandIds = (c.brand_ids ?? []).filter((id) => validBrandSet.has(id));
       const modelIds = (c.model_ids ?? []).filter((id) => validModelSet.has(id));
@@ -211,15 +223,12 @@ export function StepEvaluationChecklist({
       const modelOk = modelIds.length === 0 || (!!selectedModelId && modelIds.includes(selectedModelId));
       return brandOk && modelOk;
     };
-
     const rootVisibility = new Map<string, boolean>();
     for (const c of damageCategoriesAll) {
       if (!c.parent_id && !c.parent_option_id) {
         rootVisibility.set(c.id, matchesScope(c));
       }
     }
-
-    // Walk up parent chain to find root, following both parent_id and parent_option_id
     const findRootId = (id: string): string | null => {
       let cur = damageCategoriesAll.find((x) => x.id === id);
       const visited = new Set<string>();
@@ -243,7 +252,6 @@ export function StepEvaluationChecklist({
       }
       return cur?.id ?? null;
     };
-
     return damageCategoriesAll.filter((c) => {
       if (!c.parent_id && !c.parent_option_id) return rootVisibility.get(c.id) === true;
       const rootId = findRootId(c.id);
@@ -251,7 +259,6 @@ export function StepEvaluationChecklist({
     });
   }, [damageCategoriesAll, damageOptions, selectedBrandId, selectedModelId, validBrandIds, validModelIds]);
 
-  // Conditions (Tela A + rejections) filtered by model_ids (stale ids ignored)
   const filteredConditions = useMemo(() => {
     const validModelSet = new Set(validModelIds);
     return conditions.filter((c) => {
@@ -263,98 +270,6 @@ export function StepEvaluationChecklist({
   const normalConditions = useMemo(() => filteredConditions.filter((c) => !c.is_rejected), [filteredConditions]);
   const rejectionReasons = useMemo(() => filteredConditions.filter((c) => c.is_rejected), [filteredConditions]);
 
-  // Data-aware ordered sub-screens: skip a screen entirely when it has no items
-  // to show. This avoids dead-end "Nenhuma X cadastrada" screens.
-  const orderedSubScreens = useMemo<SubScreen[]>(() => {
-    return adminOrderedSubScreens.filter((s) => {
-      if (s === "condition") return normalConditions.length > 0;
-      if (s === "damages") return damageCategories.length > 0;
-      if (s === "rejection") return rejectionReasons.length > 0;
-      return true;
-    });
-  }, [adminOrderedSubScreens, normalConditions, damageCategories, rejectionReasons]);
-
-  // Sync current sub-screen with the first visible/non-empty one
-  useEffect(() => {
-    if (orderedSubScreens.length > 0 && !orderedSubScreens.includes(subScreen)) {
-      setSubScreen(orderedSubScreens[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderedSubScreens]);
-
-  // If literally nothing is cadastrado, skip the whole checklist
-  useEffect(() => {
-    if (
-      adminOrderedSubScreens.length > 0 &&
-      orderedSubScreens.length === 0 &&
-      conditions.length === 0 &&
-      damageCategoriesAll.length === 0
-    ) {
-      onSubmit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderedSubScreens, adminOrderedSubScreens, conditions, damageCategoriesAll]);
-
-  // ── Selection helpers ──
-  const selectCondition = (id: string) => {
-    onAnswersChange({ ...answers, conditionId: id });
-  };
-
-  const selectDamageOption = (catId: string, optId: string) => {
-    const opt = damageOptions.find((o) => o.id === optId);
-    const previousOptId = answers.damageOptionByCategory[catId];
-    const nextMap = { ...answers.damageOptionByCategory, [catId]: optId };
-
-    // If switching to a different option, clear answers of any conditional
-    // sub-questions previously triggered by the OLD option (and recursively
-    // their own descendants) so they don't keep contributing to the price.
-    if (previousOptId && previousOptId !== optId) {
-      const collectDescendantCatIds = (rootOptId: string): string[] => {
-        const directCats = damageCategoriesAll
-          .filter((c) => c.parent_option_id === rootOptId)
-          .map((c) => c.id);
-        const result = [...directCats];
-        for (const cid of directCats) {
-          // Each cat's selected option may itself trigger more conditionals
-          const selectedChildOpt = nextMap[cid];
-          if (selectedChildOpt) result.push(...collectDescendantCatIds(selectedChildOpt));
-          // Also collect via parent_id chains
-          const subCats = damageCategoriesAll.filter((c) => c.parent_id === cid).map((c) => c.id);
-          result.push(...subCats);
-        }
-        return result;
-      };
-      for (const staleCatId of collectDescendantCatIds(previousOptId)) {
-        nextMap[staleCatId] = null;
-      }
-    }
-
-    const next: ChecklistAnswers = {
-      ...answers,
-      damageOptionByCategory: nextMap,
-    };
-    onAnswersChange(next);
-
-    if (opt?.is_rejected) {
-      const cat = damageCategories.find((c) => c.id === catId);
-      const reason = `${cat?.name ?? "Defeito"}: ${opt.option_name}`;
-      onReject(reason);
-      setRejectionModal({ open: true, title: cat?.name ?? "Defeito", label: opt.option_name });
-    }
-  };
-
-  const selectRejection = (id: string) => {
-    const rej = conditions.find((c) => c.id === id);
-    const next: ChecklistAnswers = { ...answers, rejectionId: id };
-    onAnswersChange(next);
-    if (rej) {
-      onReject(rej.condition_name);
-      setRejectionModal({ open: true, title: "Impedimento", label: rej.condition_name });
-    }
-  };
-
-  // ── Validation per sub-screen ──
-  // True root: no parent at all (neither parent_id nor parent_option_id)
   const rootCategories = useMemo(
     () => damageCategories.filter((c) => !c.parent_id && !c.parent_option_id),
     [damageCategories],
@@ -370,7 +285,6 @@ export function StepEvaluationChecklist({
     return map;
   }, [damageCategories]);
 
-  // Conditional sub-questions indexed by the option that triggers them
   const conditionalsByOption = useMemo(() => {
     const map: Record<string, DamageCategory[]> = {};
     for (const c of damageCategories) {
@@ -379,86 +293,211 @@ export function StepEvaluationChecklist({
         map[c.parent_option_id].push(c);
       }
     }
-    // Keep stable display_order
     for (const key of Object.keys(map)) {
-      map[key].sort(
-        (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0),
-      );
+      map[key].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
     }
     return map;
   }, [damageCategories]);
 
-  // A required category that has no options is not actionable — exclude it.
-  // Conditional sub-questions only count when their trigger option is currently selected.
-  const requiredDamageCategories = useMemo(
-    () =>
-      damageCategories.filter((c) => {
-        if (c.is_required === false) return false;
-        if (!damageOptions.some((o) => o.damage_category_id === c.id)) return false;
-        if (c.parent_option_id) {
-          // active only if the trigger option is currently chosen in its owning category
-          const triggerOpt = damageOptions.find((o) => o.id === c.parent_option_id);
-          if (!triggerOpt) return false;
-          const ownerCatId = triggerOpt.damage_category_id;
-          return answers.damageOptionByCategory[ownerCatId] === c.parent_option_id;
+  // ── Build the linear question queue ──
+  // We re-derive on every answers change so conditional sub-questions appear
+  // immediately after the user picks the trigger option.
+  const questions = useMemo<Question[]>(() => {
+    const list: Question[] = [];
+
+    const buildDamageQuestion = (cat: DamageCategory, depth: number): Question | null => {
+      const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
+      if (opts.length === 0) return null;
+      return {
+        kind: "damage",
+        id: cat.id,
+        group: "damages",
+        title: cat.name,
+        subtitle:
+          depth > 0 ? "Detalhe do defeito anterior" : "Selecione a opção que melhor descreve o estado.",
+        icon: Wrench,
+        category: cat,
+        options: opts,
+        depth,
+      };
+    };
+
+    const pushDamageBranch = (cat: DamageCategory, depth: number) => {
+      const q = buildDamageQuestion(cat, depth);
+      if (q) list.push(q);
+      // Conditional sub-questions tied to the option currently selected
+      const selectedOptId = answers.damageOptionByCategory[cat.id];
+      if (selectedOptId && conditionalsByOption[selectedOptId]) {
+        for (const child of conditionalsByOption[selectedOptId]) {
+          pushDamageBranch(child, depth + 1);
         }
-        return true;
-      }),
-    [damageCategories, damageOptions, answers.damageOptionByCategory],
-  );
-  const conditionAnswered = !!answers.conditionId;
-  const allRequiredDamageCategoriesAnswered = requiredDamageCategories.every(
-    (c) => !!answers.damageOptionByCategory[c.id],
-  );
+      }
+      // Static sub-categories (parent_id chain)
+      const subs = subcategoriesByParent[cat.id] ?? [];
+      for (const sub of subs) pushDamageBranch(sub, depth + 1);
+    };
 
-  const scrollToFirstMissing = (ids: string[]) => {
-    const first = ids[0];
-    if (!first) return;
-    const el = cardRefs.current[first];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    for (const group of adminOrderedSubScreens) {
+      if (group === "condition" && normalConditions.length > 0) {
+        list.push({
+          kind: "condition",
+          id: "__condition__",
+          group: "condition",
+          title: "Como está a condição geral do aparelho?",
+          subtitle: "Selecione a opção que melhor descreve o estado do seu aparelho.",
+          icon: Sparkles,
+          conditions: normalConditions,
+        });
+      } else if (group === "damages" && rootCategories.length > 0) {
+        for (const cat of rootCategories) pushDamageBranch(cat, 0);
+      } else if (group === "rejection" && rejectionReasons.length > 0) {
+        list.push({
+          kind: "rejection",
+          id: "__rejection__",
+          group: "rejection",
+          title: "Algum desses problemas se aplica ao aparelho?",
+          subtitle: "Se nenhum se aplica, basta avançar para finalizar.",
+          icon: ShieldAlert,
+          reasons: rejectionReasons,
+        });
+      }
+    }
+
+    return list;
+  }, [
+    adminOrderedSubScreens,
+    normalConditions,
+    rootCategories,
+    rejectionReasons,
+    damageOptions,
+    answers.damageOptionByCategory,
+    conditionalsByOption,
+    subcategoriesByParent,
+  ]);
+
+  // Current question index. Clamp into range whenever the queue shrinks.
+  const [qIdx, setQIdx] = useState(0);
+  useEffect(() => {
+    if (questions.length === 0) return;
+    if (qIdx > questions.length - 1) setQIdx(questions.length - 1);
+  }, [questions.length, qIdx]);
+
+  // If literally nothing is registered, skip the checklist entirely.
+  const triggeredEmptySubmit = useRef(false);
+  useEffect(() => {
+    if (
+      adminOrderedSubScreens.length > 0 &&
+      questions.length === 0 &&
+      conditions.length === 0 &&
+      damageCategoriesAll.length === 0 &&
+      !triggeredEmptySubmit.current
+    ) {
+      triggeredEmptySubmit.current = true;
+      onSubmit();
+    }
+  }, [questions, adminOrderedSubScreens, conditions, damageCategoriesAll, onSubmit]);
+
+  const currentQ = questions[qIdx];
+
+  // Notify parent of group changes so the wizard can adjust the price footer etc.
+  useEffect(() => {
+    if (currentQ) onSubScreenChange?.(currentQ.group);
+  }, [currentQ?.group, currentQ, onSubScreenChange]);
+
+  // Notify parent of granular progress (Pergunta X de Y)
+  useEffect(() => {
+    if (questions.length > 0) onProgressChange?.(qIdx + 1, questions.length);
+    return () => onProgressChange?.(0, 0);
+  }, [qIdx, questions.length, onProgressChange]);
+
+  // ── Selection helpers (with auto-advance) ──
+  const ADVANCE_DELAY = 280; // ms — gives a beat of feedback before moving on
+  const advanceTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    };
+  }, []);
+
+  const scheduleAdvance = (intoFinal = false) => {
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      if (intoFinal || qIdx >= questions.length - 1) {
+        onSubmit();
+      } else {
+        setQIdx((i) => Math.min(i + 1, questions.length - 1));
+      }
+    }, ADVANCE_DELAY);
+  };
+
+  const cancelAdvance = () => {
+    if (advanceTimer.current) {
+      window.clearTimeout(advanceTimer.current);
+      advanceTimer.current = null;
     }
   };
 
-  const handleNextClick = () => {
-    // Validate current screen before moving to the next visible one.
-    if (subScreen === "condition") {
-      const requireCondition =
-        normalConditions.length > 0 && normalConditions.some((c) => c.is_required !== false);
-      if (requireCondition && !conditionAnswered) {
-        setMissingIds(new Set(["__condition__"]));
-        toast.error("Selecione uma opção para continuar.");
-        scrollToFirstMissing(["__condition__"]);
-        return;
-      }
-    } else if (subScreen === "damages") {
-      const missing = requiredDamageCategories
-        .filter((c) => !answers.damageOptionByCategory[c.id])
-        .map((c) => c.id);
-      if (missing.length > 0) {
-        setMissingIds(new Set(missing));
-        toast.error(
-          missing.length === 1
-            ? "Falta responder uma categoria obrigatória."
-            : `Faltam ${missing.length} categorias obrigatórias.`,
-        );
-        scrollToFirstMissing(missing);
-        return;
-      }
-    }
-    setMissingIds(new Set());
-    const idx = orderedSubScreens.indexOf(subScreen);
-    const nextScreen = orderedSubScreens[idx + 1];
-    if (nextScreen) setSubScreen(nextScreen);
+  const handlePickCondition = (id: string) => {
+    onAnswersChange({ ...answers, conditionId: id });
+    scheduleAdvance();
   };
 
+  const handlePickDamage = (catId: string, optId: string) => {
+    const opt = damageOptions.find((o) => o.id === optId);
+    const previousOptId = answers.damageOptionByCategory[catId];
+    const nextMap = { ...answers.damageOptionByCategory, [catId]: optId };
 
-  // Clear rejection on revisar
+    // Clear stale conditional descendants when switching options
+    if (previousOptId && previousOptId !== optId) {
+      const collectDescendantCatIds = (rootOptId: string): string[] => {
+        const directCats = damageCategoriesAll
+          .filter((c) => c.parent_option_id === rootOptId)
+          .map((c) => c.id);
+        const result = [...directCats];
+        for (const cid of directCats) {
+          const selectedChildOpt = nextMap[cid];
+          if (selectedChildOpt) result.push(...collectDescendantCatIds(selectedChildOpt));
+          const subCats = damageCategoriesAll.filter((c) => c.parent_id === cid).map((c) => c.id);
+          result.push(...subCats);
+        }
+        return result;
+      };
+      for (const staleCatId of collectDescendantCatIds(previousOptId)) {
+        nextMap[staleCatId] = null;
+      }
+    }
+
+    onAnswersChange({ ...answers, damageOptionByCategory: nextMap });
+
+    if (opt?.is_rejected) {
+      cancelAdvance();
+      const cat = damageCategories.find((c) => c.id === catId);
+      const reason = `${cat?.name ?? "Defeito"}: ${opt.option_name}`;
+      onReject(reason);
+      setRejectionModal({ open: true, title: cat?.name ?? "Defeito", label: opt.option_name });
+      return;
+    }
+    scheduleAdvance();
+  };
+
+  const handlePickRejection = (id: string) => {
+    const rej = rejectionReasons.find((c) => c.id === id);
+    onAnswersChange({ ...answers, rejectionId: id });
+    if (rej) {
+      cancelAdvance();
+      onReject(rej.condition_name);
+      setRejectionModal({ open: true, title: "Impedimento", label: rej.condition_name });
+    }
+  };
+
+  const handleSkipRejection = () => {
+    onAnswersChange({ ...answers, rejectionId: null });
+    scheduleAdvance(true);
+  };
+
   const handleClearRejection = () => {
-    const next: ChecklistAnswers = { ...answers };
-    // Remove rejection field
-    next.rejectionId = null;
-    // Remove any rejected damage option from B
+    const next: ChecklistAnswers = { ...answers, rejectionId: null };
     next.damageOptionByCategory = { ...answers.damageOptionByCategory };
     for (const [catId, optId] of Object.entries(next.damageOptionByCategory)) {
       const opt = damageOptions.find((o) => o.id === optId);
@@ -473,278 +512,141 @@ export function StepEvaluationChecklist({
     onResetAll?.();
   };
 
-  // ── Sub-screen navigation (dynamic based on admin order/visibility) ──
   const goPrev = () => {
-    const idx = orderedSubScreens.indexOf(subScreen);
-    const prevScreen = orderedSubScreens[idx - 1];
-    if (prevScreen) setSubScreen(prevScreen);
-    else onBack();
+    cancelAdvance();
+    if (qIdx === 0) onBack();
+    else setQIdx((i) => Math.max(0, i - 1));
   };
 
-  const isLastSubScreen = orderedSubScreens[orderedSubScreens.length - 1] === subScreen;
-  const currentIdx = orderedSubScreens.indexOf(subScreen);
-  const visibleSubScreensMeta = orderedSubScreens.map((key) => ({ key, ...SUB_SCREEN_META[key] }));
+  const goNextManual = () => {
+    cancelAdvance();
+    if (qIdx >= questions.length - 1) onSubmit();
+    else setQIdx((i) => Math.min(questions.length - 1, i + 1));
+  };
+
+  // Determine if the current question has been answered (so "Avançar" can be enabled).
+  const currentAnswered = useMemo(() => {
+    if (!currentQ) return false;
+    if (currentQ.kind === "condition") return !!answers.conditionId;
+    if (currentQ.kind === "damage") return !!answers.damageOptionByCategory[currentQ.id];
+    return true; // rejection screen has its own primary action
+  }, [currentQ, answers]);
+
+  if (!currentQ) {
+    return (
+      <div className="py-10 text-center text-sm text-muted-foreground">
+        Carregando avaliação…
+      </div>
+    );
+  }
+
+  const isLast = qIdx === questions.length - 1;
+  const groupMeta = GROUP_META[currentQ.group];
+  const Icon = currentQ.icon;
 
   return (
     <>
       <div className="animate-fade-in space-y-6">
-        {/* Header + sub-step indicator */}
+        {/* Header */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Avaliação do Aparelho
-            </h2>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Avaliação do Aparelho
+              </h2>
+            </div>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground tabular-nums">
+              {qIdx + 1}/{questions.length}
+            </span>
           </div>
+
+          {/* Granular progress bar */}
+          <div className="h-1 w-full bg-muted/60 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: `${((qIdx + 1) / questions.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Group chip */}
           <div className="flex items-center gap-1.5">
-            {visibleSubScreensMeta.map((s, i) => {
-              const Icon = s.icon;
-              const isActive = i === currentIdx;
-              const isDone = i < currentIdx;
-              return (
-                <div key={s.key} className="flex items-center gap-1.5 flex-1">
-                  <div
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all flex-1 ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : isDone
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {isDone ? (
-                      <Check className="h-3 w-3 flex-shrink-0" />
-                    ) : (
-                      <Icon className="h-3 w-3 flex-shrink-0" />
-                    )}
-                    <span className="truncate">{s.label}</span>
-                  </div>
-                </div>
-              );
-            })}
+            <Icon className={`h-3.5 w-3.5 ${groupMeta.tone}`} />
+            <span className={`text-[11px] font-semibold uppercase tracking-widest ${groupMeta.tone}`}>
+              {groupMeta.label}
+            </span>
+            {currentQ.kind === "damage" && currentQ.depth > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground">
+                · sub-pergunta
+              </span>
+            )}
           </div>
         </div>
 
-        {/* ───── TELA A: Condição Geral ───── */}
-        {subScreen === "condition" && (
-          <div className="space-y-4 animate-fade-in">
-            <div>
-              <p className="text-xs font-semibold text-primary uppercase tracking-widest flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3" /> Estado Geral
-              </p>
-              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2 flex items-center gap-2">
-                Como está a condição geral do aparelho?
-                <ConditionsHelp conditions={normalConditions} />
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Selecione a opção que melhor descreve o estado do seu aparelho.
-              </p>
-            </div>
-
-            <div
-              ref={(el) => {
-                cardRefs.current["__condition__"] = el;
-              }}
-              className={`rounded-3xl p-1 transition-all ${
-                missingIds.has("__condition__")
-                  ? "ring-2 ring-destructive bg-destructive/5"
-                  : ""
-              }`}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
-                {normalConditions.map((cond) => {
-                  const isSelected = answers.conditionId === cond.id;
-                  return (
-                    <OptionCard
-                      key={cond.id}
-                      selected={isSelected}
-                      onClick={() => {
-                        if (missingIds.has("__condition__")) {
-                          const next = new Set(missingIds);
-                          next.delete("__condition__");
-                          setMissingIds(next);
-                        }
-                        selectCondition(cond.id);
-                      }}
-                      label={cond.condition_name}
-                      help={cond.help_text}
-                      badge={
-                        cond.discount_percentage > 0
-                          ? `−${cond.discount_percentage}%`
-                          : "Sem desconto"
-                      }
-                    />
-                  );
-                })}
-              </div>
-              {missingIds.has("__condition__") && (
-                <p className="text-xs text-destructive font-medium px-3 pb-2 pt-1">
-                  Selecione uma opção para continuar.
-                </p>
+        {/* Question body — keyed so animation re-runs on each question change */}
+        <div key={currentQ.id} className="space-y-4 animate-fade-in">
+          <div>
+            <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground flex items-center gap-2 flex-wrap">
+              {currentQ.title}
+              {currentQ.kind === "condition" && (
+                <ConditionsHelp conditions={currentQ.conditions} />
               )}
-            </div>
-            {normalConditions.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhuma condição cadastrada.
-              </p>
-            )}
+              {currentQ.kind === "damage" && (
+                <HelpExampleButton category={currentQ.category} />
+              )}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">{currentQ.subtitle}</p>
           </div>
-        )}
 
-        {/* ───── TELA B: Categorias de Defeitos (dinâmicas) ───── */}
-        {subScreen === "damages" && (
-          <div className="space-y-5 animate-fade-in">
-            <div>
-              <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest flex items-center gap-1.5">
-                <Wrench className="h-3 w-3" /> Defeitos Específicos
-              </p>
-              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
-                Há algum defeito específico no aparelho?
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Para cada categoria, selecione a opção que descreve o estado.
-              </p>
+          {currentQ.kind === "condition" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {currentQ.conditions.map((cond) => (
+                <OptionCard
+                  key={cond.id}
+                  selected={answers.conditionId === cond.id}
+                  onClick={() => handlePickCondition(cond.id)}
+                  label={cond.condition_name}
+                  help={cond.help_text}
+                  badge={
+                    cond.discount_percentage > 0
+                      ? `−${cond.discount_percentage}%`
+                      : "Sem desconto"
+                  }
+                />
+              ))}
             </div>
+          )}
 
-            {damageCategories.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhuma categoria cadastrada.
-              </p>
-            )}
-
-            {(() => {
-              const renderCategory = (cat: DamageCategory, depth: number): JSX.Element | null => {
-                const opts = damageOptions.filter((o) => o.damage_category_id === cat.id);
-                const subs = subcategoriesByParent[cat.id] || [];
-                if (opts.length === 0 && subs.length === 0) return null;
-
-                const selectedId = answers.damageOptionByCategory[cat.id] ?? null;
-                const isMissing = missingIds.has(cat.id);
-                const isRequired = cat.is_required !== false;
-                const hasMedia = !!(cat.help_image_url || (cat.help_text && cat.help_text.trim()));
-
-                return (
-                  <div
-                    key={cat.id}
-                    ref={(el) => {
-                      cardRefs.current[cat.id] = el;
-                    }}
-                    style={depth > 0 ? { marginLeft: `${Math.min(depth, 2) * 12}px` } : undefined}
-                    className={`rounded-3xl border p-5 md:p-6 shadow-sm transition-all ${
-                      depth > 0 ? "bg-muted/30 border-dashed" : "bg-card border-black/5"
-                    } ${
-                      isMissing
-                        ? "!border-destructive ring-2 ring-destructive/40 !bg-destructive/5"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <h4 className="text-base font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                        {depth > 0 && (
-                          <span className="text-xs font-medium text-primary uppercase tracking-wider">
-                            ↳ Sub-pergunta
-                          </span>
-                        )}
-                        <span>{cat.name}</span>
-                        {isRequired && opts.length > 0 && (
-                          <span className="text-xs font-normal text-destructive" aria-label="obrigatório">
-                            *
-                          </span>
-                        )}
-                        {hasMedia && <HelpExampleButton category={cat} />}
-                      </h4>
-                      {isMissing && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive whitespace-nowrap">
-                          Obrigatório
-                        </span>
-                      )}
-                    </div>
-
-                    {opts.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {opts.map((opt) => {
-                          const isSelected = selectedId === opt.id;
-                          return (
-                            <OptionCard
-                              key={opt.id}
-                              selected={isSelected}
-                              onClick={() => {
-                                if (isMissing) {
-                                  const next = new Set(missingIds);
-                                  next.delete(cat.id);
-                                  setMissingIds(next);
-                                }
-                                selectDamageOption(cat.id, opt.id);
-                              }}
-                              label={opt.option_name}
-                              isReject={opt.is_rejected}
-                              badge={
-                                opt.is_rejected
-                                  ? "Inviabiliza"
-                                  : Number(opt.deduction_value) > 0
-                                    ? `−${formatBRL(Number(opt.deduction_value))}`
-                                    : "Sem dedução"
-                              }
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Reveal conditional sub-questions tied to the currently-selected option */}
-                    {selectedId && (conditionalsByOption[selectedId]?.length ?? 0) > 0 && (
-                      <div className="mt-4 space-y-3 animate-fade-in">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
-                          ↳ Por favor, responda também:
-                        </p>
-                        {conditionalsByOption[selectedId].map((cond) =>
-                          renderCategory(cond, depth + 1),
-                        )}
-                      </div>
-                    )}
-
-                    {subs.length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        {subs.map((sub) => renderCategory(sub, depth + 1))}
-                      </div>
-                    )}
-                  </div>
-                );
-              };
-
-              return rootCategories.map((cat) => renderCategory(cat, 0));
-            })()}
-          </div>
-        )}
-
-        {/* ───── TELA C: Motivos de Rejeição ───── */}
-        {subScreen === "rejection" && (
-          <div className="space-y-4 animate-fade-in">
-            <div>
-              <p className="text-xs font-semibold text-destructive uppercase tracking-widest flex items-center gap-1.5">
-                <ShieldAlert className="h-3 w-3" /> Impedimentos
-              </p>
-              <h3 className="text-base md:text-lg font-semibold tracking-tight text-foreground mt-2">
-                Algum desses problemas se aplica ao aparelho?
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Se nenhum se aplica, basta avançar para finalizar a avaliação.
-              </p>
+          {currentQ.kind === "damage" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {currentQ.options.map((opt) => (
+                <OptionCard
+                  key={opt.id}
+                  selected={answers.damageOptionByCategory[currentQ.id] === opt.id}
+                  onClick={() => handlePickDamage(currentQ.id, opt.id)}
+                  label={opt.option_name}
+                  isReject={opt.is_rejected}
+                  badge={
+                    opt.is_rejected
+                      ? "Inviabiliza"
+                      : Number(opt.deduction_value) > 0
+                        ? `−${formatBRL(Number(opt.deduction_value))}`
+                        : "Sem dedução"
+                  }
+                />
+              ))}
             </div>
+          )}
 
+          {currentQ.kind === "rejection" && (
             <div className="rounded-3xl bg-destructive/5 border border-destructive/15 p-5 space-y-2.5">
-              {rejectionReasons.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  Nenhum impedimento cadastrado.
-                </p>
-              )}
-              {rejectionReasons.map((rej) => {
+              {currentQ.reasons.map((rej) => {
                 const isSelected = answers.rejectionId === rej.id;
                 return (
                   <button
                     key={rej.id}
                     type="button"
-                    onClick={() => selectRejection(rej.id)}
+                    onClick={() => handlePickRejection(rej.id)}
                     className={`w-full text-left rounded-2xl border p-4 transition-all flex items-center gap-3 ${
                       isSelected
                         ? "border-destructive bg-destructive/10 ring-2 ring-destructive/30"
@@ -767,29 +669,41 @@ export function StepEvaluationChecklist({
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={handleSkipRejection}
+                className="w-full text-center rounded-2xl border border-primary/30 bg-primary/5 hover:bg-primary/10 p-4 text-sm font-medium text-primary transition-colors"
+              >
+                Nenhum desses se aplica — finalizar avaliação
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ───── Footer navigation ───── */}
-        <div className="flex gap-3 pt-2">
-          <Button variant="outline" onClick={goPrev} className="flex-1 h-12 rounded-full">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        {/* Footer navigation — discreet, since auto-advance does most of the work */}
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <Button variant="outline" size="sm" onClick={goPrev} className="rounded-full">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Voltar
           </Button>
-          {!isLastSubScreen ? (
+          {currentQ.kind !== "rejection" && (
             <Button
-              onClick={handleNextClick}
-              className="flex-1 h-12 rounded-full shadow-sm"
+              size="sm"
+              variant={currentAnswered ? "default" : "ghost"}
+              onClick={goNextManual}
+              disabled={!currentAnswered || isSubmitting}
+              className="rounded-full"
             >
-              Próximo <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={onSubmit}
-              disabled={isSubmitting}
-              className="flex-1 h-12 rounded-full shadow-sm"
-            >
-              {isSubmitting ? "Calculando..." : "Calcular"} <Send className="ml-2 h-4 w-4" />
+              {isLast ? (
+                isSubmitting ? "Calculando..." : (
+                  <>
+                    Calcular <Send className="ml-1.5 h-3.5 w-3.5" />
+                  </>
+                )
+              ) : (
+                <>
+                  Avançar <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -839,7 +753,7 @@ export function StepEvaluationChecklist({
   );
 }
 
-// ── Small reusable option card ──
+// ── Reusable option card ──
 function OptionCard({
   selected,
   onClick,
@@ -864,9 +778,9 @@ function OptionCard({
       className={`text-left rounded-2xl border p-4 transition-all duration-200 ${
         selected
           ? isReject
-            ? "border-destructive bg-destructive/5 ring-2 ring-destructive/30 shadow-sm"
-            : "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
-          : "border-black/10 bg-card hover:border-black/20 hover:shadow-sm"
+            ? "border-destructive bg-destructive/5 ring-2 ring-destructive/30 shadow-sm scale-[0.99]"
+            : "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm scale-[0.99]"
+          : "border-black/10 bg-card hover:border-black/20 hover:shadow-sm hover:scale-[1.01]"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -901,7 +815,6 @@ function OptionCard({
   );
 }
 
-// ── Inline "?" tooltip with help text ──
 function HelpIcon({ text }: { text?: string | null }) {
   if (!text || !text.trim()) return null;
   return (
@@ -925,7 +838,6 @@ function HelpIcon({ text }: { text?: string | null }) {
   );
 }
 
-// ── "Ver Exemplo" button → opens dialog with help image + text ──
 function HelpExampleButton({ category }: { category: DamageCategory }) {
   const [open, setOpen] = useState(false);
   const hasImage = !!category.help_image_url;
@@ -972,7 +884,6 @@ function HelpExampleButton({ category }: { category: DamageCategory }) {
   );
 }
 
-// Aggregates help text from all conditions into a single tooltip on the screen heading
 function ConditionsHelp({ conditions }: { conditions: ConditionRow[] }) {
   const withHelp = conditions.filter((c) => c.help_text && c.help_text.trim());
   if (withHelp.length === 0) return null;

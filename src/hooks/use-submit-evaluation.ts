@@ -14,6 +14,14 @@ export interface EvaluationData {
   finalValue: number;
   leadId?: string | null;
   flowType?: "trade" | "sale";
+  imei?: string | null;
+}
+
+export class DuplicateImeiError extends Error {
+  constructor() {
+    super("Já existe uma proposta ativa para este IMEI neste tipo de negociação.");
+    this.name = "DuplicateImeiError";
+  }
 }
 
 async function fetchCouponSettings(): Promise<Record<string, string>> {

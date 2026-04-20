@@ -126,6 +126,15 @@ export function useLead() {
     [updateLead],
   );
 
+  /** Save the IMEI on the lead via SECURITY DEFINER RPC (validates Luhn). */
+  const setImei = useCallback(async (id: string, imei: string) => {
+    const { error } = await (supabase.rpc as any)("update_lead_imei", {
+      _lead_id: id,
+      _imei: imei,
+    });
+    if (error) throw error;
+  }, []);
+
   return {
     leadId,
     setLeadId,
@@ -136,6 +145,7 @@ export function useLead() {
     updateAssessment,
     markRejected,
     setFlowType,
+    setImei,
     creating,
   };
 }

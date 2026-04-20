@@ -581,6 +581,7 @@ export function TradeInWizard() {
               basePrice={basePrice}
               selectedBrandId={selectedDevice?.brand_id ?? null}
               selectedModelId={selectedModelId}
+              onProgressChange={(current, total) => setChecklistProgress({ current, total })}
             />
           )}
           {step === 4 && (

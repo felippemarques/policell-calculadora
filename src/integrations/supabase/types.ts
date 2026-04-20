@@ -53,6 +53,7 @@ export type Database = {
           description: string | null
           display_order: number
           id: string
+          is_active: boolean
           is_required: boolean
           title: string
           updated_at: string
@@ -62,6 +63,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           id?: string
+          is_active?: boolean
           is_required?: boolean
           title: string
           updated_at?: string
@@ -71,6 +73,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           id?: string
+          is_active?: boolean
           is_required?: boolean
           title?: string
           updated_at?: string
@@ -181,6 +184,7 @@ export type Database = {
           display_order: number
           help_text: string | null
           id: string
+          is_active: boolean
           is_rejected: boolean
           is_required: boolean
           model_ids: string[]
@@ -194,6 +198,7 @@ export type Database = {
           display_order?: number
           help_text?: string | null
           id?: string
+          is_active?: boolean
           is_rejected?: boolean
           is_required?: boolean
           model_ids?: string[]
@@ -207,6 +212,7 @@ export type Database = {
           display_order?: number
           help_text?: string | null
           id?: string
+          is_active?: boolean
           is_rejected?: boolean
           is_required?: boolean
           model_ids?: string[]
@@ -222,6 +228,7 @@ export type Database = {
           help_image_url: string | null
           help_text: string | null
           id: string
+          is_active: boolean
           is_required: boolean
           model_ids: string[]
           name: string
@@ -236,6 +243,7 @@ export type Database = {
           help_image_url?: string | null
           help_text?: string | null
           id?: string
+          is_active?: boolean
           is_required?: boolean
           model_ids?: string[]
           name: string
@@ -250,6 +258,7 @@ export type Database = {
           help_image_url?: string | null
           help_text?: string | null
           id?: string
+          is_active?: boolean
           is_required?: boolean
           model_ids?: string[]
           name?: string

@@ -137,8 +137,6 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
     );
   }
 
-  const isSale = flowType === "sale";
-
   return (
     <div className="space-y-6">
       <Card className="border-primary/20 bg-primary/5">

@@ -141,7 +141,13 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
   );
 
   const handleDownload = () => {
-    generateContractPdf(renderedText, "contrato-pollicell.pdf");
+    generateContractPdf(renderedText, "contrato-pollicell.pdf", {
+      storeName,
+      customerName: data.customerName,
+      deviceLabel: data.deviceLabel,
+      acceptedAt: data.acceptedAt ?? new Date(),
+      flowLabel: data.flowLabel,
+    });
   };
 
   return (

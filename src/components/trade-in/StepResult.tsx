@@ -89,6 +89,20 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownloadContract = () => {
+    if (!acceptedContractText) {
+      toast.error("Contrato indisponível para download.");
+      return;
+    }
+    generateContractPdf(acceptedContractText, "proposta-pollicell.pdf", {
+      storeName: acceptedContractMeta?.storeName ?? "Pollicell",
+      customerName,
+      deviceLabel,
+      acceptedAt: acceptedContractMeta?.acceptedAt ?? new Date(),
+      flowLabel: acceptedContractMeta?.flowLabel ?? (isSale ? "Venda" : "Troca"),
+    });
+  };
+
   const storeUrl = settings["coupon_store_url"] || "https://pollicell.com.br";
 
   const handleSpecialist = () => {

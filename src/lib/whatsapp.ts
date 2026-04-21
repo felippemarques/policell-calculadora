@@ -5,7 +5,6 @@ const onlyDigits = (s: string) => (s ?? "").replace(/\D/g, "");
 export function normalizeWhatsappNumber(phone: string): string {
   const d = onlyDigits(phone);
   if (!d) return "";
-  // already has country code (12+ digits)
   if (d.length >= 12) return d;
   return `55${d}`;
 }
@@ -19,4 +18,40 @@ export function buildWhatsappUrl(phone: string, message: string): string {
 export function openWhatsapp(phone: string, message: string) {
   const url = buildWhatsappUrl(phone, message);
   window.open(url, "_blank", "noopener,noreferrer");
+}
+
+const formatBRL = (n?: number | null) =>
+  typeof n === "number"
+    ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : "";
+
+export interface ContextualMessageInput {
+  kind: "lead" | "evaluation";
+  customerName: string;
+  deviceLabel: string;
+  status?: string | null;
+  couponCode?: string | null;
+  finalValue?: number | null;
+}
+
+/** Builds a contextual WhatsApp message based on proposal state. */
+export function buildContextualMessage(input: ContextualMessageInput): string {
+  const firstName = (input.customerName || "").split(" ")[0] || "";
+  const greeting = firstName ? `Olá, ${firstName}!` : "Olá!";
+  const device = input.deviceLabel || "seu aparelho";
+
+  if (input.status === "rejected") {
+    return `${greeting} Sobre seu ${device} — temos outras opções pra você, posso te apresentar?`;
+  }
+
+  if (input.kind === "evaluation" && input.couponCode) {
+    const val = formatBRL(input.finalValue);
+    return `${greeting} Seu cupom *${input.couponCode}*${val ? ` de ${val}` : ""} para o ${device} está ativo. Posso te ajudar a usar agora mesmo?`;
+  }
+
+  if (input.kind === "lead") {
+    return `${greeting} Vi que você começou a avaliar um ${device} aqui na Pollicell. Posso te ajudar a finalizar?`;
+  }
+
+  return `${greeting} Sobre sua avaliação do ${device}, posso te ajudar?`;
 }

@@ -1,93 +1,67 @@
 
 
-## Escopo
+## Refatorar o Drawer de Proposta para o time comercial
 
-Adicionar um **Passo 0** ("Como você quer negociar?") com 2 cards: **Trocar por outro aparelho** ou **Vender por dinheiro**. A escolha define preço base diferente por aparelho e CTA final distinto. Admin configura textos, ícones e habilita/desabilita cada fluxo.
+Tornar o `ProposalDetailSheet` num "dossiê do cliente" completo, com tudo que o vendedor precisa antes de ligar — sem nova migration (todos os campos já existem em `leads` / `evaluations`).
 
-## 1. Banco de dados (migração)
+### O que muda no drawer
 
-**`model_storages`** (preço base hoje único):
-- `+ trade_price numeric NOT NULL DEFAULT 0` — preço quando cliente quer trocar
-- `+ sale_price numeric NOT NULL DEFAULT 0` — preço quando cliente quer vender
-- Backfill: `trade_price = base_price`, `sale_price = base_price` para registros existentes (zero quebra).
-- `base_price` continua existindo (fallback/legado).
-- Trigger `sync_device_for_model_storage` atualizada para escrever ambos em `devices` (novas colunas `trade_price`, `sale_price`).
+**1. Cabeçalho rico** (sempre visível, sticky)
+- Nome do cliente em destaque + telefone clicável (`tel:`) + e-mail (`mailto:`)
+- Badge da modalidade (Troca/Venda) e status (Em andamento / Concluído / Rejeitado)
+- 3 botões grandes lado a lado: **WhatsApp** (mensagem pré-preenchida com aparelho + valor + cupom se houver), **Ligar agora**, **Copiar dossiê**
 
-**`devices`** (sincronizada via trigger):
-- `+ trade_price numeric NOT NULL DEFAULT 0`
-- `+ sale_price numeric NOT NULL DEFAULT 0`
+**2. Bloco "Aparelho do cliente"** (novo, sempre visível)
+- Marca, modelo, armazenamento, cor (se houver no catálogo)
+- Preço base do aparelho no catálogo (referência)
+- IMEI em fonte mono **com botão copiar individual** (funciona pra lead E pra evaluation)
+- Aviso visual se IMEI inválido/ausente
 
-**`leads`** + **`evaluations`**:
-- `+ flow_type text NOT NULL DEFAULT 'trade'` — `'trade'` ou `'sale'`. Permite filtrar/relatar no admin.
+**3. Bloco "Resumo financeiro"** (nas evaluations)
+- Mantém o breakdown atual (base / desconto condição / deduções / final)
+- Adiciona: condição declarada (normal/usado/etc) e número de defeitos
+- Cupom em destaque com copiar
 
-**`lp_settings`** (chave-valor já existente, sem migração de schema):
-- Novas chaves inseridas via `supabase--insert` depois da migração:
-  - `flow_trade_enabled` ('true'/'false')
-  - `flow_trade_title`, `flow_trade_description`, `flow_trade_cta_text`
-  - `flow_sale_enabled`, `flow_sale_title`, `flow_sale_description`, `flow_sale_cta_text`
-  - `flow_sale_whatsapp` — número (já pode ter um, conferir e usar fallback)
+**4. Bloco "Defeitos declarados"** (já existe, melhorar)
+- Mostrar o impacto monetário/% de cada defeito (não só o nome)
 
-## 2. Admin — preço por aparelho
+**5. Bloco "Onde parou" (só nos leads in_progress)** — novo
+- Lista o que já foi preenchido vs faltando: aparelho ✓, IMEI ✓/✗, endereço ✓/✗, termos ✓/✗, contrato ✓/✗
+- Ajuda o comercial saber exatamente o que pedir no WhatsApp
 
-`src/components/admin/catalog/ModelStorageRow.tsx` (linha que edita capacidade + preço):
-- Substituir o único campo de preço por **dois `CurrencyInput`** lado a lado: "Preço Troca" (azul) e "Preço Venda" (verde).
-- Mutação inclui ambos na atualização de `model_storages`.
+**6. Endereço** (como já está, mas com botão "Copiar endereço")
 
-`CatalogTreeTab.tsx` exibe os dois preços compactos no nó da capacidade.
+**7. Linha do tempo curta**
+- Criado em / atualizado em / termos aceitos / contrato aceito / cupom emitido
+- Em uma linha cada, com ícones
 
-`DeviceMatrixGenerator.tsx` (criação em massa): adicionar dois inputs ao gerar variantes; default `trade=sale`.
+**8. Anotação interna + Arquivar** (mantém como está)
 
-## 3. Admin — configuração dos fluxos
+### Função "Copiar dossiê"
 
-Nova aba simples em `AdminBusinessSettings.tsx` (já existe a página): seção **"Fluxos da Calculadora"** com:
-- Toggle on/off para cada fluxo (Troca / Venda).
-- Campos editáveis por fluxo: Título, Descrição curta, Texto do CTA.
-- Campo único: WhatsApp para o fluxo Venda.
-- Tudo persistido em `lp_settings` via upsert.
+Gera texto pronto para colar no CRM/WhatsApp interno, ex.:
+```
+Cliente: Carlos Lopes — (11) 97187-2128
+Aparelho: Apple iPhone 15 Pro Max 128GB
+IMEI: 356335104637640
+Modalidade: Troca · Em andamento
+Valor estimado: R$ 2.808,00 (cupom: ABC123)
+Endereço: Rua X, 123 — Assis/SP
+Pendente: contrato não aceito
+```
 
-Pequeno hook novo: `use-flow-settings.ts` que lê todas as chaves `flow_*` em uma query e devolve um objeto tipado.
+### WhatsApp pré-preenchido (melhor)
 
-## 4. Frontend público — Passo 0
+Mensagem adaptada por contexto:
+- **Lead parado**: "Olá Carlos! Vi que você começou a avaliar um iPhone 15 Pro Max 128GB. Posso te ajudar a finalizar?"
+- **Evaluation com cupom**: "Olá Carlos! Seu cupom **ABC123** de R$ 2.808 para o iPhone 15 Pro Max está ativo. Posso te ajudar a usar?"
+- **Rejeitado**: "Olá Carlos! Sobre seu iPhone 15 Pro Max — temos outras opções, posso te apresentar?"
 
-`TradeInWizard.tsx`:
-- Adicionar `flowType: 'trade' | 'sale' | null` ao `WizardData`.
-- Inserir `step = -1` (ou renumerar para 0..4): novo `StepChooseFlow` antes de `StepPersonalInfo`.
-- Persistir `flowType` em localStorage (já existe persistência) e no lead via `updateLead`.
-- Atualizar barra de progresso (`totalSteps` vira 4).
-- Selecionar `basePrice` correto: `selectedDevice.trade_price` se `flowType==='trade'`, senão `sale_price`. Fallback para `base_price` se ambos zero (compat).
+### Arquivos afetados
 
-Novo arquivo: `src/components/trade-in/StepChooseFlow.tsx`:
-- Dois cards grandes (motion + hover), respeitando design tokens.
-- Lê settings via novo hook `use-flow-settings`.
-- Esconde card desabilitado; se só um habilitado, **pula automaticamente** essa tela e seta `flowType` direto.
+- `src/components/admin/ProposalDetailSheet.tsx` — refatoração completa do conteúdo
+- `src/lib/whatsapp.ts` — adicionar `buildContextualMessage(kind, lead/eval, device)` 
+- `src/lib/proposal-dossier.ts` (novo, ~30 linhas) — função `buildDossierText(...)` reaproveitável
 
-## 5. Resultado diferenciado
-
-`StepResult.tsx`:
-- Se `flowType==='trade'`: mantém comportamento atual (link da loja + cupom).
-- Se `flowType==='sale'`: substitui CTA por botão "Falar no WhatsApp" que abre `https://wa.me/<numero>?text=...` com mensagem pré-preenchida (nome + modelo + valor proposto + protocolo do lead).
-- Texto explicativo do card muda conforme o fluxo.
-
-`use-submit-evaluation.ts`: passar `flow_type` no insert de `evaluations`.
-`use-lead.ts`: helper `setFlowType(leadId, type)`.
-
-## 6. Tipos
-
-Após migração, `src/integrations/supabase/types.ts` é regenerado automaticamente. Atualizar:
-- `src/hooks/use-trade-in-data.ts`: device query inclui `trade_price`, `sale_price`.
-- `src/lib/trade-in-pricing.ts`: nada muda — `computePricing` continua recebendo `basePrice` resolvido.
-
-## Arquivos tocados
-
-**Banco:** 1 migration + 1 insert (settings defaults).
-**Criar:** `src/components/trade-in/StepChooseFlow.tsx`, `src/hooks/use-flow-settings.ts`.
-**Editar:** `TradeInWizard.tsx`, `StepResult.tsx`, `use-trade-in-data.ts`, `use-submit-evaluation.ts`, `use-lead.ts`, `ModelStorageRow.tsx`, `DeviceMatrixGenerator.tsx`, `CatalogTreeTab.tsx`, `AdminBusinessSettings.tsx`.
-
-## Smoke test final
-
-1. Admin define iPhone 15 Pro 256GB: Troca R$ 3.000, Venda R$ 2.700.
-2. Admin habilita ambos fluxos com textos custom; cadastra WhatsApp.
-3. Cliente abre calculadora → vê 2 cards → escolhe **Troca** → vai pelos passos → resultado mostra R$ 3.000 + cupom.
-4. Reset → escolhe **Venda** → resultado mostra R$ 2.700 + botão WhatsApp com mensagem.
-5. Admin desativa "Venda" → cliente novo entra direto em Troca, sem ver Passo 0.
+Sem mudanças no banco, sem novas dependências.
 

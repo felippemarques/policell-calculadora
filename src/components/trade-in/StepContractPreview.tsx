@@ -151,11 +151,11 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
           <FileText className="h-6 w-6 text-primary" />
         </div>
         <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground">
-          Contrato e Termo LGPD
+          Contrato de {isSale ? "Venda" : "Troca"} e Termo LGPD
         </h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Documento único com os dizeres configurados no admin para LGPD e contrato.
-          Você pode baixar uma cópia em PDF antes de aceitar.
+          Documento personalizado para a modalidade de <strong>{isSale ? "venda em dinheiro" : "troca/upgrade"}</strong>,
+          com o laudo completo da sua avaliação. Você pode baixar uma cópia em PDF antes de aceitar.
         </p>
       </div>
 

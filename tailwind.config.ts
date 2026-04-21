@@ -53,6 +53,15 @@ export default {
           border: "hsl(var(--checked-border))",
           bg: "hsl(var(--checked-bg))",
         },
+        coupon: {
+          "bg-from": "hsl(var(--coupon-bg-from))",
+          "bg-via": "hsl(var(--coupon-bg-via))",
+          "bg-to": "hsl(var(--coupon-bg-to))",
+          border: "hsl(var(--coupon-border))",
+          text: "hsl(var(--coupon-text))",
+          "text-muted": "hsl(var(--coupon-text-muted))",
+          glow: "hsl(var(--coupon-glow))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

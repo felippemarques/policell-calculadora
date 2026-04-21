@@ -177,33 +177,80 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
             </p>
           </div>
 
-          {isSale ? (
+          {isSale && (
             <div className="bg-card rounded-xl p-4 border">
               <p className="text-xs text-muted-foreground">
                 Para concluir a venda, fale agora com nossa equipe pelo WhatsApp.
               </p>
             </div>
-          ) : (
-            <div className="bg-card rounded-xl p-4 border">
-              <p className="text-xs text-muted-foreground mb-1">Seu cupom de desconto:</p>
-              {result.couponCode ? (
-                <div className="flex items-center justify-center gap-2">
-                  <code className="text-lg font-mono font-bold text-primary tracking-wider">
-                    {result.couponCode}
-                  </code>
-                  <Button variant="ghost" size="icon" onClick={copyToClipboard}>
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-1">
-                  Seu cupom está sendo processado. Em breve você receberá o código.
-                </p>
-              )}
-            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* ── Bilhete dourado: cupom em destaque máximo ── */}
+      {!isSale && (
+        <div className="relative">
+          {result.couponCode ? (
+            <div className="relative overflow-hidden rounded-2xl border-2 border-coupon-border/70 bg-gradient-to-br from-coupon-bg-from via-coupon-bg-via to-coupon-bg-to shadow-[0_10px_40px_-10px_hsl(var(--coupon-glow)/0.55)]">
+              {/* Glow decorativo */}
+              <div className="pointer-events-none absolute -top-10 -right-10 h-36 w-36 rounded-full bg-coupon-glow/40 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-coupon-glow/30 blur-3xl" />
+              {/* "Recortes" laterais de bilhete */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-background border-2 border-coupon-border/70" />
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 h-6 w-6 rounded-full bg-background border-2 border-coupon-border/70" />
+
+              <div className="relative px-5 py-6 sm:px-7 sm:py-7 text-center space-y-4">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-coupon-border/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-coupon-text">
+                  <Sparkles className="h-3 w-3" />
+                  Cupom exclusivo gerado
+                </div>
+
+                <p className="text-xs sm:text-sm text-coupon-text-muted font-medium">
+                  Use o código abaixo no checkout da loja para resgatar seu crédito:
+                </p>
+
+                <button
+                  type="button"
+                  onClick={copyToClipboard}
+                  className="group block w-full rounded-xl border-2 border-dashed border-coupon-border/60 bg-card/80 px-4 py-4 transition-all hover:bg-card hover:scale-[1.01] active:scale-[0.99]"
+                  aria-label="Copiar código do cupom"
+                >
+                  <code className="block font-mono text-2xl sm:text-3xl font-extrabold tracking-[0.25em] text-coupon-text break-all">
+                    {result.couponCode}
+                  </code>
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-coupon-text">
+                    {copied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" /> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" /> Toque para copiar
+                      </>
+                    )}
+                  </span>
+                </button>
+
+                <p className="text-[11px] text-coupon-text-muted">
+                  Cupom pessoal e intransferível, vinculado ao IMEI declarado.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-5 text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mx-auto mb-2">
+                <Clock className="h-5 w-5 text-primary animate-pulse" />
+              </div>
+              <p className="text-sm font-medium text-foreground">
+                Seu cupom está sendo processado
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Em instantes você receberá o código por aqui e por e-mail.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {showBonus && (
         <div
@@ -251,13 +298,14 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
         ) : (
           <>
             <Button
-              className="w-full"
+              size="lg"
+              className="w-full h-14 text-base font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-[1.01]"
               onClick={() => {
                 copyToClipboard();
                 window.open(storeUrl, "_blank");
               }}
             >
-              <ShoppingCart className="mr-2 h-4 w-4" /> Comprar Agora com o cupom
+              <ShoppingCart className="mr-2 h-5 w-5" /> Usar cupom agora na loja
             </Button>
             <Button
               variant="outline"

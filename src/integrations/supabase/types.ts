@@ -411,6 +411,7 @@ export type Database = {
       }
       evaluations: {
         Row: {
+          archived_at: string | null
           base_price: number
           condition_discount: number
           coupon_code: string | null
@@ -426,10 +427,12 @@ export type Database = {
           flow_type: string
           id: string
           imei: string | null
+          internal_notes: string | null
           status: string
           total_deductions: number
         }
         Insert: {
+          archived_at?: string | null
           base_price: number
           condition_discount?: number
           coupon_code?: string | null
@@ -445,10 +448,12 @@ export type Database = {
           flow_type?: string
           id?: string
           imei?: string | null
+          internal_notes?: string | null
           status?: string
           total_deductions?: number
         }
         Update: {
+          archived_at?: string | null
           base_price?: number
           condition_discount?: number
           coupon_code?: string | null
@@ -464,6 +469,7 @@ export type Database = {
           flow_type?: string
           id?: string
           imei?: string | null
+          internal_notes?: string | null
           status?: string
           total_deductions?: number
         }
@@ -486,6 +492,7 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           address_zip: string | null
+          archived_at: string | null
           assessment_responses: Json
           contract_accepted_at: string | null
           contract_version: string | null
@@ -497,6 +504,7 @@ export type Database = {
           flow_type: string
           id: string
           imei: string | null
+          internal_notes: string | null
           rejection_reason: string | null
           status: string
           terms_accepted_at: string | null
@@ -511,6 +519,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          archived_at?: string | null
           assessment_responses?: Json
           contract_accepted_at?: string | null
           contract_version?: string | null
@@ -522,6 +531,7 @@ export type Database = {
           flow_type?: string
           id?: string
           imei?: string | null
+          internal_notes?: string | null
           rejection_reason?: string | null
           status?: string
           terms_accepted_at?: string | null
@@ -536,6 +546,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           address_zip?: string | null
+          archived_at?: string | null
           assessment_responses?: Json
           contract_accepted_at?: string | null
           contract_version?: string | null
@@ -547,6 +558,7 @@ export type Database = {
           flow_type?: string
           id?: string
           imei?: string | null
+          internal_notes?: string | null
           rejection_reason?: string | null
           status?: string
           terms_accepted_at?: string | null
@@ -852,6 +864,14 @@ export type Database = {
         Args: { _lead_id: string; _version: string }
         Returns: undefined
       }
+      archive_evaluation: {
+        Args: { _archive?: boolean; _evaluation_id: string }
+        Returns: undefined
+      }
+      archive_lead: {
+        Args: { _archive?: boolean; _lead_id: string }
+        Returns: undefined
+      }
       attach_evaluation_coupon: {
         Args: {
           _coupon_code: string
@@ -890,6 +910,14 @@ export type Database = {
       }
       is_valid_imei: { Args: { _imei: string }; Returns: boolean }
       normalize_phone: { Args: { _phone: string }; Returns: string }
+      set_evaluation_notes: {
+        Args: { _evaluation_id: string; _notes: string }
+        Returns: undefined
+      }
+      set_lead_notes: {
+        Args: { _lead_id: string; _notes: string }
+        Returns: undefined
+      }
       sync_device_for_model_storage: {
         Args: { _ms_id: string }
         Returns: undefined

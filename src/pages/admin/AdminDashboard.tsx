@@ -23,6 +23,7 @@ import {
   type DashboardFiltersValue,
 } from "@/components/admin/dashboard/DashboardFilters";
 import { downloadCsv } from "@/lib/export-csv";
+import { NextActionsCard } from "@/components/admin/dashboard/NextActionsCard";
 
 const formatBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -204,6 +205,9 @@ const AdminDashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Next actions — stale leads */}
+      <NextActionsCard />
 
       {/* Top devices */}
       <Card className="p-5">

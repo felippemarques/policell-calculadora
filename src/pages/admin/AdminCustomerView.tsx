@@ -25,6 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { ProposalDetailSheet, type ProposalKind } from "@/components/admin/ProposalDetailSheet";
+import { openWhatsapp } from "@/lib/whatsapp";
 
 type LeadRow = {
   id: string;
@@ -38,6 +40,7 @@ type LeadRow = {
   rejection_reason: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 type EvaluationRow = {
@@ -52,6 +55,7 @@ type EvaluationRow = {
   coupon_code: string | null;
   imei: string | null;
   created_at: string;
+  archived_at: string | null;
 };
 
 type DeviceRow = { id: string; brand: string; model: string; storage: string };
@@ -85,6 +89,7 @@ interface CustomerGroup {
 const AdminCustomerView = () => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ kind: ProposalKind; id: string } | null>(null);
 
   const { data: leads = [] } = useQuery({
     queryKey: ["admin-customer-view-leads"],
@@ -92,6 +97,7 @@ const AdminCustomerView = () => {
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as LeadRow[];
@@ -104,6 +110,7 @@ const AdminCustomerView = () => {
       const { data, error } = await supabase
         .from("evaluations")
         .select("*")
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as EvaluationRow[];
@@ -123,7 +130,6 @@ const AdminCustomerView = () => {
 
   const deviceMap = useMemo(() => new Map(devices.map((d) => [d.id, d])), [devices]);
 
-  // Group by normalized phone.
   const groups: CustomerGroup[] = useMemo(() => {
     const map = new Map<string, CustomerGroup>();
 
@@ -191,6 +197,14 @@ const AdminCustomerView = () => {
     const openLeads = current.leads.filter((l) => l.status === "in_progress");
     const closedLeads = current.leads.filter((l) => l.status !== "in_progress");
 
+    const greetCustomer = () => {
+      const first = current.name?.split(" ")[0] ?? "";
+      openWhatsapp(
+        current.phone,
+        `Olá${first ? `, ${first}` : ""}! Tudo bem? Sou da Pollicell e estou retornando sobre sua avaliação.`,
+      );
+    };
+
     return (
       <div className="p-6 space-y-6 max-w-4xl">
         <Button variant="ghost" size="sm" onClick={() => setSelected(null)} className="-ml-2">
@@ -217,6 +231,14 @@ const AdminCustomerView = () => {
                 )}
               </div>
             </div>
+            <Button
+              size="sm"
+              onClick={greetCustomer}
+              className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Chamar no WhatsApp</span>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2 pt-2">
             <Badge variant="outline" className="gap-1">
@@ -241,35 +263,42 @@ const AdminCustomerView = () => {
           ) : (
             <div className="space-y-2">
               {couponEvals.map((e) => (
-                <Card key={e.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <Smartphone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{deviceLabel(e.device_id)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {format(new Date(e.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                          {" · "}
-                          {e.flow_type === "sale" ? "Venda" : "Troca"}
-                          {e.imei && (
-                            <>
-                              {" · "}
-                              <span className="font-mono">IMEI {e.imei}</span>
-                            </>
-                          )}
-                        </p>
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => setDetail({ kind: "evaluation", id: e.id })}
+                  className="w-full text-left"
+                >
+                  <Card className="p-4 hover:border-primary/40 hover:shadow-sm transition cursor-pointer">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <Smartphone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{deviceLabel(e.device_id)}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {format(new Date(e.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                            {" · "}
+                            {e.flow_type === "sale" ? "Venda" : "Troca"}
+                            {e.imei && (
+                              <>
+                                {" · "}
+                                <span className="font-mono">IMEI {e.imei}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-primary">{formatBRL(e.final_value)}</p>
+                        {e.coupon_code && (
+                          <code className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-foreground">
+                            {e.coupon_code}
+                          </code>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-primary">{formatBRL(e.final_value)}</p>
-                      {e.coupon_code && (
-                        <code className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-foreground">
-                          {e.coupon_code}
-                        </code>
-                      )}
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                </button>
               ))}
             </div>
           )}
@@ -290,31 +319,38 @@ const AdminCustomerView = () => {
                 const meta = STATUS_LABEL[l.status] ?? STATUS_LABEL.in_progress;
                 const Icon = meta.Icon;
                 return (
-                  <Card key={l.id} className="p-4">
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <Smartphone className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{deviceLabel(l.device_id)}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {format(new Date(l.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                            {" · "}
-                            {l.flow_type === "sale" ? "Venda" : "Troca"}
-                            {l.imei && (
-                              <>
-                                {" · "}
-                                <span className="font-mono">IMEI {l.imei}</span>
-                              </>
-                            )}
-                          </p>
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setDetail({ kind: "lead", id: l.id })}
+                    className="w-full text-left"
+                  >
+                    <Card className="p-4 hover:border-primary/40 hover:shadow-sm transition cursor-pointer">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <Smartphone className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{deviceLabel(l.device_id)}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {format(new Date(l.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                              {" · "}
+                              {l.flow_type === "sale" ? "Venda" : "Troca"}
+                              {l.imei && (
+                                <>
+                                  {" · "}
+                                  <span className="font-mono">IMEI {l.imei}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
                         </div>
+                        <Badge variant="outline" className={cn("gap-1", meta.cls)}>
+                          <Icon className="h-3 w-3" />
+                          {meta.label}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={cn("gap-1", meta.cls)}>
-                        <Icon className="h-3 w-3" />
-                        {meta.label}
-                      </Badge>
-                    </div>
-                  </Card>
+                    </Card>
+                  </button>
                 );
               })}
             </div>
@@ -334,21 +370,28 @@ const AdminCustomerView = () => {
                   const meta = STATUS_LABEL[l.status] ?? STATUS_LABEL.in_progress;
                   const Icon = meta.Icon;
                   return (
-                    <Card key={l.id} className="p-4">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{deviceLabel(l.device_id)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(l.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                            {l.rejection_reason ? ` · ${l.rejection_reason}` : ""}
-                          </p>
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setDetail({ kind: "lead", id: l.id })}
+                      className="w-full text-left"
+                    >
+                      <Card className="p-4 hover:border-primary/40 hover:shadow-sm transition cursor-pointer">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{deviceLabel(l.device_id)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(l.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                              {l.rejection_reason ? ` · ${l.rejection_reason}` : ""}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className={cn("gap-1", meta.cls)}>
+                            <Icon className="h-3 w-3" />
+                            {meta.label}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className={cn("gap-1", meta.cls)}>
-                          <Icon className="h-3 w-3" />
-                          {meta.label}
-                        </Badge>
-                      </div>
-                    </Card>
+                      </Card>
+                    </button>
                   );
                 })}
               </div>
@@ -363,6 +406,23 @@ const AdminCustomerView = () => {
             cliente quiser uma nova proposta, ela precisa ser para um aparelho diferente.
           </p>
         </Card>
+
+        <ProposalDetailSheet
+          kind={detail?.kind ?? null}
+          id={detail?.id ?? null}
+          customerName={current.name}
+          customerPhone={current.phone}
+          deviceLabel={
+            detail
+              ? deviceLabel(
+                  (detail.kind === "lead"
+                    ? current.leads.find((l) => l.id === detail.id)?.device_id
+                    : current.evaluations.find((e) => e.id === detail.id)?.device_id) ?? null,
+                )
+              : ""
+          }
+          onClose={() => setDetail(null)}
+        />
       </div>
     );
   }
@@ -402,37 +462,54 @@ const AdminCustomerView = () => {
           const couponCount = g.evaluations.filter((e) => !!e.coupon_code).length;
           const openCount = g.leads.filter((l) => l.status === "in_progress").length;
           return (
-            <button
-              key={g.phoneKey}
-              type="button"
-              onClick={() => setSelected(g.phoneKey)}
-              className="w-full text-left"
-            >
-              <Card className="p-4 hover:border-primary/40 hover:shadow-sm transition">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Users className="h-5 w-5 text-primary" />
+            <div key={g.phoneKey} className="relative group">
+              <button
+                type="button"
+                onClick={() => setSelected(g.phoneKey)}
+                className="w-full text-left"
+              >
+                <Card className="p-4 hover:border-primary/40 hover:shadow-sm transition">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{g.name || "Cliente sem nome"}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {g.phone} {g.email ? `· ${g.email}` : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{g.name || "Cliente sem nome"}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {g.phone} {g.email ? `· ${g.email}` : ""}
-                      </p>
+                    <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                      <Badge variant="outline" className="gap-1">
+                        <Ticket className="h-3 w-3" /> {couponCount}
+                      </Badge>
+                      <Badge variant="outline" className="gap-1">
+                        <Clock className="h-3 w-3" /> {openCount}
+                      </Badge>
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const first = g.name?.split(" ")[0] ?? "";
+                        openWhatsapp(
+                          g.phone,
+                          `Olá${first ? `, ${first}` : ""}! Tudo bem? Sou da Pollicell.`,
+                        );
+                      }}
+                      className="text-success hover:text-success hover:bg-success/10"
+                      title="Chamar no WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   </div>
-                  <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-                    <Badge variant="outline" className="gap-1">
-                      <Ticket className="h-3 w-3" /> {couponCount}
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <Clock className="h-3 w-3" /> {openCount}
-                    </Badge>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                </div>
-              </Card>
-            </button>
+                </Card>
+              </button>
+            </div>
           );
         })}
       </div>

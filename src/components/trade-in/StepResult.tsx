@@ -273,6 +273,16 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
             </Button>
           </>
         )}
+
+        {acceptedContractText && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleDownloadContract}
+          >
+            <FileDown className="mr-2 h-4 w-4" /> Baixar proposta completa em PDF
+          </Button>
+        )}
       </div>
 
       <div className="text-center">

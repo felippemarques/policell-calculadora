@@ -781,9 +781,12 @@ export function TradeInWizard() {
                 deductions:
                   pricing.fixedDeductions +
                   Math.round(pricing.basePrice * (pricing.percentDiscount / 100) * 100) / 100,
+                percentDiscount: pricing.percentDiscount,
+                fixedDeductions: pricing.fixedDeductions,
                 bonusPercent: data.flowType === "trade" ? upgradeBonusPercent : 0,
                 finalValue: pricing.finalValue,
                 flowLabel: data.flowType === "sale" ? "Venda" : "Troca",
+                evaluationItems,
               }}
               isSubmitting={isSubmitting}
               onBack={() => setStep(7)}

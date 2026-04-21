@@ -50,7 +50,7 @@ function buildWhatsAppUrl(raw: string | undefined, message: string): string | nu
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function StepResult({ result, onReset, sanity, flowType, customerName, deviceLabel }: Props) {
+export function StepResult({ result, onReset, sanity, flowType, customerName, deviceLabel, acceptedContractText, acceptedContractMeta }: Props) {
   const [copied, setCopied] = useState(false);
   const { data: flowSettings } = useFlowSettings();
 

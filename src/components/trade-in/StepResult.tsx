@@ -298,13 +298,14 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
         ) : (
           <>
             <Button
-              className="w-full"
+              size="lg"
+              className="w-full h-14 text-base font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-[1.01]"
               onClick={() => {
                 copyToClipboard();
                 window.open(storeUrl, "_blank");
               }}
             >
-              <ShoppingCart className="mr-2 h-4 w-4" /> Comprar Agora com o cupom
+              <ShoppingCart className="mr-2 h-5 w-5" /> Usar cupom agora na loja
             </Button>
             <Button
               variant="outline"

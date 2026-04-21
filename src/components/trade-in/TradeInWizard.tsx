@@ -565,6 +565,7 @@ export function TradeInWizard() {
       await updateLead(leadId, { status: "completed" });
     }
 
+    if (rendered) setAcceptedContract(rendered);
     clearPersisted();
     setStep(RESULT_STEP);
   };

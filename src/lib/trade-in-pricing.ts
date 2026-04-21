@@ -125,10 +125,13 @@ export function computePricing(
     }
   }
 
-  const afterFixed = Math.max(0, basePrice - fixedDeductions);
+  // Linear math (NO compounding): every % is computed on the original basePrice,
+  // never on the remaining balance. Order of selections is irrelevant.
+  const percentAmount = Math.round(basePrice * (percentDiscount / 100) * 100) / 100;
+  const totalDeductions = Math.min(basePrice, fixedDeductions + percentAmount);
   const finalValue = isRejected
     ? 0
-    : Math.max(0, Math.round(afterFixed * (1 - percentDiscount / 100) * 100) / 100);
+    : Math.max(0, Math.round((basePrice - totalDeductions) * 100) / 100);
 
   return { basePrice, percentDiscount, fixedDeductions, finalValue, isRejected, rejectionReason };
 }

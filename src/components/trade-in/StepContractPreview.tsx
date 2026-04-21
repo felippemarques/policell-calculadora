@@ -85,7 +85,7 @@ interface Props {
   data: ContractData;
   isSubmitting: boolean;
   onBack: () => void;
-  onAccept: () => void | Promise<void>;
+  onAccept: (renderedContract?: { text: string; storeName: string; flowLabel: string; acceptedAt: Date }) => void | Promise<void>;
 }
 
 export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Props) {

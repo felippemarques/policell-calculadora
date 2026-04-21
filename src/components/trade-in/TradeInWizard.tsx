@@ -812,6 +812,16 @@ export function TradeInWizard() {
                 flowType={data.flowType}
                 customerName={data.name}
                 deviceLabel={deviceLabel}
+                acceptedContractText={acceptedContract?.text ?? null}
+                acceptedContractMeta={
+                  acceptedContract
+                    ? {
+                        storeName: acceptedContract.storeName,
+                        flowLabel: acceptedContract.flowLabel,
+                        acceptedAt: acceptedContract.acceptedAt,
+                      }
+                    : null
+                }
               />
             </div>
           )}

@@ -502,7 +502,9 @@ export function TradeInWizard() {
   };
 
   // Contrato aceito -> registra aceite + submete avaliação (gera cupom)
-  const handleAcceptContract = async () => {
+  const handleAcceptContract = async (
+    rendered?: { text: string; storeName: string; flowLabel: string; acceptedAt: Date },
+  ) => {
     if (!selectedDevice) return;
 
     if (leadId) {

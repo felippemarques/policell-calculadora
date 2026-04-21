@@ -49,6 +49,15 @@
     --checked-border: 145 50% 60%;
     --checked-bg: 145 50% 97%;
 
+    /* Coupon "golden ticket" tokens */
+    --coupon-bg-from: 48 100% 96%;
+    --coupon-bg-via: 50 100% 92%;
+    --coupon-bg-to: 42 95% 88%;
+    --coupon-border: 38 92% 55%;
+    --coupon-text: 30 70% 25%;
+    --coupon-text-muted: 32 50% 38%;
+    --coupon-glow: 42 95% 60%;
+
     --border: 220 15% 90%;
     --input: 220 15% 90%;
     --ring: 234 82% 55%;

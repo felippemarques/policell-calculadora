@@ -133,6 +133,12 @@ export function TradeInWizard() {
 
   const [imeiServerError, setImeiServerError] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const [acceptedContract, setAcceptedContract] = useState<{
+    text: string;
+    storeName: string;
+    flowLabel: string;
+    acceptedAt: Date;
+  } | null>(null);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {

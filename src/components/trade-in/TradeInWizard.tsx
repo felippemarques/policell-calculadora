@@ -594,6 +594,69 @@ export function TradeInWizard() {
     return [line1, line2, line3, cep].filter(Boolean).join(" · ");
   })();
 
+  // Laudo dinâmico — lista explícita do que o cliente declarou na avaliação,
+  // injetada no contrato para garantir transparência total.
+  const evaluationItems = useMemo(() => {
+    const items: { group: string; answer: string; impact: string }[] = [];
+
+    // Tela A — condição geral
+    if (data.answers.conditionId) {
+      const cond = conditions.find((c) => c.id === data.answers.conditionId);
+      if (cond) {
+        const mode = (cond.discount_mode as string) || "percent";
+        let impact = "";
+        if (mode === "fixed") {
+          const v = Number(cond.discount_fixed) || 0;
+          if (v > 0) impact = `− ${formatBRL(v)}`;
+        } else {
+          const p = Number(cond.discount_percentage) || 0;
+          if (p > 0) impact = `− ${p}% sobre o valor base`;
+        }
+        items.push({
+          group: "Estado de conservação",
+          answer: cond.condition_name,
+          impact,
+        });
+      }
+    }
+
+    // Tela B — defeitos por categoria
+    for (const [catId, optId] of Object.entries(data.answers.damageOptionByCategory)) {
+      if (!optId) continue;
+      const opt = damageOptions.find((o) => o.id === optId);
+      const cat = damageCategories.find((c) => c.id === catId);
+      if (!opt || !cat) continue;
+      let impact = "";
+      if (opt.is_rejected) {
+        impact = "Bloqueia avaliação";
+      } else {
+        const mode = (opt.deduction_mode as string) || "fixed";
+        if (mode === "percent") {
+          const p = Number(opt.deduction_percent) || 0;
+          if (p > 0) impact = `− ${p}% sobre o valor base`;
+        } else {
+          const v = Number(opt.deduction_value) || 0;
+          if (v > 0) impact = `− ${formatBRL(v)}`;
+        }
+      }
+      items.push({ group: cat.name, answer: opt.option_name, impact });
+    }
+
+    // Tela C — rejeição explícita
+    if (data.answers.rejectionId) {
+      const rej = conditions.find((c) => c.id === data.answers.rejectionId);
+      if (rej) {
+        items.push({
+          group: "Restrição declarada",
+          answer: rej.condition_name,
+          impact: "Bloqueia avaliação",
+        });
+      }
+    }
+
+    return items;
+  }, [data.answers, conditions, damageOptions, damageCategories]);
+
   return (
     <div id="calculadora" className="w-full max-w-2xl mx-auto px-4 md:px-0">
       <div className="text-center mb-6 md:mb-8">

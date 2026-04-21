@@ -586,6 +586,7 @@ export function TradeInWizard() {
     setResult(null);
     setLeadId(null);
     setImeiServerError(null);
+    setAcceptedContract(null);
     setStep(0);
     setSubScreen("condition");
   };

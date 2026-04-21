@@ -164,35 +164,140 @@ export function renderContractText(template: string, data: ContractData): string
   return rendered;
 }
 
-/** Gera o PDF do contrato e dispara download no browser. */
-export function generateContractPdf(text: string, fileName = "contrato-pollicell.pdf") {
+/**
+ * Gera o PDF profissional da Proposta Comercial + Laudo + Contrato aceito.
+ * Inclui cabeçalho com nome da loja, metadados (cliente / aparelho / data),
+ * corpo tipografado (negritando títulos em CAIXA-ALTA) e rodapé com paginação.
+ */
+export function generateContractPdf(
+  text: string,
+  fileName = "contrato-pollicell.pdf",
+  meta?: {
+    storeName?: string;
+    customerName?: string;
+    deviceLabel?: string;
+    acceptedAt?: Date;
+    flowLabel?: string;
+  },
+) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const margin = 48;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const usableWidth = pageWidth - margin * 2;
+  const lineHeight = 13.5;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("Contrato de Avaliação / Troca", margin, margin);
+  const storeName = meta?.storeName || "Pollicell";
+  const flowLabel = meta?.flowLabel || "Troca";
+  const acceptedAt = meta?.acceptedAt ?? new Date();
+
+  // ── Cabeçalho da primeira página ──
+  const drawHeader = () => {
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 70, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(storeName.toUpperCase(), margin, 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Proposta Comercial · ${flowLabel}`, margin, 50);
+    doc.text(
+      `Emitida em ${fmtDate(acceptedAt)}`,
+      pageWidth - margin,
+      50,
+      { align: "right" },
+    );
+    doc.setTextColor(30, 30, 30);
+  };
+
+  // ── Rodapé com paginação ──
+  const drawFooter = (pageNum: number, totalPages: number) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(
+      `${storeName} · Documento gerado eletronicamente`,
+      margin,
+      pageHeight - 20,
+    );
+    doc.text(
+      `Página ${pageNum} de ${totalPages}`,
+      pageWidth - margin,
+      pageHeight - 20,
+      { align: "right" },
+    );
+    doc.setTextColor(30, 30, 30);
+  };
+
+  drawHeader();
+  let y = 100;
+
+  // Mini metadados sob o cabeçalho
+  if (meta?.customerName || meta?.deviceLabel) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    if (meta?.customerName) {
+      doc.text(`Cliente: `, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(meta.customerName, margin + 50, y);
+      y += lineHeight;
+    }
+    if (meta?.deviceLabel) {
+      doc.setFont("helvetica", "bold");
+      doc.text(`Aparelho: `, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(meta.deviceLabel, margin + 55, y);
+      y += lineHeight;
+    }
+    y += 6;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 14;
+  }
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
+
+  // Heurística simples para destacar títulos: linhas curtas em CAIXA-ALTA
+  // ou que começam com numeração romana (I., II., ...) viram negrito.
+  const isHeading = (line: string) => {
+    const t = line.trim();
+    if (!t) return false;
+    if (t.length > 90) return false;
+    if (/^[IVX]+\.\s/.test(t)) return true;
+    if (/^[A-ZÀ-Ú0-9 ºª\-—–·\.\,\(\)\/]+$/.test(t) && t.length > 4 && /[A-ZÀ-Ú]/.test(t)) {
+      // pelo menos 60% caracteres alfabéticos em maiúscula
+      const letters = t.replace(/[^A-Za-zÀ-ÿ]/g, "");
+      if (letters.length === 0) return false;
+      const upper = letters.replace(/[^A-ZÀ-Ú]/g, "");
+      return upper.length / letters.length >= 0.7;
+    }
+    return false;
+  };
 
   const paragraphs = text.split("\n");
-  let y = margin + 28;
-  const lineHeight = 14;
-
   for (const para of paragraphs) {
+    const heading = isHeading(para);
+    doc.setFont("helvetica", heading ? "bold" : "normal");
+    doc.setFontSize(heading ? 11 : 10.5);
     const lines = doc.splitTextToSize(para === "" ? " " : para, usableWidth);
     for (const line of lines) {
-      if (y > pageHeight - margin) {
+      if (y > pageHeight - margin - 24) {
         doc.addPage();
         y = margin;
       }
       doc.text(line, margin, y);
       y += lineHeight;
     }
+    if (heading) y += 2;
+  }
+
+  // Aplica rodapé em todas as páginas
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    drawFooter(i, totalPages);
   }
 
   doc.save(fileName);

@@ -280,6 +280,66 @@ export function TradeInWizard() {
     [basePrice, data.answers, conditions, damageOptions, damageCategories],
   );
 
+  // Laudo dinâmico — lista explícita do que o cliente declarou na avaliação,
+  // injetada no contrato para garantir transparência total.
+  const evaluationItems = useMemo(() => {
+    const items: { group: string; answer: string; impact: string }[] = [];
+
+    if (data.answers.conditionId) {
+      const cond = conditions.find((c) => c.id === data.answers.conditionId);
+      if (cond) {
+        const mode = (cond.discount_mode as string) || "percent";
+        let impact = "";
+        if (mode === "fixed") {
+          const v = Number(cond.discount_fixed) || 0;
+          if (v > 0) impact = `− ${formatBRL(v)}`;
+        } else {
+          const p = Number(cond.discount_percentage) || 0;
+          if (p > 0) impact = `− ${p}% sobre o valor base`;
+        }
+        items.push({
+          group: "Estado de conservação",
+          answer: cond.condition_name,
+          impact,
+        });
+      }
+    }
+
+    for (const [catId, optId] of Object.entries(data.answers.damageOptionByCategory)) {
+      if (!optId) continue;
+      const opt = damageOptions.find((o) => o.id === optId);
+      const cat = damageCategories.find((c) => c.id === catId);
+      if (!opt || !cat) continue;
+      let impact = "";
+      if (opt.is_rejected) {
+        impact = "Bloqueia avaliação";
+      } else {
+        const mode = (opt.deduction_mode as string) || "fixed";
+        if (mode === "percent") {
+          const p = Number(opt.deduction_percent) || 0;
+          if (p > 0) impact = `− ${p}% sobre o valor base`;
+        } else {
+          const v = Number(opt.deduction_value) || 0;
+          if (v > 0) impact = `− ${formatBRL(v)}`;
+        }
+      }
+      items.push({ group: cat.name, answer: opt.option_name, impact });
+    }
+
+    if (data.answers.rejectionId) {
+      const rej = conditions.find((c) => c.id === data.answers.rejectionId);
+      if (rej) {
+        items.push({
+          group: "Restrição declarada",
+          answer: rej.condition_name,
+          impact: "Bloqueia avaliação",
+        });
+      }
+    }
+
+    return items;
+  }, [data.answers, conditions, damageOptions, damageCategories]);
+
   // Define se a tela "Cupom Especial" deve aparecer.
   const upgradeBonusPercent = businessSettings?.upgradeBonusPercent ?? 0;
   const showSpecialOffer =

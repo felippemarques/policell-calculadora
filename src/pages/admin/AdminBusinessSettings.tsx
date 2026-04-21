@@ -9,10 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
 
 const BUSINESS_KEYS = [
-  "business_contract_terms",
+  "business_contract_terms", // legado — mantido para compat, não editado mais
+  "business_contract_terms_trade",
+  "business_contract_terms_sale",
   "business_upgrade_bonus_percent",
   "business_show_realtime_deductions",
   // Flow choice screen settings
@@ -46,6 +49,8 @@ Você pode solicitar a exclusão dos seus dados a qualquer momento entrando em c
 
 const DEFAULTS: FormState = {
   business_contract_terms: "",
+  business_contract_terms_trade: "",
+  business_contract_terms_sale: "",
   business_upgrade_bonus_percent: "0",
   business_show_realtime_deductions: "true",
   flow_trade_enabled: "true",
@@ -316,25 +321,59 @@ const AdminBusinessSettings = () => {
         <CardHeader>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Contrato de Compra e Venda</CardTitle>
+            <CardTitle className="text-base">Contratos de Aceite</CardTitle>
           </div>
           <CardDescription>
-            Texto exibido para o cliente no momento do aceite. Suporta texto longo (Markdown simples).
+            Dois textos independentes — um para o fluxo de <strong>Troca/Upgrade</strong> e outro para
+            <strong> Venda em dinheiro</strong>. O sistema escolhe automaticamente qual exibir conforme
+            a opção do cliente. Suporta texto longo e tokens dinâmicos como{" "}
+            <code className="text-[11px]">{"{{customer_name}}"}</code>,{" "}
+            <code className="text-[11px]">{"{{device_label}}"}</code>,{" "}
+            <code className="text-[11px]">{"{{imei}}"}</code>,{" "}
+            <code className="text-[11px]">{"{{final_value}}"}</code>.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Label htmlFor="contract">Termos de Aceite</Label>
-          <Textarea
-            id="contract"
-            value={form.business_contract_terms}
-            onChange={(e) => set("business_contract_terms", e.target.value)}
-            rows={12}
-            className="mt-2 font-mono text-sm"
-            placeholder={"Ex: Pelo presente contrato, o vendedor declara..."}
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            {form.business_contract_terms.length.toLocaleString("pt-BR")} caracteres
-          </p>
+          <Tabs defaultValue="trade" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="trade" className="gap-2">
+                <ArrowRightLeft className="h-3.5 w-3.5" /> Troca / Upgrade
+              </TabsTrigger>
+              <TabsTrigger value="sale" className="gap-2">
+                <Banknote className="h-3.5 w-3.5" /> Venda em dinheiro
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="trade" className="mt-4 space-y-2">
+              <Label htmlFor="contract_trade">Contrato exibido no fluxo de TROCA</Label>
+              <Textarea
+                id="contract_trade"
+                value={form.business_contract_terms_trade}
+                onChange={(e) => set("business_contract_terms_trade", e.target.value)}
+                rows={14}
+                className="mt-2 font-mono text-sm"
+                placeholder={"Ex: INSTRUMENTO PARTICULAR DE PROPOSTA DE TROCA DE APARELHO USADO..."}
+              />
+              <p className="text-xs text-muted-foreground">
+                {form.business_contract_terms_trade.length.toLocaleString("pt-BR")} caracteres
+              </p>
+            </TabsContent>
+
+            <TabsContent value="sale" className="mt-4 space-y-2">
+              <Label htmlFor="contract_sale">Contrato exibido no fluxo de VENDA</Label>
+              <Textarea
+                id="contract_sale"
+                value={form.business_contract_terms_sale}
+                onChange={(e) => set("business_contract_terms_sale", e.target.value)}
+                rows={14}
+                className="mt-2 font-mono text-sm"
+                placeholder={"Ex: INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE APARELHO USADO..."}
+              />
+              <p className="text-xs text-muted-foreground">
+                {form.business_contract_terms_sale.length.toLocaleString("pt-BR")} caracteres
+              </p>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

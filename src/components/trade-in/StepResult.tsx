@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote, Sparkles, Gift } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote, Sparkles, Gift, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
 import type { SanityResult } from "@/lib/trade-in-sanity";
 import type { FlowType } from "./StepChooseFlow";
+import { generateContractPdf } from "@/lib/contract";
 
 interface Props {
   result: { finalValue: number; couponCode: string | null } | null;
@@ -16,6 +17,13 @@ interface Props {
   flowType?: FlowType | null;
   customerName?: string;
   deviceLabel?: string;
+  /** Texto renderizado do contrato aceito — habilita download pós-aceite. */
+  acceptedContractText?: string | null;
+  acceptedContractMeta?: {
+    storeName?: string;
+    flowLabel?: string;
+    acceptedAt?: Date;
+  } | null;
 }
 
 /**
@@ -42,7 +50,7 @@ function buildWhatsAppUrl(raw: string | undefined, message: string): string | nu
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export function StepResult({ result, onReset, sanity, flowType, customerName, deviceLabel }: Props) {
+export function StepResult({ result, onReset, sanity, flowType, customerName, deviceLabel, acceptedContractText, acceptedContractMeta }: Props) {
   const [copied, setCopied] = useState(false);
   const { data: flowSettings } = useFlowSettings();
 
@@ -79,6 +87,20 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
     setCopied(true);
     toast.success("Cupom copiado!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadContract = () => {
+    if (!acceptedContractText) {
+      toast.error("Contrato indisponível para download.");
+      return;
+    }
+    generateContractPdf(acceptedContractText, "proposta-pollicell.pdf", {
+      storeName: acceptedContractMeta?.storeName ?? "Pollicell",
+      customerName,
+      deviceLabel,
+      acceptedAt: acceptedContractMeta?.acceptedAt ?? new Date(),
+      flowLabel: acceptedContractMeta?.flowLabel ?? (isSale ? "Venda" : "Troca"),
+    });
   };
 
   const storeUrl = settings["coupon_store_url"] || "https://pollicell.com.br";
@@ -250,6 +272,16 @@ export function StepResult({ result, onReset, sanity, flowType, customerName, de
               <MessageCircle className="mr-2 h-4 w-4" /> Falar com Especialista
             </Button>
           </>
+        )}
+
+        {acceptedContractText && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleDownloadContract}
+          >
+            <FileDown className="mr-2 h-4 w-4" /> Baixar proposta completa em PDF
+          </Button>
         )}
       </div>
 

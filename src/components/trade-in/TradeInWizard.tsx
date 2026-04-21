@@ -133,6 +133,12 @@ export function TradeInWizard() {
 
   const [imeiServerError, setImeiServerError] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const [acceptedContract, setAcceptedContract] = useState<{
+    text: string;
+    storeName: string;
+    flowLabel: string;
+    acceptedAt: Date;
+  } | null>(null);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {
@@ -496,7 +502,9 @@ export function TradeInWizard() {
   };
 
   // Contrato aceito -> registra aceite + submete avaliação (gera cupom)
-  const handleAcceptContract = async () => {
+  const handleAcceptContract = async (
+    rendered?: { text: string; storeName: string; flowLabel: string; acceptedAt: Date },
+  ) => {
     if (!selectedDevice) return;
 
     if (leadId) {
@@ -557,6 +565,7 @@ export function TradeInWizard() {
       await updateLead(leadId, { status: "completed" });
     }
 
+    if (rendered) setAcceptedContract(rendered);
     clearPersisted();
     setStep(RESULT_STEP);
   };
@@ -577,6 +586,7 @@ export function TradeInWizard() {
     setResult(null);
     setLeadId(null);
     setImeiServerError(null);
+    setAcceptedContract(null);
     setStep(0);
     setSubScreen("condition");
   };
@@ -802,6 +812,16 @@ export function TradeInWizard() {
                 flowType={data.flowType}
                 customerName={data.name}
                 deviceLabel={deviceLabel}
+                acceptedContractText={acceptedContract?.text ?? null}
+                acceptedContractMeta={
+                  acceptedContract
+                    ? {
+                        storeName: acceptedContract.storeName,
+                        flowLabel: acceptedContract.flowLabel,
+                        acceptedAt: acceptedContract.acceptedAt,
+                      }
+                    : null
+                }
               />
             </div>
           )}

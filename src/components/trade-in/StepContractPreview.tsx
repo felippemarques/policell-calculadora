@@ -85,7 +85,7 @@ interface Props {
   data: ContractData;
   isSubmitting: boolean;
   onBack: () => void;
-  onAccept: () => void | Promise<void>;
+  onAccept: (renderedContract?: { text: string; storeName: string; flowLabel: string; acceptedAt: Date }) => void | Promise<void>;
 }
 
 export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Props) {
@@ -141,7 +141,13 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
   );
 
   const handleDownload = () => {
-    generateContractPdf(renderedText, "contrato-pollicell.pdf");
+    generateContractPdf(renderedText, "contrato-pollicell.pdf", {
+      storeName,
+      customerName: data.customerName,
+      deviceLabel: data.deviceLabel,
+      acceptedAt: data.acceptedAt ?? new Date(),
+      flowLabel: data.flowLabel,
+    });
   };
 
   return (
@@ -220,7 +226,14 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
         <Button
           type="button"
           disabled={!accepted || isSubmitting}
-          onClick={() => onAccept()}
+          onClick={() =>
+            onAccept({
+              text: renderedText,
+              storeName,
+              flowLabel: data.flowLabel,
+              acceptedAt: new Date(),
+            })
+          }
           className="flex-1"
           size="lg"
         >

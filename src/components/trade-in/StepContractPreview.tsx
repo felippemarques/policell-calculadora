@@ -91,15 +91,21 @@ interface Props {
 export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Props) {
   const [accepted, setAccepted] = useState(false);
 
+  const isSale = (data.flowLabel || "").toLowerCase().startsWith("venda");
+  const contractKey = isSale
+    ? "business_contract_terms_sale"
+    : "business_contract_terms_trade";
+
   const { data: settings } = useQuery({
-    queryKey: ["lp_settings", "contract_unified"],
+    queryKey: ["lp_settings", "contract_unified", contractKey],
     queryFn: async () => {
       const { data: rows, error } = await supabase
         .from("lp_settings")
         .select("key,value")
         .in("key", [
-          "business_contract_terms",
-          "business_contract_template",
+          contractKey,
+          "business_contract_terms", // legado — fallback
+          "business_contract_template", // legado mais antigo
           "business_store_name",
           "terms_title",
           "terms_text",
@@ -117,6 +123,7 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
   const lgpdTitle = settings?.terms_title?.trim() || "Termos e Política de Privacidade";
   const lgpdText = settings?.terms_text?.trim() || "";
   const contractTerms =
+    settings?.[contractKey]?.trim() ||
     settings?.business_contract_terms?.trim() ||
     settings?.business_contract_template?.trim() ||
     DEFAULT_TEMPLATE;

@@ -189,7 +189,7 @@ export function ProposalDetailSheet({
           ) : (
             <>
               {isArchived && (
-                <div className="flex items-center gap-2 p-3 rounded-md border border-amber-200 bg-amber-50 text-amber-800 text-xs">
+                <div className="flex items-center gap-2 p-3 rounded-md border border-warning/40 bg-warning/10 text-warning text-xs">
                   <AlertTriangle className="h-4 w-4" />
                   Esta proposta está arquivada.
                 </div>
@@ -197,7 +197,7 @@ export function ProposalDetailSheet({
 
               {/* Quick actions */}
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={handleWhats} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button onClick={handleWhats} className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </Button>
@@ -333,7 +333,7 @@ export function ProposalDetailSheet({
               {/* Internal notes */}
               <section className="space-y-2">
                 <label className="text-sm font-semibold flex items-center gap-2">
-                  <StickyNote className="h-4 w-4 text-amber-500" />
+                  <StickyNote className="h-4 w-4 text-warning" />
                   Anotação interna
                 </label>
                 <Textarea

@@ -226,7 +226,14 @@ export function StepContractPreview({ data, isSubmitting, onBack, onAccept }: Pr
         <Button
           type="button"
           disabled={!accepted || isSubmitting}
-          onClick={() => onAccept()}
+          onClick={() =>
+            onAccept({
+              text: renderedText,
+              storeName,
+              flowLabel: data.flowLabel,
+              acceptedAt: new Date(),
+            })
+          }
           className="flex-1"
           size="lg"
         >

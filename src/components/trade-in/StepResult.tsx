@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote, Sparkles, Gift } from "lucide-react";
+import { Check, Copy, ShoppingCart, Clock, MessageCircle, RotateCcw, AlertTriangle, Banknote, Sparkles, Gift, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
 import type { SanityResult } from "@/lib/trade-in-sanity";
 import type { FlowType } from "./StepChooseFlow";
+import { generateContractPdf } from "@/lib/contract";
 
 interface Props {
   result: { finalValue: number; couponCode: string | null } | null;
@@ -16,6 +17,13 @@ interface Props {
   flowType?: FlowType | null;
   customerName?: string;
   deviceLabel?: string;
+  /** Texto renderizado do contrato aceito — habilita download pós-aceite. */
+  acceptedContractText?: string | null;
+  acceptedContractMeta?: {
+    storeName?: string;
+    flowLabel?: string;
+    acceptedAt?: Date;
+  } | null;
 }
 
 /**

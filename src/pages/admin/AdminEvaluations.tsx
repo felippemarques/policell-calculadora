@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Copy, Ban, Loader2, Check, RefreshCw } from "lucide-react";
+import { Copy, Ban, Loader2, Check, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Evaluation {
   id: string;
@@ -30,11 +31,27 @@ interface Evaluation {
   devices: { brand: string; model: string; storage: string } | null;
 }
 
-const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Pendente", variant: "secondary" },
-  completed: { label: "Concluída", variant: "default" },
-  revoked: { label: "Revogada", variant: "destructive" },
-  coupon_error: { label: "Erro no cupom", variant: "outline" },
+const STATUS_META: Record<string, { label: string; icon: any; className: string }> = {
+  pending: {
+    label: "Pendente",
+    icon: Clock,
+    className: "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200",
+  },
+  completed: {
+    label: "Concluída",
+    icon: CheckCircle2,
+    className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200",
+  },
+  revoked: {
+    label: "Revogada",
+    icon: AlertTriangle,
+    className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
+  },
+  coupon_error: {
+    label: "Erro no cupom",
+    icon: XCircle,
+    className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200",
+  },
 };
 
 function CopyButton({ text }: { text: string }) {
@@ -251,7 +268,8 @@ const AdminEvaluations = () => {
                 </thead>
                 <tbody>
                   {evaluations.map((ev) => {
-                    const st = statusLabel[ev.status] ?? { label: ev.status, variant: "outline" as const };
+                    const st = STATUS_META[ev.status] ?? { label: ev.status, icon: Clock, className: "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200" };
+                    const StatusIcon = st.icon;
                     const canRevoke = ev.status !== "revoked" && ev.coupon_code;
                     const canRetry = ev.status === "pending" || ev.status === "coupon_error";
                     const isRetrying = retryingId === ev.id;
@@ -278,7 +296,10 @@ const AdminEvaluations = () => {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={st.variant}>{st.label}</Badge>
+                          <Badge variant="outline" className={cn("gap-1 font-normal", st.className)}>
+                            <StatusIcon className="h-3 w-3" />
+                            {st.label}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
                           {new Date(ev.created_at).toLocaleDateString("pt-BR", {

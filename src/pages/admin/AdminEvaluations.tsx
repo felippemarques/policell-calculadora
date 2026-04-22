@@ -38,17 +38,17 @@ const STATUS_META: Record<string, { label: string; icon: any; className: string 
     className: "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200",
   },
   completed: {
-    label: "Concluída",
+    label: "Criado",
     icon: CheckCircle2,
     className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200",
   },
   revoked: {
-    label: "Revogada",
+    label: "Revogado",
     icon: AlertTriangle,
     className: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
   },
   coupon_error: {
-    label: "Erro no cupom",
+    label: "Não criado",
     icon: XCircle,
     className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200",
   },

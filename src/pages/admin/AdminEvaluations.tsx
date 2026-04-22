@@ -54,21 +54,26 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-async function fetchRevokeUrl(): Promise<{ url: string; auth: string } | null> {
+async function fetchRevokeConfig(): Promise<{ url: string; auth: string; store_url: string; store_id: string } | null> {
   const { data, error } = await supabase
     .from("lp_settings")
     .select("key,value")
-    .in("key", ["coupon_n8n_revoke_url", "coupon_n8n_auth"]);
+    .in("key", ["coupon_n8n_revoke_url", "coupon_n8n_auth", "coupon_store_url", "coupon_store_id"]);
   if (error || !data) return null;
   const map: Record<string, string> = {};
   data.forEach((row: any) => { map[row.key] = row.value; });
   const url = map["coupon_n8n_revoke_url"];
   if (!url) return null;
-  return { url, auth: map["coupon_n8n_auth"] ?? "" };
+  return {
+    url,
+    auth: map["coupon_n8n_auth"] ?? "",
+    store_url: map["coupon_store_url"] ?? "",
+    store_id: map["coupon_store_id"] ?? "",
+  };
 }
 
 async function callN8nRevoke(couponId: string): Promise<void> {
-  const config = await fetchRevokeUrl();
+  const config = await fetchRevokeConfig();
   if (!config) throw new Error("URL de revogação não configurada.");
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -77,12 +82,19 @@ async function callN8nRevoke(couponId: string): Promise<void> {
   const res = await fetch(config.url, {
     method: "POST",
     headers,
-    body: JSON.stringify({ coupon_id: couponId }),
+    body: JSON.stringify({
+      coupon_id: couponId,
+      store_url: config.store_url,
+      store_id: config.store_id,
+    }),
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`n8n retornou erro ${res.status}: ${text}`);
+  const json = await res.json().catch(() => null);
+
+  const success = json?.message === "Deleted" && json?.code === 200;
+  if (!success) {
+    const detail = json?.message ?? res.statusText;
+    throw new Error(`Revogação não confirmada pela loja: ${detail}`);
   }
 }
 

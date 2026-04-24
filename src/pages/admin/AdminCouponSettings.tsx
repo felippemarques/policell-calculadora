@@ -342,7 +342,7 @@ const AdminCouponSettings = () => {
               onChange={(e) => set("coupon_n8n_revoke_url", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Receberá um POST com <code className="font-mono text-xs">coupon_id</code> ao revogar um cupom pelo painel. O mesmo segredo de autenticação será enviado no header.
+              Receberá um POST com <code className="font-mono text-xs">coupon_id</code>, <code className="font-mono text-xs">store_id</code> e <code className="font-mono text-xs">store_url</code> ao revogar um cupom pelo painel. O mesmo segredo de autenticação será enviado no header.
             </p>
           </div>
         </CardContent>

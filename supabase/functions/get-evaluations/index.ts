@@ -2,7 +2,7 @@
 // Returns individual evaluation records with customer and device data.
 //
 // Auth: either
-//   - Header `x-api-key: <DASHBOARD_API_KEY>` (for external integrations), OR
+//   - Header `access_token: <EVALUATIONS_ACCESS_TOKEN>` (for external integrations), OR
 //   - Authenticated Supabase JWT belonging to a user with the `admin` role.
 //
 // Query params:
@@ -14,7 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-key",
+    "authorization, x-client-info, apikey, content-type, access_token",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
@@ -31,13 +31,13 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const API_KEY = Deno.env.get("DASHBOARD_API_KEY");
+  const ACCESS_TOKEN = Deno.env.get("EVALUATIONS_ACCESS_TOKEN");
 
   // ── AUTH ──────────────────────────────────────────────────────
-  const apiKeyHeader = req.headers.get("x-api-key");
+  const accessTokenHeader = req.headers.get("access_token");
   let authorized = false;
 
-  if (API_KEY && apiKeyHeader && apiKeyHeader === API_KEY) {
+  if (ACCESS_TOKEN && accessTokenHeader && accessTokenHeader === ACCESS_TOKEN) {
     authorized = true;
   } else {
     const authHeader = req.headers.get("Authorization") ?? "";

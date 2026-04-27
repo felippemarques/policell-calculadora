@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusinessSettings } from "@/hooks/use-business-settings";
 import {
   ClipboardCheck,
   ArrowLeft,
@@ -139,6 +140,9 @@ export function StepEvaluationChecklist({
   };
 
   const { data: groupsConfig } = useEvaluationGroupsConfig();
+  const { data: businessSettings } = useBusinessSettings();
+  const showRejectLabel = businessSettings?.showRejectLabel ?? true;
+  const showNoDeductionLabel = businessSettings?.showNoDeductionLabel ?? true;
 
   const adminOrderedSubScreens = useMemo<SubScreen[]>(() => {
     const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];
@@ -628,10 +632,14 @@ export function StepEvaluationChecklist({
                   isReject={opt.is_rejected}
                   badge={
                     opt.is_rejected
-                      ? "Inviabiliza"
+                      ? showRejectLabel
+                        ? "Inviabiliza"
+                        : undefined
                       : Number(opt.deduction_value) > 0
                         ? `−${formatBRL(Number(opt.deduction_value))}`
-                        : "Sem dedução"
+                        : showNoDeductionLabel
+                          ? "Sem dedução"
+                          : undefined
                   }
                 />
               ))}

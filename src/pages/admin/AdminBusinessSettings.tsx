@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
+import { BUSINESS_SETTINGS_KEY } from "@/hooks/use-business-settings";
 
 const BUSINESS_KEYS = [
   "business_contract_terms", // legado — mantido para compat, não editado mais
@@ -18,6 +19,8 @@ const BUSINESS_KEYS = [
   "business_contract_terms_sale",
   "business_upgrade_bonus_percent",
   "business_show_realtime_deductions",
+  "business_show_reject_label",
+  "business_show_no_deduction_label",
   // Flow choice screen settings
   "flow_trade_enabled",
   "flow_trade_title",
@@ -53,6 +56,8 @@ const DEFAULTS: FormState = {
   business_contract_terms_sale: "",
   business_upgrade_bonus_percent: "0",
   business_show_realtime_deductions: "true",
+  business_show_reject_label: "true",
+  business_show_no_deduction_label: "true",
   flow_trade_enabled: "true",
   flow_trade_title: "Trocar por outro aparelho",
   flow_trade_description:
@@ -118,6 +123,7 @@ const AdminBusinessSettings = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["business-settings"] });
+      qc.invalidateQueries({ queryKey: BUSINESS_SETTINGS_KEY });
       qc.invalidateQueries({ queryKey: FLOW_SETTINGS_KEY });
       toast.success("Configurações de negócio salvas.");
     },
@@ -417,7 +423,7 @@ const AdminBusinessSettings = () => {
             avaliação. Desativado, ele só vê o valor final.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label className="text-sm font-medium">Exibir deduções em tempo real</Label>
@@ -431,6 +437,36 @@ const AdminBusinessSettings = () => {
               checked={form.business_show_realtime_deductions === "true"}
               onCheckedChange={(checked) =>
                 set("business_show_realtime_deductions", checked ? "true" : "false")
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar rótulo "Inviabiliza"</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aparece nas opções de defeito que reprovam a avaliação. Desligue para esconder o aviso do cliente.
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_reject_label === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_reject_label", checked ? "true" : "false")
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar rótulo "Sem dedução"</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aparece nas opções de defeito sem desconto (ex.: "Sim — Sem dedução"). Desligue para deixar o card mais limpo.
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_no_deduction_label === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_no_deduction_label", checked ? "true" : "false")
               }
             />
           </div>

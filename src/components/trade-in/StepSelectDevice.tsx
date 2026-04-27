@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useColorsByBrand } from "@/hooks/use-trade-in-data";
+import { useColorsByDevice } from "@/hooks/use-trade-in-data";
 import { hasAnyAnswers } from "@/lib/trade-in-sanity";
 import { emptyAnswers } from "@/lib/trade-in-pricing";
 import {
@@ -73,8 +73,10 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
       .sort((a, b) => a.base_price - b.base_price);
   }, [devices, selectedBrand, selectedModel]);
 
-  // ── Colors filtered by the brand of the selected device ──
-  const { data: colors = [], isLoading: loadingColors } = useColorsByBrand(
+  // ── Colors registered for THIS specific device variant (model+storage) ──
+  // Falls back to brand-level colors when the variant has no colors registered.
+  const { data: colors = [], isLoading: loadingColors } = useColorsByDevice(
+    selectedDevice?.id ?? null,
     selectedDevice?.brand_id ?? null,
   );
   const selectedColor = colors.find((c) => c.id === data.colorId) || null;

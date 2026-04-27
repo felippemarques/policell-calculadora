@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
+import { BUSINESS_SETTINGS_KEY } from "@/hooks/use-business-settings";
 
 const BUSINESS_KEYS = [
   "business_contract_terms", // legado — mantido para compat, não editado mais
@@ -122,6 +123,7 @@ const AdminBusinessSettings = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["business-settings"] });
+      qc.invalidateQueries({ queryKey: BUSINESS_SETTINGS_KEY });
       qc.invalidateQueries({ queryKey: FLOW_SETTINGS_KEY });
       toast.success("Configurações de negócio salvas.");
     },

@@ -80,6 +80,59 @@ export function useColorsByBrand(brandId: string | null | undefined) {
 }
 
 /**
+ * Returns the colors registered specifically for a given device variant
+ * (model + storage). Since `devices.id` mirrors `model_storages.id`, we can
+ * query `variant_colors.model_storage_id = deviceId` directly.
+ *
+ * If no variant colors are registered for the device, falls back to the
+ * brand-level colors so legacy catalogs keep working.
+ */
+export function useColorsByDevice(
+  deviceId: string | null | undefined,
+  brandId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ["colors-by-device", deviceId ?? "none", brandId ?? "none"],
+    enabled: !!deviceId,
+    queryFn: async (): Promise<ColorRow[]> => {
+      // 1. Try variant_colors for this exact device variant
+      const { data: variants, error: vErr } = await supabase
+        .from("variant_colors")
+        .select(
+          "display_order, colors:color_id (id, name, hex_code, brand_ids, display_order)",
+        )
+        .eq("model_storage_id", deviceId!)
+        .order("display_order");
+      if (vErr) throw vErr;
+
+      const variantColors: ColorRow[] = (variants || [])
+        .map((v: any) => v.colors)
+        .filter(Boolean);
+
+      if (variantColors.length > 0) {
+        return variantColors;
+      }
+
+      // 2. Fallback: colors filtered by brand (legacy behavior)
+      if (!brandId) return [];
+      const { data, error } = await supabase
+        .from("colors")
+        .select("id, name, hex_code, brand_ids, display_order")
+        .order("display_order")
+        .order("name");
+      if (error) throw error;
+      const all = (data || []) as ColorRow[];
+      return all.filter(
+        (c) =>
+          !c.brand_ids ||
+          c.brand_ids.length === 0 ||
+          c.brand_ids.includes(brandId),
+      );
+    },
+  });
+}
+
+/**
  * Resolve the public-facing base price for a device based on the chosen flow.
  * Falls back to `base_price` (legacy) when the flow-specific price is zero.
  */

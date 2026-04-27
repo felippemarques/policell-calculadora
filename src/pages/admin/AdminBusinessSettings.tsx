@@ -423,7 +423,7 @@ const AdminBusinessSettings = () => {
             avaliação. Desativado, ele só vê o valor final.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label className="text-sm font-medium">Exibir deduções em tempo real</Label>
@@ -437,6 +437,36 @@ const AdminBusinessSettings = () => {
               checked={form.business_show_realtime_deductions === "true"}
               onCheckedChange={(checked) =>
                 set("business_show_realtime_deductions", checked ? "true" : "false")
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar rótulo "Inviabiliza"</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aparece nas opções de defeito que reprovam a avaliação. Desligue para esconder o aviso do cliente.
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_reject_label === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_reject_label", checked ? "true" : "false")
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar rótulo "Sem dedução"</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aparece nas opções de defeito sem desconto (ex.: "Sim — Sem dedução"). Desligue para deixar o card mais limpo.
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_no_deduction_label === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_no_deduction_label", checked ? "true" : "false")
               }
             />
           </div>

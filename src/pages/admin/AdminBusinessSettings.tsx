@@ -18,6 +18,8 @@ const BUSINESS_KEYS = [
   "business_contract_terms_sale",
   "business_upgrade_bonus_percent",
   "business_show_realtime_deductions",
+  "business_show_reject_label",
+  "business_show_no_deduction_label",
   // Flow choice screen settings
   "flow_trade_enabled",
   "flow_trade_title",
@@ -53,6 +55,8 @@ const DEFAULTS: FormState = {
   business_contract_terms_sale: "",
   business_upgrade_bonus_percent: "0",
   business_show_realtime_deductions: "true",
+  business_show_reject_label: "true",
+  business_show_no_deduction_label: "true",
   flow_trade_enabled: "true",
   flow_trade_title: "Trocar por outro aparelho",
   flow_trade_description:

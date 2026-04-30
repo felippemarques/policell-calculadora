@@ -66,9 +66,12 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
       .forEach((d) => {
         if (!map.has(d.model)) map.set(d.model, (d as any).image_url ?? null);
       });
+    // Sort by model name DESC using natural numeric order so
+    // "Iphone 16 Pro Max" > "Iphone 16 Pro" > "Iphone 15 Pro Max" > … > "Iphone 12".
+    const collator = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
     return Array.from(map.entries())
       .map(([name, image_url]) => ({ name, image_url }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => collator.compare(b.name, a.name));
   }, [devices, selectedBrand]);
 
   // storages for selected brand+model
@@ -544,9 +547,9 @@ function ModelCard({
         </div>
       )}
 
-      {/* Bottom gradient + name */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-left">
-        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px] origin-bottom-left">
+      {/* Bottom gradient + name (centered) */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-center">
+        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px]">
           {name}
         </p>
       </div>

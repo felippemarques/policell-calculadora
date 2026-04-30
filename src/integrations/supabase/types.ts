@@ -370,6 +370,7 @@ export type Database = {
           colors: string | null
           created_at: string
           id: string
+          is_visible: boolean
           model: string
           sale_price: number
           storage: string
@@ -382,6 +383,7 @@ export type Database = {
           colors?: string | null
           created_at?: string
           id?: string
+          is_visible?: boolean
           model: string
           sale_price?: number
           storage: string
@@ -394,6 +396,7 @@ export type Database = {
           colors?: string | null
           created_at?: string
           id?: string
+          is_visible?: boolean
           model?: string
           sale_price?: number
           storage?: string
@@ -918,6 +921,7 @@ export type Database = {
         Args: { _lead_id: string; _notes: string }
         Returns: undefined
       }
+      storage_display_order: { Args: { _capacity: string }; Returns: number }
       sync_device_for_model_storage: {
         Args: { _ms_id: string }
         Returns: undefined

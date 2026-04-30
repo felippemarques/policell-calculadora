@@ -624,15 +624,37 @@ const AdminCustomers = () => {
                       className="text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedLead(lead)}
-                        className="gap-1.5"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        Ver detalhes
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedLead(lead)}
+                          className="gap-1.5"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Ver detalhes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={lead.archived_at ? "Restaurar" : "Arquivar/Excluir"}
+                          onClick={() =>
+                            archiveMutation.mutate({ id: lead.id, archive: !lead.archived_at })
+                          }
+                          className={cn(
+                            "gap-1.5",
+                            lead.archived_at
+                              ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                              : "text-destructive hover:text-destructive hover:bg-destructive/10",
+                          )}
+                        >
+                          {lead.archived_at ? (
+                            <ArchiveRestore className="h-3.5 w-3.5" />
+                          ) : (
+                            <Archive className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

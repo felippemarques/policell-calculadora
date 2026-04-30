@@ -20,7 +20,7 @@ import { StepSpecialOffer } from "./StepSpecialOffer";
 import { StepAddress, type AddressData } from "./StepAddress";
 import { StepContractPreview } from "./StepContractPreview";
 import { RestartProposalButton } from "./RestartProposalButton";
-import { Smartphone, TrendingUp } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import {
   ChecklistAnswers,
   ConditionRow,

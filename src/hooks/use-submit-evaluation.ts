@@ -120,7 +120,24 @@ export function useSubmitEvaluation() {
       );
       if (error) {
         if ((error as any).code === "23505") {
-          throw new DuplicateImeiError();
+          // Enrich with expiration info, if available.
+          let expiresAt: Date | null = null;
+          let flow: "trade" | "sale" | null = null;
+          try {
+            const { data: row } = await (supabase.rpc as any)(
+              "find_active_imei_proposal",
+              {
+                _imei: data.imei ?? "",
+                _flow_type: data.flowType ?? "trade",
+              },
+            );
+            const r = Array.isArray(row) ? row[0] : row;
+            if (r?.expires_at) expiresAt = new Date(r.expires_at);
+            if (r?.flow_type === "trade" || r?.flow_type === "sale") flow = r.flow_type;
+          } catch {
+            /* ignore */
+          }
+          throw new DuplicateImeiError(expiresAt, flow);
         }
         throw error;
       }

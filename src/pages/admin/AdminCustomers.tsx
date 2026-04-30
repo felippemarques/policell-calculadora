@@ -22,6 +22,7 @@ import {
   Sparkles,
   Archive,
   ArchiveRestore,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -36,13 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -70,6 +64,10 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
+import { CommercialAdjustmentSection } from "@/components/admin/CommercialAdjustmentSection";
+import { ContractDownloadButtons } from "@/components/admin/ContractDownloadButtons";
+import { useAuth } from "@/hooks/use-auth";
+
 
 type LeadRow = {
   id: string;
@@ -84,6 +82,7 @@ type LeadRow = {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  [k: string]: any;
 };
 
 type DeviceRow = {
@@ -100,6 +99,7 @@ type EvaluationRow = {
   device_id: string;
   final_value: number;
   created_at: string;
+  [k: string]: any;
 };
 
 type ConditionRow = {
@@ -194,6 +194,8 @@ const DEFAULT_VISIBLE: Record<ColumnKey, boolean> = {
 
 const AdminCustomers = () => {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const adminEmail = user?.email ?? null;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -230,7 +232,7 @@ const AdminCustomers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, customer_email, device_id, final_value, created_at")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as EvaluationRow[];
@@ -315,6 +317,14 @@ const AdminCustomers = () => {
     return m;
   }, [evaluations]);
 
+  const evaluationByEmail = useMemo(() => {
+    const m = new Map<string, EvaluationRow>();
+    for (const e of evaluations) {
+      if (!m.has(e.customer_email)) m.set(e.customer_email, e);
+    }
+    return m;
+  }, [evaluations]);
+
   const brands = useMemo(() => {
     const set = new Set<string>();
     devices.forEach((d) => d.brand && set.add(d.brand));
@@ -362,9 +372,10 @@ const AdminCustomers = () => {
   const selectedDevice = selectedLead?.device_id
     ? deviceMap.get(selectedLead.device_id) ?? null
     : null;
-  const selectedFinalValue = selectedLead
-    ? finalValueMap.get(selectedLead.customer_email)
-    : undefined;
+  const selectedEvaluation = selectedLead
+    ? evaluationByEmail.get(selectedLead.customer_email) ?? null
+    : null;
+  const selectedFinalValue = selectedEvaluation?.final_value;
   const selectedDeviceLabel = selectedDevice
     ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
     : "Aparelho não informado";
@@ -664,23 +675,28 @@ const AdminCustomers = () => {
         </div>
       </Card>
 
-      {/* Detail Sheet */}
-      <Sheet
+      {/* Detail — Full screen modal */}
+      <Dialog
         open={!!selectedLead}
         onOpenChange={(o) => !o && setSelectedLead(null)}
       >
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <DialogContent
+          className="p-0 gap-0 max-w-none w-[96vw] h-[94vh] sm:rounded-xl flex flex-col overflow-hidden"
+        >
           {selectedLead && (
             <LeadDetail
               lead={selectedLead}
               device={selectedDevice}
               finalValue={selectedFinalValue}
               parsed={selectedParsed}
+              evaluation={selectedEvaluation}
+              adminEmail={adminEmail}
               onSendProposal={() => setProposalDialogOpen(true)}
+              onClose={() => setSelectedLead(null)}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Proposal Confirmation Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
@@ -886,13 +902,19 @@ function LeadDetail({
   device,
   finalValue,
   parsed,
+  evaluation,
+  adminEmail,
   onSendProposal,
+  onClose,
 }: {
   lead: LeadRow;
   device: DeviceRow | null;
   finalValue?: number;
   parsed: ParsedAnswer[];
+  evaluation: EvaluationRow | null;
+  adminEmail: string | null;
   onSendProposal: () => void;
+  onClose: () => void;
 }) {
   const meta = STATUS_META[lead.status] ?? STATUS_META.in_progress;
   const Icon = meta.icon;
@@ -903,280 +925,333 @@ function LeadDetail({
     typeof finalValue === "number" &&
     finalValue > 0;
 
+  const deviceLabel = device
+    ? `${device.brand} ${device.model} ${device.storage}`.trim()
+    : "Aparelho não informado";
+
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>{lead.customer_name}</SheetTitle>
-        <SheetDescription>
-          Cadastrado em{" "}
-          {format(new Date(lead.created_at), "dd 'de' MMMM 'às' HH:mm", {
-            locale: ptBR,
-          })}
-        </SheetDescription>
-      </SheetHeader>
-
-      <div className="mt-6 space-y-6">
-        <div>
-          <Badge
-            variant="outline"
-            className={cn("gap-1 font-normal", meta.className)}
-          >
-            <Icon className="h-3 w-3" />
-            {meta.label}
-          </Badge>
-        </div>
-
-        {/* ─── Sales action card ─── */}
-        {canSendProposal && (
-          <Card className="p-4 bg-gradient-to-br from-emerald-50 to-sky-50 border-emerald-200/60">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                <MessageCircle className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-emerald-900">
-                  Pronto para fechar?
-                </p>
-                <p className="text-xs text-emerald-800/80 mt-0.5">
-                  Envie a proposta formatada via WhatsApp em um clique.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={onSendProposal}
-              className="w-full mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Enviar Proposta via WhatsApp
-            </Button>
-          </Card>
-        )}
-
-        {/* Contato */}
-        <section className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Contato
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>{lead.customer_name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`mailto:${lead.customer_email}`}
-                className="text-primary hover:underline"
-              >
-                {lead.customer_email}
-              </a>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`tel:${lead.customer_phone}`}
-                className="text-primary hover:underline"
-              >
-                {lead.customer_phone}
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <Separator />
-
-        {/* Aparelho */}
-        <section className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Aparelho selecionado
-          </h4>
-          {device ? (
-            <Card className="p-4 bg-muted/30">
-              <div className="flex items-start gap-3">
-                <Smartphone className="h-5 w-5 mt-0.5 text-primary" />
-                <div className="flex-1">
-                  <p className="font-semibold">
-                    {device.brand} {device.model}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Armazenamento: {device.storage}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Preço base:{" "}
-                    {device.base_price.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhum aparelho selecionado.
-            </p>
-          )}
-        </section>
-
-        {/* Valor */}
-        {typeof finalValue === "number" && (
-          <>
-            <Separator />
-            <section className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Valor final ofertado
-              </h4>
-              <p className="text-2xl font-bold text-primary">
-                {finalValue.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
+      {/* Sticky header */}
+      <DialogHeader className="px-6 py-4 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-xl font-bold truncate">
+              {lead.customer_name}
+            </DialogTitle>
+            <DialogDescription className="mt-1 flex flex-wrap items-center gap-3 text-xs">
+              <span>
+                Cadastrado em{" "}
+                {format(new Date(lead.created_at), "dd 'de' MMMM 'às' HH:mm", {
+                  locale: ptBR,
                 })}
-              </p>
-            </section>
-          </>
-        )}
-
-        {/* Rejection */}
-        {lead.rejection_reason && (
-          <>
-            <Separator />
-            <section className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Motivo da rejeição
-              </h4>
-              <Card className="p-3 border-destructive/30 bg-destructive/10">
-                <div className="flex items-start gap-2">
-                  <Ban className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
-                  <p className="text-sm text-destructive">
-                    {lead.rejection_reason}
-                  </p>
-                </div>
-              </Card>
-            </section>
-          </>
-        )}
-
-        <Separator />
-
-        {/* Raio-X — Checklist responses */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Raio-X do aparelho
-            </h4>
-            {parsed.length > 0 && (
-              <span className="text-[10px] text-muted-foreground">
-                {parsed.length} respostas
               </span>
-            )}
+              <Badge
+                variant="outline"
+                className={cn("gap-1 font-normal", meta.className)}
+              >
+                <Icon className="h-3 w-3" />
+                {meta.label}
+              </Badge>
+            </DialogDescription>
           </div>
-          {parsed.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma resposta registrada.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {parsed.map((entry, i) => (
-                <Card
-                  key={i}
-                  className={cn(
-                    "p-3 flex items-start gap-3",
-                    entry.isCritical
-                      ? "border-destructive/30 bg-destructive/5"
-                      : "bg-muted/20"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                      entry.isCritical
-                        ? "bg-destructive/15 text-destructive"
-                        : "bg-primary/10 text-primary"
-                    )}
-                  >
-                    {entry.isCritical ? (
-                      <Ban className="h-3.5 w-3.5" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5" />
-                    )}
+        </div>
+      </DialogHeader>
+
+      {/* Two-column body — scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-6">
+          {/* ── LEFT COLUMN ── */}
+          <div className="space-y-6">
+            {/* Sales action card */}
+            {canSendProposal && (
+              <Card className="p-4 bg-gradient-to-br from-emerald-50 to-sky-50 border-emerald-200/60">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">
-                      {entry.question}
-                    </p>
-                    <p
-                      className={cn(
-                        "text-sm font-medium",
-                        entry.isCritical && "text-destructive"
-                      )}
-                    >
-                      {entry.answer}
+                    <p className="font-semibold text-emerald-900">Pronto para fechar?</p>
+                    <p className="text-xs text-emerald-800/80 mt-0.5">
+                      Envie a proposta formatada via WhatsApp em um clique.
                     </p>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+                </div>
+                <Button
+                  onClick={onSendProposal}
+                  className="w-full mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar Proposta via WhatsApp
+                </Button>
+              </Card>
+            )}
 
-        {/* Quick links */}
-        <section className="pt-2 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="flex-1 gap-1.5"
-          >
-            <a
-              href={buildWhatsAppLink(
-                lead.customer_phone,
-                lead.customer_name,
-                device
-                  ? `${device.brand} ${device.model} ${device.storage}`.trim()
-                  : "seu aparelho",
-                finalValue ?? 0,
+            {/* Contato */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Contato
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{lead.customer_name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${lead.customer_email}`} className="text-primary hover:underline truncate">
+                    {lead.customer_email}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${lead.customer_phone}`} className="text-primary hover:underline">
+                    {lead.customer_phone}
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Aparelho selecionado */}
+            <section className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Aparelho selecionado
+              </h4>
+              {device ? (
+                <Card className="p-4 bg-muted/30">
+                  <div className="flex items-start gap-3">
+                    <Smartphone className="h-5 w-5 mt-0.5 text-primary" />
+                    <div className="flex-1">
+                      <p className="font-semibold">
+                        {device.brand} {device.model}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Armazenamento: {device.storage}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Preço base:{" "}
+                        {device.base_price.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum aparelho selecionado.</p>
               )}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              WhatsApp
-              <ExternalLink className="h-3 w-3 opacity-60" />
-            </a>
-          </Button>
-          {canSendProposal && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 gap-1.5"
-              onClick={() =>
-                openProposalInNewTab({
-                  customerName: lead.customer_name,
-                  customerEmail: lead.customer_email,
-                  customerPhone: lead.customer_phone,
-                  deviceLabel: device
-                    ? `${device.brand} ${device.model} ${device.storage}`.trim()
-                    : "Aparelho",
-                  basePrice: device?.base_price ?? 0,
-                  finalValue: finalValue ?? 0,
-                  conditions: parsed.map((p) => ({
-                    label: p.question,
-                    value: p.answer,
-                    critical: p.isCritical,
-                  })),
-                  rejectionReason: lead.rejection_reason,
-                  createdAt: lead.created_at,
-                })
-              }
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Visualizar proposta
-            </Button>
-          )}
-        </section>
+            </section>
+
+            {/* Endereço */}
+            {(lead.address_zip || lead.address_city) && (
+              <>
+                <Separator />
+                <section className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Endereço
+                  </h4>
+                  <div className="text-sm text-foreground leading-relaxed rounded-md border border-border p-3 bg-muted/10">
+                    {[
+                      [lead.address_street, lead.address_number].filter(Boolean).join(", "),
+                      lead.address_complement,
+                      lead.address_neighborhood,
+                      [lead.address_city, lead.address_state].filter(Boolean).join(" - "),
+                      lead.address_zip ? `CEP ${lead.address_zip}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* Rejection */}
+            {lead.rejection_reason && (
+              <>
+                <Separator />
+                <section className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Motivo da rejeição
+                  </h4>
+                  <Card className="p-3 border-destructive/30 bg-destructive/10">
+                    <div className="flex items-start gap-2">
+                      <Ban className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                      <p className="text-sm text-destructive">{lead.rejection_reason}</p>
+                    </div>
+                  </Card>
+                </section>
+              </>
+            )}
+
+            {/* Quick action: WhatsApp + visualizar proposta */}
+            <Separator />
+            <section className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild className="gap-1.5">
+                <a
+                  href={buildWhatsAppLink(
+                    lead.customer_phone,
+                    lead.customer_name,
+                    deviceLabel,
+                    finalValue ?? 0,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  WhatsApp
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
+              </Button>
+              {canSendProposal && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    openProposalInNewTab({
+                      customerName: lead.customer_name,
+                      customerEmail: lead.customer_email,
+                      customerPhone: lead.customer_phone,
+                      deviceLabel,
+                      basePrice: device?.base_price ?? 0,
+                      finalValue: finalValue ?? 0,
+                      conditions: parsed.map((p) => ({
+                        label: p.question,
+                        value: p.answer,
+                        critical: p.isCritical,
+                      })),
+                      rejectionReason: lead.rejection_reason,
+                      createdAt: lead.created_at,
+                    })
+                  }
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Visualizar proposta
+                </Button>
+              )}
+            </section>
+          </div>
+
+          {/* ── RIGHT COLUMN ── */}
+          <div className="space-y-6">
+            {/* Raio-X */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Raio-X do aparelho
+                </h4>
+                {parsed.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {parsed.length} respostas
+                  </span>
+                )}
+              </div>
+              {parsed.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma resposta registrada.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {parsed.map((entry, i) => (
+                    <Card
+                      key={i}
+                      className={cn(
+                        "p-3 flex items-start gap-3",
+                        entry.isCritical
+                          ? "border-destructive/30 bg-destructive/5"
+                          : "bg-muted/20",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                          entry.isCritical
+                            ? "bg-destructive/15 text-destructive"
+                            : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        {entry.isCritical ? (
+                          <Ban className="h-3.5 w-3.5" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">{entry.question}</p>
+                        <p
+                          className={cn(
+                            "text-sm font-medium",
+                            entry.isCritical && "text-destructive",
+                          )}
+                        >
+                          {entry.answer}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Resumo financeiro */}
+            {evaluation && (
+              <section className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Resumo financeiro
+                </h4>
+                <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
+                  <FinanceRow label="Preço base" value={formatBRLNum(evaluation.base_price)} />
+                  <FinanceRow label="Desconto de condição" value={`− ${formatBRLNum(evaluation.condition_discount)}`} />
+                  <FinanceRow label="Total de deduções" value={`− ${formatBRLNum(evaluation.total_deductions)}`} />
+                  <FinanceRow label="Valor final" value={formatBRLNum(evaluation.final_value)} bold />
+                </div>
+              </section>
+            )}
+
+            {/* Ajuste comercial + Contrato */}
+            {evaluation ? (
+              <>
+                <CommercialAdjustmentSection evaluation={evaluation} adminEmail={adminEmail} />
+                <ContractDownloadButtons evaluation={evaluation} />
+              </>
+            ) : (
+              <Card className="p-4 bg-muted/20 border-dashed text-xs text-muted-foreground flex items-start gap-2">
+                <Sparkles className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p>
+                  O ajuste comercial e o download do contrato ficam disponíveis quando o cliente
+                  conclui a proposta (cupom emitido).
+                </p>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
+}
+
+function FinanceRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className={cn("flex items-center justify-between px-3 py-2", bold && "bg-muted/40")}>
+      <span className={cn("text-muted-foreground", bold && "text-foreground font-semibold")}>
+        {label}
+      </span>
+      <span
+        className={cn(
+          "tabular-nums",
+          bold ? "font-bold text-primary" : "text-foreground",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function formatBRLNum(n: number | null | undefined) {
+  return typeof n === "number"
+    ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : "—";
 }
 
 export default AdminCustomers;

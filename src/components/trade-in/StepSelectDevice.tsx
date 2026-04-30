@@ -57,12 +57,18 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
     return Array.from(set).sort();
   }, [devices]);
 
-  // models for selected brand
+  // models for selected brand (with their image, picked from the first variant)
   const models = useMemo(() => {
-    if (!selectedBrand) return [];
-    const set = new Set<string>();
-    devices.filter((d) => d.brand === selectedBrand).forEach((d) => set.add(d.model));
-    return Array.from(set).sort();
+    if (!selectedBrand) return [] as { name: string; image_url: string | null }[];
+    const map = new Map<string, string | null>();
+    devices
+      .filter((d) => d.brand === selectedBrand)
+      .forEach((d) => {
+        if (!map.has(d.model)) map.set(d.model, (d as any).image_url ?? null);
+      });
+    return Array.from(map.entries())
+      .map(([name, image_url]) => ({ name, image_url }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [devices, selectedBrand]);
 
   // storages for selected brand+model

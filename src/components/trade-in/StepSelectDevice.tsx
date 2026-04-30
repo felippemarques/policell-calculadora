@@ -269,9 +269,11 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                         <span className="text-base font-semibold text-foreground">
                           {d.storage}
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </span>
+                        {showBasePrice && (
+                          <span className="text-sm font-semibold text-primary">
+                            R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
                       </div>
                       {isSel && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
                     </div>

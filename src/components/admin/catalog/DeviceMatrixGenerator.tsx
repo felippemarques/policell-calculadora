@@ -515,6 +515,14 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
             <Button size="sm" variant="outline" onClick={applyGlobalPrice} disabled={!globalPrice}>
               Aplicar a todas
             </Button>
+            <div className="flex items-center gap-2 ml-2">
+              <Button size="sm" variant="outline" onClick={() => setAllVisible(true)}>
+                Mostrar todas
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setAllVisible(false)}>
+                Ocultar todas
+              </Button>
+            </div>
             <span className="text-xs text-muted-foreground ml-auto">
               {summaryLabel || `${activeRows.length} de ${rows.length} ativa(s)`}
             </span>

@@ -160,7 +160,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
         <Label className="text-xs">Preço base</Label>
         <CurrencyInput
           value={basePrice}
-          onValueChange={(v) => setBasePrice(v ?? 0)}
+          onValueChange={(v) => setBasePrice(v || 0)}
         />
         <p className="text-[11px] text-muted-foreground">
           Original: {formatBRL(original.basePrice)}
@@ -190,7 +190,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
           {bonusType === "money" ? (
             <CurrencyInput
               value={bonusValue}
-              onValueChange={(v) => setBonusValue(v ?? 0)}
+              onValueChange={(v) => setBonusValue(v || 0)}
               className="flex-1"
             />
           ) : (

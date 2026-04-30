@@ -35,6 +35,10 @@ import { openWhatsapp, buildContextualMessage } from "@/lib/whatsapp";
 import { buildDossierText, buildAddressText } from "@/lib/proposal-dossier";
 import { formatImei, isValidImei } from "@/lib/imei";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { CommercialAdjustmentSection } from "./CommercialAdjustmentSection";
+import { ContractDownloadButtons } from "./ContractDownloadButtons";
+import { parseProposalOverride } from "@/lib/proposal-override";
 
 export type ProposalKind = "lead" | "evaluation";
 

@@ -1064,24 +1064,66 @@ function LeadDetail({
                 Aparelho selecionado
               </h4>
               {device ? (
-                <Card className="p-4 bg-muted/30">
+                <Card className="p-4 bg-muted/30 space-y-3">
                   <div className="flex items-start gap-3">
                     <Smartphone className="h-5 w-5 mt-0.5 text-primary" />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold">
                         {device.brand} {device.model}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Armazenamento: {device.storage}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Preço base:{" "}
-                        {device.base_price.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isTrade
+                          ? "Aparelho que o cliente vai entregar na troca"
+                          : "Aparelho que o cliente quer vender"}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Specs grid */}
+                  <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-border/60">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Armazenamento
+                        </p>
+                        <p className="font-medium truncate">{device.storage || "—"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Cor escolhida
+                        </p>
+                        {chosenColor ? (
+                          <div className="flex items-center gap-1.5">
+                            {chosenColor.hex_code && (
+                              <span
+                                className="inline-block h-3 w-3 rounded-full border border-border"
+                                style={{ backgroundColor: chosenColor.hex_code }}
+                              />
+                            )}
+                            <p className="font-medium truncate">{chosenColor.name}</p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Não informada</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {isTrade ? "Crédito base na troca" : "Preço base de compra"}
+                    </span>
+                    <span className="font-bold text-primary tabular-nums">
+                      {device.base_price.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
                   </div>
                 </Card>
               ) : (

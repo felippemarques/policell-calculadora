@@ -21,6 +21,7 @@ const BUSINESS_KEYS = [
   "business_show_realtime_deductions",
   "business_show_reject_label",
   "business_show_no_deduction_label",
+  "business_show_device_base_price",
   // Flow choice screen settings
   "flow_trade_enabled",
   "flow_trade_title",

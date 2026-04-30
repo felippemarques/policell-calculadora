@@ -985,6 +985,18 @@ function LeadDetail({
                 <Icon className="h-3 w-3" />
                 {meta.label}
               </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 font-normal",
+                  isTrade
+                    ? "bg-violet-100 text-violet-800 border-violet-200"
+                    : "bg-blue-100 text-blue-800 border-blue-200",
+                )}
+              >
+                <FlowIcon className="h-3 w-3" />
+                {flowLabel}
+              </Badge>
             </DialogDescription>
           </div>
         </div>

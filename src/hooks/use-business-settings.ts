@@ -8,6 +8,8 @@ export interface BusinessSettings {
   showRejectLabel: boolean;
   /** When true, damage options worth R$ 0 show the "Sem dedução" badge. */
   showNoDeductionLabel: boolean;
+  /** When true, the device base price is shown on the storage/color selection screens (promotional mode). */
+  showDeviceBasePrice: boolean;
 }
 
 const KEYS = [
@@ -15,6 +17,7 @@ const KEYS = [
   "business_upgrade_bonus_percent",
   "business_show_reject_label",
   "business_show_no_deduction_label",
+  "business_show_device_base_price",
 ] as const;
 
 export const BUSINESS_SETTINGS_KEY = ["business-settings-public"] as const;

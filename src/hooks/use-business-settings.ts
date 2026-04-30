@@ -43,6 +43,8 @@ export function useBusinessSettings() {
         upgradeBonusPercent: Number(map.business_upgrade_bonus_percent ?? "0") || 0,
         showRejectLabel: (map.business_show_reject_label ?? "true") !== "false",
         showNoDeductionLabel: (map.business_show_no_deduction_label ?? "true") !== "false",
+        // Default: false (esconder) — só mostra em campanhas promocionais.
+        showDeviceBasePrice: (map.business_show_device_base_price ?? "false") === "true",
       };
     },
   });

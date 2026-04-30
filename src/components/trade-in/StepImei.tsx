@@ -175,8 +175,10 @@ export function StepImei({
               showError ? "text-destructive" : "text-muted-foreground"
             } flex items-center gap-1`}
           >
-            {showError && <AlertCircle className="h-3 w-3" />}
-            {showError ? errorMessage : "Apenas números. Sem espaços ou traços."}
+            {showError && !serverError && <AlertCircle className="h-3 w-3" />}
+            {showError && !serverError
+              ? errorMessage
+              : "Apenas números. Sem espaços ou traços."}
           </span>
           <span className="text-muted-foreground tabular-nums">
             {digits.length}/15

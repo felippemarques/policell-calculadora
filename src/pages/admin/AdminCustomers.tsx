@@ -105,6 +105,7 @@ type EvaluationRow = {
   device_id: string;
   final_value: number;
   created_at: string;
+  [k: string]: any;
 };
 
 type ConditionRow = {
@@ -235,7 +236,7 @@ const AdminCustomers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, customer_email, device_id, final_value, created_at")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as EvaluationRow[];
@@ -316,6 +317,14 @@ const AdminCustomers = () => {
     const m = new Map<string, number>();
     for (const e of evaluations) {
       if (!m.has(e.customer_email)) m.set(e.customer_email, e.final_value);
+    }
+    return m;
+  }, [evaluations]);
+
+  const evaluationByEmail = useMemo(() => {
+    const m = new Map<string, EvaluationRow>();
+    for (const e of evaluations) {
+      if (!m.has(e.customer_email)) m.set(e.customer_email, e);
     }
     return m;
   }, [evaluations]);

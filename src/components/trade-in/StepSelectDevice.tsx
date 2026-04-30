@@ -547,9 +547,9 @@ function ModelCard({
         </div>
       )}
 
-      {/* Bottom gradient + name */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-left">
-        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px] origin-bottom-left">
+      {/* Bottom gradient + name (centered) */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-center">
+        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px]">
           {name}
         </p>
       </div>

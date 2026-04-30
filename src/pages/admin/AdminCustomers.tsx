@@ -22,6 +22,7 @@ import {
   Sparkles,
   Archive,
   ArchiveRestore,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,10 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
+import { CommercialAdjustmentSection } from "@/components/admin/CommercialAdjustmentSection";
+import { ContractDownloadButtons } from "@/components/admin/ContractDownloadButtons";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge as UIBadge } from "@/components/ui/badge";
 
 type LeadRow = {
   id: string;

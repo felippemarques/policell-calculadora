@@ -241,6 +241,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
             storage: r.storage,
             colors: r.color,
             base_price: r.base_price,
+            is_visible: r.is_visible,
           }));
           const { error } = await supabase.from("devices").insert(inserts);
           if (error) throw error;
@@ -250,7 +251,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
         for (const r of toUpdate) {
           const { error } = await supabase
             .from("devices")
-            .update({ base_price: r.base_price, colors: r.color, storage: r.storage })
+            .update({ base_price: r.base_price, colors: r.color, storage: r.storage, is_visible: r.is_visible })
             .eq("id", r.existingId!);
           if (error) throw error;
         }

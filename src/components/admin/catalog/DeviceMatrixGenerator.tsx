@@ -539,6 +539,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
                   <TableHead>Armazenamento</TableHead>
                   <TableHead>Cor</TableHead>
                   <TableHead className="w-40">Preço Base (R$)</TableHead>
+                  <TableHead className="w-24">Visível ao cliente</TableHead>
                   {isEditMode && <TableHead className="w-20">Status</TableHead>}
                 </TableRow>
               </TableHeader>

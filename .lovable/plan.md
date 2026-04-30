@@ -1,54 +1,88 @@
-## Humanização das perguntas e respostas da avaliação
 
-### Backup (já feito)
-Arquivos CSV gravados em `/mnt/documents/backup-humanizacao-2026-04-30/`:
-- `damage_categories_BACKUP.csv` (perguntas)
-- `damage_deductions_BACKUP.csv` (respostas)
-- `condition_discounts_BACKUP.csv` (condições gerais)
+# Esconder valores no fluxo + Toggle de preço base configurável
 
-Para reverter, basta me pedir "voltar para o backup" — eu releio os CSVs e restauro os textos originais.
+## Decisões confirmadas
+- **IMEI**: mantém como está hoje (cliente preenche IMEI já sabendo o valor — esse momento é proposital).
+- **Cupom Especial**: mantém como está hoje.
+- **Foco**: esconder cifras e percentuais nas etapas de **avaliação** (danos, riscos, bateria, condição, etc.) e tornar o **preço base do aparelho** (o card "SELECIONADO" do print, mostrado nas telas de armazenamento e cor) **configurável via admin**.
 
-### O que muda
-Apenas o texto (`name`, `option_name`, `help_text`). **Não muda**: IDs, valores de desconto (`%`/`R$`), regras `is_rejected`, `is_required`, `display_order`, ordem das categorias, vínculos pai/filho (`parent_id`, `parent_option_id`).
+---
 
-### Perguntas (damage_categories) — 17 atualizadas
+## O que muda na prática
 
-| Antes | Depois |
-|---|---|
-| O seu aparelho liga? | 🔌 Seu aparelho liga normalmente? |
-| O aparelho faz e recebe ligações… | 📞 Você consegue fazer e receber ligações pela operadora? |
-| A conectividade com wifi e bluetooth… | 📶 Wi-Fi e Bluetooth funcionam direitinho? |
-| Tem marcas de uso? | 👀 O aparelho tem marcas de uso? |
-| O aparelho está com a parte traseira… | 📱 A traseira ou as laterais têm algum dano? |
-| O aparelho está com a tela quebrada… | 🖥️ A tela do aparelho tem algum problema? |
-| O aparelho possui funcionalidade de Leitores Biométricos… | 🔐 A biometria (Face ID ou digital) está funcionando? |
-| As câmeras do dispositivo apresentam algum problema… | 📸 As câmeras (frontal e traseira) tiram foto bem? |
-| Qual o nível de saúde da sua bateria? | 🔋 Qual a saúde da bateria do seu aparelho? |
-| O dispositivo apresenta mensagem de peça… | ⚙️ Aparece algum aviso de "peça não original" nos ajustes? |
-| Voce consegue fazer pagamentos por proximidade? | 💳 O pagamento por aproximação (NFC) funciona? |
-| Aparece mensagem de qual peça? | 🔧 Qual peça aparece no aviso? |
-| Qual mensagem? *(disparada por "Mensagem de tela")* | 🛠️ E para a tela, é peça genuína ou desconhecida? |
-| Qual mensagemm? *(disparada por "Mensagem de câmera")* | 🛠️ E para a câmera, é peça genuína ou desconhecida? |
-| Qual mensagemmm? *(disparada por "Mensagem de bateria")* | 🛠️ E para a bateria, é peça genuína ou desconhecida? |
-| Como seria esse dano na tela? | 🩹 Como é o dano na tela? |
-| Como seria esse dano? | 🩹 Como é o dano? |
+### 1. Toggle "Mostrar preço base na calculadora" (Admin)
+Novo controle em **Admin → Configurações de Negócio** (`AdminBusinessSettings.tsx`):
+- Label: "Mostrar preço base do aparelho na calculadora"
+- Descrição: "Quando ligado, o cliente vê o valor base do aparelho ao escolher armazenamento e cor (ideal para campanhas promocionais). Quando desligado, o cliente segue todo o fluxo e só descobre o valor no resultado final."
+- Default: **desligado** (esconder).
+- Persistido em `lp_settings` com a chave `business_show_device_base_price` (segue o padrão das outras flags da tabela — sem mudança de schema).
 
-### Respostas (damage_deductions)
-- Sim/Não viram frases com personalidade: "✅ Sim, liga e funciona certinho", "❌ Não estou conseguindo", "❌ Não funciona ou não cadastra", etc.
-- Marcas de uso: ✨ impecável / 🙂 quase invisíveis / 👌 visíveis
-- Bateria: 💚 acima de 90% (ótima) / 💛 80-90% (boa) / 🧡 abaixo de 80% (precisa trocar)
-- Subopções de aviso de peça: 🖥️ Mensagem na tela / 📸 Mensagem na câmera / 🔋 Mensagem na bateria / 🚫 Mensagem no Face ID ou rede celular
-- Sub-sub: ✅ Peça genuína (original) / ⚠️ Peça desconhecida (não original)
-- Danos na tela: 💥 quebrada/manchas/toques fantasmas, ✏️ apenas com riscos
-- Danos traseira: 🔨 traseira trincada, 🔨 lateral com riscos, 🔘 botão faltando
+### 2. Preço base do aparelho (`StepSelectDevice.tsx`)
+Os 3 lugares que hoje mostram "R$ X" passam a respeitar o toggle:
+- **Lista de armazenamentos** → R$ ao lado de cada capacidade
+- **Card "SELECIONADO" do armazenamento** (o do print)
+- **Card "SELECIONADO" da cor**
 
-### Help text (textos de apoio)
-Reescritos em tom amigável onde já existem (Liga, Ligações, Wi-Fi/BT, Câmeras) e adicionados nos que faziam sentido (Traseira/laterais, Tela, Biometria, Aviso de peça).
+Comportamento:
+- **Toggle ligado**: mostra o valor com tratamento promocional (badge "Oferta especial", cor de destaque) — fica evidente que é uma promoção.
+- **Toggle desligado**: o R$ desaparece dos 3 pontos. O card "SELECIONADO" continua aparecendo, mas só com modelo + capacidade + cor (sem cifra).
 
-### Como será aplicado
-1. Uma migration única com ~50 statements `UPDATE` em `damage_categories` e `damage_deductions`
-2. Não toca em estrutura, só em texto
-3. As 3 perguntas duplicadas ("Qual mensagem?" / "Qual mensagemm?" / "Qual mensagemmm?") são na verdade subperguntas legítimas disparadas por opções diferentes (tela/câmera/bateria) — vou renomear cada uma para refletir o contexto, sem deletar nem desativar nenhuma
+### 3. Avaliação — esconder TODAS as cifras e percentuais (sempre, sem toggle)
+- **`StepEvaluationChecklist.tsx`**: remover os badges de dedução por resposta (ex: "−R$ 50,00", "−15%", "−R$ 80"). As opções aparecem só com texto + emoji, sem revelar o impacto financeiro.
+- **`TradeInWizard.tsx`** (e equivalente do fluxo de venda, se houver): remover o **rodapé flutuante "Valor estimado: R$ X"** que acompanha o cliente durante toda a avaliação.
+- **Tela de condição geral do aparelho** (impecável / normal / com marcas): se houver percentual ou R$ visível, esconder também.
 
-### Como reverter depois
-Posso restaurar tudo a partir dos CSVs em `/mnt/documents/backup-humanizacao-2026-04-30/` rodando uma migration de UPDATE inversa. É só pedir.
+### 4. O que NÃO muda
+- **`StepImei.tsx`**: intacto (mostra "Sua proposta até aqui" e o aviso de bônus +X% — é o momento em que o cliente já precisa ver o valor pra decidir preencher IMEI).
+- **`StepSpecialOffer.tsx`** (Cupom Especial): intacto.
+- **`StepResult.tsx`**: intacto — é onde o cliente finalmente vê o valor cheio.
+- **Lógica de cálculo (`computePricing`)**: intocada. Tudo continua sendo calculado normalmente no backend/estado, só não é exibido.
+- **Banco de dados**: nenhuma mudança de estrutura. Apenas um `INSERT` da nova chave em `lp_settings`.
+
+---
+
+## Fluxo do cliente — antes vs depois (com toggle desligado)
+
+```text
+ANTES                                    DEPOIS
+─────                                    ──────
+Escolhe modelo                           Escolhe modelo
+Escolhe armazenamento (vê R$)            Escolhe armazenamento (sem R$)
+Escolhe cor (vê R$)                      Escolhe cor (sem R$)
+Avaliação: "Tela trincada −R$ 200"       Avaliação: "Tela trincada" (sem valor)
+Rodapé flutuante: "Valor: R$ 1.450"      [sem rodapé]
+IMEI (vê proposta + bônus)               IMEI (vê proposta + bônus) ← igual
+Cupom especial                           Cupom especial ← igual
+Resultado: R$ final                      Resultado: R$ final ← surpresa
+```
+
+Com **toggle ligado** (modo promocional), o preço base reaparece nas telas de armazenamento/cor com destaque "Oferta", mas as cifras de avaliação continuam escondidas.
+
+---
+
+## Detalhes técnicos
+
+### Arquivos alterados
+- `src/hooks/use-business-settings.ts` — adicionar `show_device_base_price: boolean` ao tipo e ao mapeamento (chave `business_show_device_base_price`, default `false`).
+- `src/pages/admin/AdminBusinessSettings.tsx` — novo Switch + descrição.
+- `src/components/trade-in/StepSelectDevice.tsx` — envolver os 3 pontos de R$ em `{showBasePrice && ...}` e aplicar styling promocional quando ativo.
+- `src/components/trade-in/StepEvaluationChecklist.tsx` — remover badges de `−R$` e `−%` das opções.
+- `src/components/trade-in/TradeInWizard.tsx` — remover footer flutuante de valor estimado.
+- Verificar fluxo de venda (`StepSale*` se existir) e aplicar a mesma limpeza visual.
+
+### Banco
+Apenas **1 INSERT** (sem migration de schema):
+```sql
+INSERT INTO lp_settings (key, value)
+VALUES ('business_show_device_base_price', 'false')
+ON CONFLICT (key) DO NOTHING;
+```
+
+### Reversibilidade
+- Tudo é UI condicional → reverter = remover os `{flag && ...}`.
+- Nenhum dado é apagado, nenhuma coluna é alterada.
+- Se quiser voltar tudo a aparecer: basta ligar o toggle (preço base) — porém as deduções da avaliação ficam escondidas por design (não tem toggle pra elas, conforme pedido).
+
+---
+
+Pode aprovar? Assim que aprovar, eu já implemento.

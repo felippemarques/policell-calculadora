@@ -1283,15 +1283,83 @@ function LeadDetail({
             {/* Resumo financeiro */}
             {evaluation && (
               <section className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Resumo financeiro
-                </h4>
-                <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
-                  <FinanceRow label="Preço base" value={formatBRLNum(evaluation.base_price)} />
-                  <FinanceRow label="Desconto de condição" value={`− ${formatBRLNum(evaluation.condition_discount)}`} />
-                  <FinanceRow label="Total de deduções" value={`− ${formatBRLNum(evaluation.total_deductions)}`} />
-                  <FinanceRow label="Valor final" value={formatBRLNum(evaluation.final_value)} bold />
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Resumo financeiro
+                  </h4>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1 text-[10px]",
+                      isTrade
+                        ? "bg-violet-50 text-violet-700 border-violet-200"
+                        : "bg-blue-50 text-blue-700 border-blue-200",
+                    )}
+                  >
+                    <FlowIcon className="h-3 w-3" />
+                    {flowLabel}
+                  </Badge>
                 </div>
+
+                <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
+                  <FinanceRow
+                    label={isTrade ? "Crédito base do aparelho" : "Preço base de compra"}
+                    value={formatBRLNum(override?.original.basePrice ?? evaluation.base_price)}
+                  />
+                  {Number(evaluation.condition_discount) > 0 && (
+                    <FinanceRow
+                      label="Desconto por condição"
+                      value={`− ${formatBRLNum(evaluation.condition_discount)}`}
+                    />
+                  )}
+                  {Number(evaluation.total_deductions) > 0 && (
+                    <FinanceRow
+                      label="Deduções por defeitos"
+                      value={`− ${formatBRLNum(evaluation.total_deductions)}`}
+                    />
+                  )}
+
+                  {/* Valor original que o cliente fechou */}
+                  <FinanceRow
+                    label={
+                      override
+                        ? isTrade
+                          ? "Crédito original ao cliente"
+                          : "Valor original ao cliente"
+                        : isTrade
+                          ? "Crédito final ao cliente"
+                          : "Valor final ao cliente"
+                    }
+                    value={formatBRLNum(override?.original.finalValue ?? evaluation.final_value)}
+                    bold={!override}
+                  />
+
+                  {/* Bônus extra do comercial — só aparece quando há override */}
+                  {override && extraBonus !== 0 && (
+                    <FinanceRow
+                      label="Bônus extra do comercial"
+                      value={`${extraBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(extraBonus))}`}
+                      accent={extraBonus >= 0 ? "success" : "destructive"}
+                    />
+                  )}
+
+                  {/* Valor final efetivo (após ajuste) */}
+                  {override && (
+                    <FinanceRow
+                      label={isTrade ? "Crédito final negociado" : "Valor final negociado"}
+                      value={formatBRLNum(evaluation.final_value)}
+                      bold
+                    />
+                  )}
+                </div>
+
+                {evaluation.coupon_code && (
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    {isTrade
+                      ? "O cliente usa o cupom como crédito ao adquirir um novo aparelho."
+                      : "O cliente recebe o valor após a entrega e validação do aparelho."}
+                  </p>
+                )}
               </section>
             )}
 

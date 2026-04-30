@@ -549,17 +549,19 @@ export function TradeInWizard() {
         basePrice: pricing.basePrice,
         conditionDiscount: pricing.percentDiscount,
         totalDeductions: pricing.fixedDeductions,
-        finalValue: pricing.finalValue,
+        finalValue: finalValueWithBonus,
         leadId,
         flowType: data.flowType ?? "trade",
         imei: data.imei,
       });
     } catch (e: any) {
       if (e instanceof DuplicateImeiError) {
+        const flowLbl = data.flowType === "sale" ? "venda" : "troca";
+        const expTxt = e.expiresAt
+          ? ` Esta proposta é válida até ${e.expiresAt.toLocaleDateString("pt-BR")}.`
+          : "";
         setImeiServerError(
-          `Já existe uma proposta ativa para este IMEI no fluxo de ${
-            data.flowType === "sale" ? "venda" : "troca"
-          }. Use outro aparelho ou fale com um especialista.`,
+          `Localizamos uma proposta em andamento para este IMEI no fluxo de ${flowLbl}.${expTxt} Para evitar duplicidade, fale diretamente com nosso comercial — ele consegue dar continuidade no atendimento ou liberar uma nova avaliação.`,
         );
         setStep(5);
         return;

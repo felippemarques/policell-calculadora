@@ -329,6 +329,7 @@ const AdminEvaluations = () => {
                   <tr className="border-b bg-muted/40">
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cliente</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Aparelho</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">IMEI</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Valor</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cupom</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -337,7 +338,7 @@ const AdminEvaluations = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {evaluations.map((ev) => {
+                  {filtered.map((ev) => {
                     const st = STATUS_META[ev.status] ?? { label: ev.status, icon: Clock, className: "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200" };
                     const StatusIcon = st.icon;
                     const canRevoke = ev.status !== "revoked" && ev.coupon_code;

@@ -752,7 +752,8 @@ export function TradeInWizard() {
           {step === 4 && showSpecialOffer && (
             <StepSpecialOffer
               baseValue={pricing.finalValue}
-              bonusPercent={upgradeBonusPercent}
+              bonusPercent={activeBonusPercent}
+              flowType={data.flowType === "sale" ? "sale" : "trade"}
               onBack={() => setStep(3)}
               onContinue={() => setStep(5)}
             />
@@ -768,7 +769,12 @@ export function TradeInWizard() {
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
               estimatedValue={pricing.finalValue}
               flowType={data.flowType}
-              upgradeBonusPercent={upgradeBonusPercent}
+              upgradeBonusPercent={data.flowType === "trade" ? upgradeBonusPercent : saleBonusPercent}
+              commercialWhatsapp={
+                businessSettings?.commercialWhatsapp ||
+                flowSettings?.sale?.whatsapp ||
+                ""
+              }
             />
           )}
           {/* Step 6 (Termos) foi unificado ao Contrato (step 8). */}

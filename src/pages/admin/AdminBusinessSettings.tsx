@@ -21,6 +21,7 @@ const BUSINESS_KEYS = [
   "business_show_realtime_deductions",
   "business_show_reject_label",
   "business_show_no_deduction_label",
+  "business_show_device_base_price",
   // Flow choice screen settings
   "flow_trade_enabled",
   "flow_trade_title",
@@ -58,6 +59,7 @@ const DEFAULTS: FormState = {
   business_show_realtime_deductions: "true",
   business_show_reject_label: "true",
   business_show_no_deduction_label: "true",
+  business_show_device_base_price: "false",
   flow_trade_enabled: "true",
   flow_trade_title: "Trocar por outro aparelho",
   flow_trade_description:
@@ -467,6 +469,39 @@ const AdminBusinessSettings = () => {
               checked={form.business_show_no_deduction_label === "true"}
               onCheckedChange={(checked) =>
                 set("business_show_no_deduction_label", checked ? "true" : "false")
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Preço base do aparelho (modo promocional) ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Preço base do aparelho na calculadora</CardTitle>
+          </div>
+          <CardDescription>
+            Controla se o cliente vê o valor base do aparelho ao escolher armazenamento e cor.
+            Ligue para campanhas promocionais. Desligado, o cliente segue todo o fluxo e só
+            descobre o valor final no resultado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar preço base na calculadora</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {form.business_show_device_base_price === "true"
+                  ? "Ativado — o valor base aparece em destaque (modo promocional)."
+                  : "Desativado — o cliente só descobre o valor no resultado final."}
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_device_base_price === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_device_base_price", checked ? "true" : "false")
               }
             />
           </div>

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette } from "lucide-react";
+import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useColorsByDevice } from "@/hooks/use-trade-in-data";
+import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { hasAnyAnswers } from "@/lib/trade-in-sanity";
 import { emptyAnswers } from "@/lib/trade-in-pricing";
 import {
@@ -30,6 +31,8 @@ interface Props {
 type Phase = "brand" | "model" | "storage" | "color";
 
 export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Props) {
+  const { data: businessSettings } = useBusinessSettings();
+  const showBasePrice = businessSettings?.showDeviceBasePrice ?? false;
   const selectedDevice = devices.find((d) => d.id === data.deviceId) || null;
 
   const [phase, setPhase] = useState<Phase>(
@@ -266,9 +269,11 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                         <span className="text-base font-semibold text-foreground">
                           {d.storage}
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </span>
+                        {showBasePrice && (
+                          <span className="text-sm font-semibold text-primary">
+                            R$ {d.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
                       </div>
                       {isSel && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
                     </div>
@@ -278,18 +283,27 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
             </div>
 
             {selectedDevice && (
-              <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/15 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast">
+              <div
+                className={`mt-6 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast ${
+                  showBasePrice
+                    ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/30 shadow-md ring-1 ring-primary/10"
+                    : "bg-primary/5 border border-primary/15"
+                }`}
+              >
                 <div>
-                  <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">
-                    Selecionado
+                  <p className="text-[11px] font-semibold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                    {showBasePrice && <Sparkles className="h-3 w-3" />}
+                    {showBasePrice ? "Oferta especial" : "Selecionado"}
                   </p>
                   <p className="text-sm md:text-base font-semibold text-foreground">
                     {selectedDevice.brand} {selectedDevice.model} · {selectedDevice.storage}
                   </p>
                 </div>
-                <p className="text-xl font-bold text-primary">
-                  R$ {selectedDevice.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </p>
+                {showBasePrice && (
+                  <p className="text-xl font-bold text-primary">
+                    R$ {selectedDevice.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
             )}
           </>
@@ -354,19 +368,28 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
             )}
 
             {selectedDevice && (
-              <div className="mt-6 rounded-2xl bg-primary/5 border border-primary/15 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast">
+              <div
+                className={`mt-6 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-fast ${
+                  showBasePrice
+                    ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/30 shadow-md ring-1 ring-primary/10"
+                    : "bg-primary/5 border border-primary/15"
+                }`}
+              >
                 <div>
-                  <p className="text-[11px] font-semibold text-primary uppercase tracking-wider">
-                    Selecionado
+                  <p className="text-[11px] font-semibold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                    {showBasePrice && <Sparkles className="h-3 w-3" />}
+                    {showBasePrice ? "Oferta especial" : "Selecionado"}
                   </p>
                   <p className="text-sm md:text-base font-semibold text-foreground">
                     {selectedDevice.brand} {selectedDevice.model} · {selectedDevice.storage}
                     {selectedColor ? ` · ${selectedColor.name}` : ""}
                   </p>
                 </div>
-                <p className="text-xl font-bold text-primary">
-                  R$ {selectedDevice.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </p>
+                {showBasePrice && (
+                  <p className="text-xl font-bold text-primary">
+                    R$ {selectedDevice.base_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
             )}
           </>

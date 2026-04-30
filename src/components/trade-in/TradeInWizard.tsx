@@ -20,7 +20,7 @@ import { StepSpecialOffer } from "./StepSpecialOffer";
 import { StepAddress, type AddressData } from "./StepAddress";
 import { StepContractPreview } from "./StepContractPreview";
 import { RestartProposalButton } from "./RestartProposalButton";
-import { Smartphone, TrendingUp } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import {
   ChecklistAnswers,
   ConditionRow,
@@ -644,11 +644,7 @@ export function TradeInWizard() {
       ? 100
       : Math.round(((displayStepIndex + 1) / (visibleStepsCount + 1)) * 100);
 
-  const showPriceFooter =
-    (businessSettings?.showRealtimeDeductions ?? true) &&
-    step === 3 &&
-    (subScreen === "condition" || subScreen === "damages") &&
-    basePrice > 0;
+  // (Removido) showPriceFooter — o rodapé flutuante de valor estimado foi descontinuado.
 
   // Build contract data once (used by step 8)
   const deviceLabel = selectedDevice
@@ -827,36 +823,8 @@ export function TradeInWizard() {
           )}
         </div>
 
-        {/* Sticky price footer */}
-        {showPriceFooter && (
-          <div className="sticky bottom-0 left-0 right-0 border-t border-border/60 bg-card/95 backdrop-blur-md px-4 sm:px-6 md:px-10 py-3 md:py-4 animate-fade-in">
-            <div className="flex items-center justify-between gap-3 md:gap-4">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Valor Estimado
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate hidden sm:block">
-                    {data.flowType === "sale" ? "Em dinheiro" : "Em crédito para troca"}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-lg md:text-2xl font-semibold tracking-tight text-foreground tabular-nums">
-                  {formatBRL(pricing.finalValue)}
-                </p>
-                {(pricing.percentDiscount > 0 || pricing.fixedDeductions > 0) && (
-                  <p className="text-[10px] text-muted-foreground">
-                    de {formatBRL(pricing.basePrice)}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Sticky price footer removido — cliente só vê o valor no resultado final.
+            (Configurável: se quiser reativar, restaurar o bloco usando businessSettings.showRealtimeDeductions) */}
       </div>
     </div>
   );

@@ -83,6 +83,13 @@ function ModelNode({ brandId, model }: { brandId: string; model: CatalogModel })
           </span>
         </button>
 
+        <ModelImageUploader
+          modelId={model.model_id}
+          modelName={model.model_name}
+          imageUrl={model.image_url}
+          compact
+        />
+
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" className="ml-auto h-7 gap-1 px-2 text-xs">

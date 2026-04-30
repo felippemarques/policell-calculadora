@@ -40,10 +40,28 @@ export function DevicesTab() {
   const [bulkPriceValue, setBulkPriceValue] = useState("");
   const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> | null>(null);
 
+  const { data: storagesList = [] } = useQuery({
+    queryKey: ["admin-storages-order"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("storages")
+        .select("capacity, display_order")
+        .order("display_order");
+      if (error) throw error;
+      return data as { capacity: string; display_order: number }[];
+    },
+  });
+
+  const storageOrderMap = useMemo(() => {
+    const m = new Map<string, number>();
+    storagesList.forEach((s) => m.set(String(s.capacity).trim().toLowerCase(), s.display_order ?? 9999));
+    return m;
+  }, [storagesList]);
+
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("devices").select("*").order("brand").order("model").order("storage");
+      const { data, error } = await supabase.from("devices").select("*").order("brand").order("model");
       if (error) throw error;
       return data;
     },

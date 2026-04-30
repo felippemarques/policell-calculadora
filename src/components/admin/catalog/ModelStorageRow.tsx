@@ -172,6 +172,21 @@ export function ModelStorageRow({ brandId, storage }: Props) {
 
         <div className="ml-auto flex items-center gap-1">
           {!editing && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => toggleVisibility.mutate()}
+              title={storage.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
+            >
+              {storage.is_visible ? (
+                <Eye className="h-3.5 w-3.5" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+          {!editing && (
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(true)}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>

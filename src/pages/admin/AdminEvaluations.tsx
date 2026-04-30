@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Copy, Ban, Loader2, Check, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle } from "lucide-react";
+import {
+  Copy, Ban, Loader2, Check, RefreshCw, CheckCircle2, Clock, XCircle,
+  AlertTriangle, Search, Archive, ArchiveRestore,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Evaluation {
@@ -24,6 +35,8 @@ interface Evaluation {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  imei: string | null;
+  archived_at: string | null;
   final_value: number;
   coupon_code: string | null;
   coupon_id: string | null;

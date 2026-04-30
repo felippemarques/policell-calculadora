@@ -362,7 +362,7 @@ export function TradeInWizard() {
   const handleChooseFlow = (type: FlowType) => {
     setData((prev) => ({ ...prev, flowType: type }));
     if (leadId) {
-      updateAssessment(leadId, { ...(data.answers as any), flow_type: type });
+      updateAssessment(leadId, { ...(data.answers as any), selectedColorId: data.colorId ?? null, flow_type: type });
     }
     setStep(1);
   };
@@ -374,7 +374,7 @@ export function TradeInWizard() {
       customer_phone: data.phone,
     });
     if (id && data.flowType) {
-      await updateAssessment(id, { ...(data.answers as any), flow_type: data.flowType });
+      await updateAssessment(id, { ...(data.answers as any), selectedColorId: data.colorId ?? null, flow_type: data.flowType });
     }
     return id;
   };

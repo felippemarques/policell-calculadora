@@ -28,11 +28,17 @@ export interface ContractData {
   /** Soma de R$ fixos aplicados (informativo). */
   fixedDeductions?: number;
   bonusPercent: number;
+  /** Bônus convertido em R$. Quando informado e > 0, é mostrado em linha
+   *  separada no laudo (em vez de só `+%`). Funciona para troca e venda. */
+  bonusValue?: number;
   finalValue: number;
   flowLabel: string; // "Troca" | "Venda"
   /** Itens explícitos da avaliação (laudo). Quando informado, é renderizado no contrato. */
   evaluationItems?: EvaluationLineItem[];
   acceptedAt?: Date;
+  /** Bloco extra anexado ao final do contrato (ex.: "REVISÃO COMERCIAL DA
+   *  PROPOSTA" gerado pelo painel admin quando há ajuste). */
+  commercialReview?: string | null;
 }
 
 const DEFAULTS = {
@@ -46,6 +52,7 @@ const DEFAULTS = {
   base_price: "0,00",
   deductions: "0,00",
   bonus_percent: "0",
+  bonus_value: "0,00",
   final_value: "0,00",
   flow_label: "Troca",
   flow_label_upper: "TROCA",
@@ -105,11 +112,20 @@ function buildEvaluationReport(data: ContractData): string {
       `  • Deduções fixas por defeitos declarados ... − R$ ${fmtMoneyPlain(data.fixedDeductions ?? 0)}`,
     );
   }
-  if (
-    (data.bonusPercent ?? 0) > 0 &&
-    (data.flowLabel || "").toLowerCase().startsWith("troca")
-  ) {
-    lines.push(`  • Bônus de upgrade aplicável na troca ...... +${data.bonusPercent}%`);
+  const bonusMoney = data.bonusValue ?? 0;
+  const bonusPct = data.bonusPercent ?? 0;
+  if (bonusMoney > 0 || bonusPct > 0) {
+    const isSale = (data.flowLabel || "").toLowerCase().startsWith("venda");
+    const label = isSale ? "Bônus de venda" : "Bônus de troca";
+    const pctSuffix = bonusPct > 0 ? ` (${bonusPct}%)` : "";
+    if (bonusMoney > 0) {
+      lines.push(
+        `  • ${label}${pctSuffix} ........................ + R$ ${fmtMoneyPlain(bonusMoney)}`,
+      );
+    } else {
+      // fallback: só temos o percentual, sem R$ explícito
+      lines.push(`  • ${label} aplicável ........................ +${bonusPct}%`);
+    }
   }
   lines.push(`  ─────────────────────────────────────────────`);
   lines.push(
@@ -138,6 +154,7 @@ export function renderContractText(template: string, data: ContractData): string
     base_price: fmtMoneyPlain(data.basePrice),
     deductions: fmtMoneyPlain(data.deductions),
     bonus_percent: String(data.bonusPercent ?? 0),
+    bonus_value: fmtMoneyPlain(data.bonusValue ?? 0),
     final_value: fmtMoneyPlain(data.finalValue),
     flow_label: flowLabel,
     flow_label_upper: flowLabel.toUpperCase(),
@@ -159,6 +176,12 @@ export function renderContractText(template: string, data: ContractData): string
     !rendered.includes("LAUDO TÉCNICO DA AVALIAÇÃO")
   ) {
     rendered = `${rendered.trimEnd()}\n\n----------------------------------------\n\n${report}\n`;
+  }
+
+  // Bloco extra de revisão comercial (somente quando o admin gera o PDF
+  // ajustado). Vem sempre por último, isolado por divisor visual.
+  if (data.commercialReview && data.commercialReview.trim()) {
+    rendered = `${rendered.trimEnd()}\n\n========================================\n\n${data.commercialReview.trim()}\n`;
   }
 
   return rendered;

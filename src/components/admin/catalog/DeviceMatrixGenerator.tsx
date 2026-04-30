@@ -25,6 +25,7 @@ interface ExistingDevice {
   storage: string;
   colors: string | null;
   base_price: number;
+  is_visible?: boolean;
 }
 
 interface MatrixRow {
@@ -37,6 +38,7 @@ interface MatrixRow {
   base_price: number;
   active: boolean;
   wasActive: boolean; // tracks original state for upsert logic
+  is_visible: boolean; // controls whether shown to clients
 }
 
 interface DeviceMatrixGeneratorProps {

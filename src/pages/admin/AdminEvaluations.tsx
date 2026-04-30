@@ -282,6 +282,33 @@ const AdminEvaluations = () => {
         </p>
       </div>
 
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, email, telefone, IMEI ou cupom..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as any)}>
+            <SelectTrigger className="lg:w-40">
+              <SelectValue placeholder="Visibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativas</SelectItem>
+              <SelectItem value="archived">Arquivadas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground">
+          {isLoading ? "Carregando..." : `${filtered.length} de ${evaluations.length} registro(s)`}
+        </div>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Todas as avaliações</CardTitle>
@@ -291,9 +318,9 @@ const AdminEvaluations = () => {
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : evaluations.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
-              Nenhuma avaliação registrada ainda.
+              Nenhuma avaliação encontrada.
             </p>
           ) : (
             <div className="overflow-x-auto">

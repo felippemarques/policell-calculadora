@@ -702,6 +702,7 @@ const AdminCustomers = () => {
               parsed={selectedParsed}
               evaluation={selectedEvaluation}
               adminEmail={adminEmail}
+              colorMap={colorMap}
               onSendProposal={() => setProposalDialogOpen(true)}
               onClose={() => setSelectedLead(null)}
             />

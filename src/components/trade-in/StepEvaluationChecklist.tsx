@@ -46,7 +46,6 @@ import {
   ConditionRow,
   DamageOption,
   DamageCategory,
-  formatBRL,
 } from "@/lib/trade-in-pricing";
 import {
   useEvaluationGroupsConfig,

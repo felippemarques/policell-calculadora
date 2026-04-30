@@ -348,8 +348,15 @@ export function TradeInWizard() {
 
   // Define se a tela "Cupom Especial" deve aparecer.
   const upgradeBonusPercent = businessSettings?.upgradeBonusPercent ?? 0;
+  const saleBonusPercent = businessSettings?.saleBonusPercent ?? 0;
+  const activeBonusPercent =
+    data.flowType === "trade" ? upgradeBonusPercent : data.flowType === "sale" ? saleBonusPercent : 0;
   const showSpecialOffer =
-    data.flowType === "trade" && upgradeBonusPercent > 0 && pricing.finalValue > 0 && !pricing.isRejected;
+    !!data.flowType && activeBonusPercent > 0 && pricing.finalValue > 0 && !pricing.isRejected;
+  // Valor final EFETIVO (com bônus) — gravado na evaluation e exibido no cupom.
+  const finalValueWithBonus = pricing.isRejected
+    ? 0
+    : Math.round(pricing.finalValue * (1 + activeBonusPercent / 100) * 100) / 100;
 
   // ── Handlers ──
   const handleChooseFlow = (type: FlowType) => {

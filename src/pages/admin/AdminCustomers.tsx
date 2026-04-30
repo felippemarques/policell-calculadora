@@ -469,6 +469,17 @@ const AdminCustomers = () => {
             </SelectContent>
           </Select>
 
+          <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as any)}>
+            <SelectTrigger className="lg:w-40">
+              <SelectValue placeholder="Visibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativas</SelectItem>
+              <SelectItem value="archived">Arquivadas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
+            </SelectContent>
+          </Select>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2">

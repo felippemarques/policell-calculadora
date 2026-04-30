@@ -18,9 +18,13 @@ export interface EvaluationData {
 }
 
 export class DuplicateImeiError extends Error {
-  constructor() {
+  expiresAt: Date | null;
+  flowType: "trade" | "sale" | null;
+  constructor(expiresAt: Date | null = null, flowType: "trade" | "sale" | null = null) {
     super("Já existe uma proposta ativa para este IMEI neste tipo de negociação.");
     this.name = "DuplicateImeiError";
+    this.expiresAt = expiresAt;
+    this.flowType = flowType;
   }
 }
 

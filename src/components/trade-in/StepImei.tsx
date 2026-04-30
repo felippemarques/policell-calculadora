@@ -184,6 +184,39 @@ export function StepImei({
         </div>
       </div>
 
+      {serverError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-3 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-xl bg-destructive/15 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-semibold text-destructive">
+                Já existe uma proposta para este IMEI
+              </p>
+              <p className="text-xs leading-relaxed text-foreground/80">
+                {serverError}
+              </p>
+            </div>
+          </div>
+          {(() => {
+            const wa = buildWaUrl(commercialWhatsapp ?? "");
+            if (!wa) return null;
+            return (
+              <Button
+                type="button"
+                variant="default"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => window.open(wa, "_blank", "noopener,noreferrer")}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Falar com o comercial no WhatsApp
+              </Button>
+            );
+          })()}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-2 pt-2">
         <Button
           type="button"

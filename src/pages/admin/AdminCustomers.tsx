@@ -20,6 +20,8 @@ import {
   ExternalLink,
   Loader2,
   Sparkles,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -195,6 +197,7 @@ const AdminCustomers = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [archivedFilter, setArchivedFilter] = useState<"active" | "archived" | "all">("active");
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [visible, setVisible] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
@@ -284,6 +287,21 @@ const AdminCustomers = () => {
     onError: (e: any) => toast.error(`Falha ao atualizar status: ${e.message}`),
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
+      const { error } = await (supabase.rpc as any)("archive_lead", {
+        _lead_id: id,
+        _archive: archive,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin-leads"] });
+      toast.success(vars.archive ? "Proposta arquivada." : "Proposta restaurada.");
+    },
+    onError: (e: any) => toast.error(`Falha ao arquivar: ${e.message}`),
+  });
+
   const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
     [devices]
@@ -306,6 +324,9 @@ const AdminCustomers = () => {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return leads.filter((l) => {
+      if (archivedFilter === "active" && l.archived_at) return false;
+      if (archivedFilter === "archived" && !l.archived_at) return false;
+
       if (statusFilter !== "all") {
         if (statusFilter === "lead_only") {
           if (!(l.status === "in_progress" && !l.device_id)) return false;
@@ -317,7 +338,7 @@ const AdminCustomers = () => {
       }
 
       if (term) {
-        const hay = `${l.customer_name} ${l.customer_email} ${l.customer_phone}`.toLowerCase();
+        const hay = `${l.customer_name} ${l.customer_email} ${l.customer_phone} ${l.imei ?? ""}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
 
@@ -328,7 +349,7 @@ const AdminCustomers = () => {
 
       return true;
     });
-  }, [leads, search, statusFilter, brandFilter, deviceMap]);
+  }, [leads, search, statusFilter, brandFilter, archivedFilter, deviceMap]);
 
   const formatBRL = (n: number | null | undefined) =>
     typeof n === "number"
@@ -414,7 +435,7 @@ const AdminCustomers = () => {
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, email ou telefone..."
+              placeholder="Buscar por nome, email, telefone ou IMEI..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -445,6 +466,17 @@ const AdminCustomers = () => {
                   {b}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as any)}>
+            <SelectTrigger className="lg:w-40">
+              <SelectValue placeholder="Visibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativas</SelectItem>
+              <SelectItem value="archived">Arquivadas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
             </SelectContent>
           </Select>
 
@@ -592,15 +624,37 @@ const AdminCustomers = () => {
                       className="text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedLead(lead)}
-                        className="gap-1.5"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        Ver detalhes
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedLead(lead)}
+                          className="gap-1.5"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Ver detalhes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={lead.archived_at ? "Restaurar" : "Arquivar/Excluir"}
+                          onClick={() =>
+                            archiveMutation.mutate({ id: lead.id, archive: !lead.archived_at })
+                          }
+                          className={cn(
+                            "gap-1.5",
+                            lead.archived_at
+                              ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                              : "text-destructive hover:text-destructive hover:bg-destructive/10",
+                          )}
+                        >
+                          {lead.archived_at ? (
+                            <ArchiveRestore className="h-3.5 w-3.5" />
+                          ) : (
+                            <Archive className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

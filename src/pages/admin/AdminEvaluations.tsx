@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Copy, Ban, Loader2, Check, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle } from "lucide-react";
+import {
+  Copy, Ban, Loader2, Check, RefreshCw, CheckCircle2, Clock, XCircle,
+  AlertTriangle, Search, Archive, ArchiveRestore,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Evaluation {
@@ -24,6 +35,8 @@ interface Evaluation {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  imei: string | null;
+  archived_at: string | null;
   final_value: number;
   coupon_code: string | null;
   coupon_id: string | null;
@@ -173,18 +186,48 @@ const AdminEvaluations = () => {
   const qc = useQueryClient();
   const [revokeTarget, setRevokeTarget] = useState<Evaluation | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [archivedFilter, setArchivedFilter] = useState<"active" | "archived" | "all">("active");
 
   const { data: evaluations = [], isLoading } = useQuery({
     queryKey: ["admin-evaluations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, created_at, customer_name, customer_email, customer_phone, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
+        .select("id, created_at, customer_name, customer_email, customer_phone, imei, archived_at, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Evaluation[];
     },
   });
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
+      const { error } = await (supabase.rpc as any)("archive_evaluation", {
+        _evaluation_id: id,
+        _archive: archive,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin-evaluations"] });
+      toast.success(vars.archive ? "Avaliação arquivada." : "Avaliação restaurada.");
+    },
+    onError: (e: any) => toast.error(`Falha ao arquivar: ${e.message}`),
+  });
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return evaluations.filter((ev) => {
+      if (archivedFilter === "active" && ev.archived_at) return false;
+      if (archivedFilter === "archived" && !ev.archived_at) return false;
+      if (term) {
+        const hay = `${ev.customer_name} ${ev.customer_email} ${ev.customer_phone} ${ev.imei ?? ""} ${ev.coupon_code ?? ""}`.toLowerCase();
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [evaluations, search, archivedFilter]);
 
   const revokeMutation = useMutation({
     mutationFn: async (ev: Evaluation) => {
@@ -239,6 +282,33 @@ const AdminEvaluations = () => {
         </p>
       </div>
 
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, email, telefone, IMEI ou cupom..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as any)}>
+            <SelectTrigger className="lg:w-40">
+              <SelectValue placeholder="Visibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativas</SelectItem>
+              <SelectItem value="archived">Arquivadas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground">
+          {isLoading ? "Carregando..." : `${filtered.length} de ${evaluations.length} registro(s)`}
+        </div>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Todas as avaliações</CardTitle>
@@ -248,9 +318,9 @@ const AdminEvaluations = () => {
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : evaluations.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
-              Nenhuma avaliação registrada ainda.
+              Nenhuma avaliação encontrada.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -259,6 +329,7 @@ const AdminEvaluations = () => {
                   <tr className="border-b bg-muted/40">
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cliente</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Aparelho</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">IMEI</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Valor</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cupom</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -267,7 +338,7 @@ const AdminEvaluations = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {evaluations.map((ev) => {
+                  {filtered.map((ev) => {
                     const st = STATUS_META[ev.status] ?? { label: ev.status, icon: Clock, className: "bg-sky-100 text-sky-800 hover:bg-sky-100 border-sky-200" };
                     const StatusIcon = st.icon;
                     const canRevoke = ev.status !== "revoked" && ev.coupon_code;
@@ -281,6 +352,9 @@ const AdminEvaluations = () => {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {ev.devices ? `${ev.devices.brand} ${ev.devices.model} ${ev.devices.storage}` : "—"}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {ev.imei || "—"}
                         </td>
                         <td className="px-4 py-3 font-medium tabular-nums">
                           {ev.final_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -334,6 +408,25 @@ const AdminEvaluations = () => {
                                 Revogar
                               </Button>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={ev.archived_at ? "Restaurar" : "Arquivar/Excluir"}
+                              onClick={() =>
+                                archiveMutation.mutate({ id: ev.id, archive: !ev.archived_at })
+                              }
+                              className={cn(
+                                ev.archived_at
+                                  ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                  : "text-destructive hover:text-destructive hover:bg-destructive/10",
+                              )}
+                            >
+                              {ev.archived_at ? (
+                                <ArchiveRestore className="h-3.5 w-3.5" />
+                              ) : (
+                                <Archive className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
                           </div>
                         </td>
                       </tr>

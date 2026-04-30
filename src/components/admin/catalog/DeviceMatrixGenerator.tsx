@@ -25,6 +25,7 @@ interface ExistingDevice {
   storage: string;
   colors: string | null;
   base_price: number;
+  is_visible?: boolean;
 }
 
 interface MatrixRow {
@@ -37,6 +38,7 @@ interface MatrixRow {
   base_price: number;
   active: boolean;
   wasActive: boolean; // tracks original state for upsert logic
+  is_visible: boolean; // controls whether shown to clients
 }
 
 interface DeviceMatrixGeneratorProps {
@@ -162,6 +164,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           base_price: existing ? Number(existing.base_price) : (globalPrice ? Number(globalPrice) : 0),
           active: true,
           wasActive: Boolean(existing),
+          is_visible: existing ? existing.is_visible !== false : true,
         });
       }
     }
@@ -208,6 +211,14 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, active: !r.active } : r)));
   };
 
+  const toggleRowVisible = (key: string) => {
+    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, is_visible: !r.is_visible } : r)));
+  };
+
+  const setAllVisible = (visible: boolean) => {
+    setRows((prev) => prev.map((r) => ({ ...r, is_visible: visible })));
+  };
+
   const activeRows = rows.filter((r) => r.active);
 
   // Track how many rows were skipped on the last save (already existed in DB)
@@ -230,6 +241,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
             storage: r.storage,
             colors: r.color,
             base_price: r.base_price,
+            is_visible: r.is_visible,
           }));
           const { error } = await supabase.from("devices").insert(inserts);
           if (error) throw error;
@@ -239,7 +251,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
         for (const r of toUpdate) {
           const { error } = await supabase
             .from("devices")
-            .update({ base_price: r.base_price, colors: r.color, storage: r.storage })
+            .update({ base_price: r.base_price, colors: r.color, storage: r.storage, is_visible: r.is_visible })
             .eq("id", r.existingId!);
           if (error) throw error;
         }
@@ -298,6 +310,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           storage: r.storage,
           colors: r.color,
           base_price: r.base_price,
+          is_visible: r.is_visible,
         }));
         const { error } = await supabase.from("devices").insert(inserts);
         if (error) throw error;
@@ -502,6 +515,14 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
             <Button size="sm" variant="outline" onClick={applyGlobalPrice} disabled={!globalPrice}>
               Aplicar a todas
             </Button>
+            <div className="flex items-center gap-2 ml-2">
+              <Button size="sm" variant="outline" onClick={() => setAllVisible(true)}>
+                Mostrar todas
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setAllVisible(false)}>
+                Ocultar todas
+              </Button>
+            </div>
             <span className="text-xs text-muted-foreground ml-auto">
               {summaryLabel || `${activeRows.length} de ${rows.length} ativa(s)`}
             </span>
@@ -518,6 +539,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
                   <TableHead>Armazenamento</TableHead>
                   <TableHead>Cor</TableHead>
                   <TableHead className="w-40">Preço Base (R$)</TableHead>
+                  <TableHead className="w-24">Visível ao cliente</TableHead>
                   {isEditMode && <TableHead className="w-20">Status</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -538,6 +560,13 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
                         value={Number(r.base_price) || 0}
                         onValueChange={(v) => updateRowPrice(r.key, v)}
                         className="h-8 text-sm"
+                        disabled={!r.active}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={r.is_visible}
+                        onCheckedChange={() => toggleRowVisible(r.key)}
                         disabled={!r.active}
                       />
                     </TableCell>

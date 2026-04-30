@@ -5,13 +5,30 @@ export function useDevices() {
   return useQuery({
     queryKey: ["devices"],
     queryFn: async () => {
+      // Fetch storages first to get display_order map (smallest → largest)
+      const { data: storages } = await supabase
+        .from("storages")
+        .select("capacity, display_order");
+      const orderMap = new Map<string, number>();
+      (storages || []).forEach((s: any) =>
+        orderMap.set(String(s.capacity).trim().toLowerCase(), s.display_order ?? 9999),
+      );
+
       const { data, error } = await supabase
         .from("devices")
         .select("*")
-        .order("model")
-        .order("base_price");
+        .eq("is_visible", true)
+        .order("model");
       if (error) throw error;
-      return data;
+
+      // Sort by storage display_order (smallest → largest), then by base_price
+      return (data || []).slice().sort((a: any, b: any) => {
+        if (a.model !== b.model) return String(a.model).localeCompare(String(b.model));
+        const ao = orderMap.get(String(a.storage).trim().toLowerCase()) ?? 9999;
+        const bo = orderMap.get(String(b.storage).trim().toLowerCase()) ?? 9999;
+        if (ao !== bo) return ao - bo;
+        return Number(a.base_price) - Number(b.base_price);
+      });
     },
   });
 }

@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Check, Smartphone, Filter, Percent, DollarSign, Grid3X3, Settings2, Eye, EyeOff } from "lucide-react";
 import { DeviceMatrixGenerator } from "./DeviceMatrixGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
@@ -39,10 +40,28 @@ export function DevicesTab() {
   const [bulkPriceValue, setBulkPriceValue] = useState("");
   const [pendingChanges, setPendingChanges] = useState<Array<{ id: string; label: string; field: string; fieldKey: string; from: string; to: string; rawTo: number | string }> | null>(null);
 
+  const { data: storagesList = [] } = useQuery({
+    queryKey: ["admin-storages-order"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("storages")
+        .select("capacity, display_order")
+        .order("display_order");
+      if (error) throw error;
+      return data as { capacity: string; display_order: number }[];
+    },
+  });
+
+  const storageOrderMap = useMemo(() => {
+    const m = new Map<string, number>();
+    storagesList.forEach((s) => m.set(String(s.capacity).trim().toLowerCase(), s.display_order ?? 9999));
+    return m;
+  }, [storagesList]);
+
   const { data: devices, isLoading } = useQuery({
     queryKey: ["admin-devices"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("devices").select("*").order("brand").order("model").order("storage");
+      const { data, error } = await supabase.from("devices").select("*").order("brand").order("model");
       if (error) throw error;
       return data;
     },
@@ -53,14 +72,22 @@ export function DevicesTab() {
   // Extract unique values for filters
   const uniqueBrands = useMemo(() => [...new Set(devices?.map((d) => d.brand) || [])].sort(), [devices]);
   const uniqueModels = useMemo(() => [...new Set(devices?.map((d) => d.model) || [])].sort(), [devices]);
-  const uniqueStorages = useMemo(() => [...new Set(devices?.map((d) => d.storage) || [])].sort(), [devices]);
+  const uniqueStorages = useMemo(
+    () =>
+      [...new Set(devices?.map((d) => d.storage) || [])].sort((a, b) => {
+        const ao = storageOrderMap.get(String(a).trim().toLowerCase()) ?? 9999;
+        const bo = storageOrderMap.get(String(b).trim().toLowerCase()) ?? 9999;
+        return ao - bo;
+      }),
+    [devices, storageOrderMap],
+  );
   const uniqueColors = useMemo(() => {
     const allColors = devices?.flatMap((d) => (d.colors || "").split(",").map((c) => c.trim()).filter(Boolean)) || [];
     return [...new Set(allColors)].sort();
   }, [devices]);
 
   const filtered = useMemo(() => {
-    return devices?.filter((d) => {
+    const list = devices?.filter((d) => {
       if (search && !`${d.brand} ${d.model} ${d.storage} ${d.colors}`.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterBrand !== "all" && d.brand !== filterBrand) return false;
       if (filterModel !== "all" && d.model !== filterModel) return false;
@@ -72,8 +99,17 @@ export function DevicesTab() {
       if (priceMin && Number(d.base_price) < Number(priceMin)) return false;
       if (priceMax && Number(d.base_price) > Number(priceMax)) return false;
       return true;
+    }) || [];
+    // Sort: brand → model → storage display_order (smallest → largest) → color
+    return list.slice().sort((a: any, b: any) => {
+      if (a.brand !== b.brand) return String(a.brand).localeCompare(String(b.brand));
+      if (a.model !== b.model) return String(a.model).localeCompare(String(b.model));
+      const ao = storageOrderMap.get(String(a.storage).trim().toLowerCase()) ?? 9999;
+      const bo = storageOrderMap.get(String(b.storage).trim().toLowerCase()) ?? 9999;
+      if (ao !== bo) return ao - bo;
+      return String(a.colors || "").localeCompare(String(b.colors || ""));
     });
-  }, [devices, search, filterBrand, filterModel, filterStorage, filterColor, priceMin, priceMax]);
+  }, [devices, search, filterBrand, filterModel, filterStorage, filterColor, priceMin, priceMax, storageOrderMap]);
 
   const saveMutation = useMutation({
     mutationFn: async (device: any) => {
@@ -87,6 +123,18 @@ export function DevicesTab() {
       }
     },
     onSuccess: () => { invalidate(); setEditingId(null); setShowNew(false); setForm(emptyDevice); toast.success("Salvo!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, is_visible }: { id: string; is_visible: boolean }) => {
+      const { error } = await supabase.from("devices").update({ is_visible }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidate();
+      toast.success(vars.is_visible ? "Visível ao cliente" : "Oculto do cliente");
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -475,15 +523,16 @@ export function DevicesTab() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Armazenamento</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Preço Base</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cores</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Visível</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered?.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum aparelho encontrado.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Nenhum aparelho encontrado.</td></tr>
               )}
               {filtered?.map((d) => (
-                <tr key={d.id} className={`hover:bg-muted/30 transition-colors ${selected.has(d.id) ? "bg-primary/5" : ""}`}>
+                <tr key={d.id} className={`hover:bg-muted/30 transition-colors ${selected.has(d.id) ? "bg-primary/5" : ""} ${(d as any).is_visible === false ? "opacity-60" : ""}`}>
                   <td className="px-3 py-3">
                     <Checkbox checked={selected.has(d.id)} onCheckedChange={() => toggleSelect(d.id)} />
                   </td>
@@ -497,6 +546,19 @@ export function DevicesTab() {
                   <td className="px-4 py-3"><span className="bg-muted px-2 py-0.5 rounded text-xs">{d.storage}</span></td>
                   <td className="px-4 py-3">R$ {Number(d.base_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{d.colors || "—"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={(d as any).is_visible !== false}
+                        onCheckedChange={(checked) => toggleVisibilityMutation.mutate({ id: d.id, is_visible: checked })}
+                      />
+                      {(d as any).is_visible === false ? (
+                        <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5 text-primary" />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" title="Gerenciar variações" onClick={() => startManageVariations(d.brand, d.model)}>

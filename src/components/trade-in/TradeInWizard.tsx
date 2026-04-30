@@ -405,19 +405,19 @@ export function TradeInWizard() {
   useEffect(() => {
     if (!leadId || step !== 3) return;
     const timer = setTimeout(() => {
-      updateAssessment(leadId, { ...(data.answers as any), flow_type: data.flowType });
+      updateAssessment(leadId, { ...(data.answers as any), selectedColorId: data.colorId ?? null, flow_type: data.flowType });
     }, 400);
     return () => clearTimeout(timer);
-  }, [leadId, step, data.answers, data.flowType, updateAssessment]);
+  }, [leadId, step, data.answers, data.flowType, data.colorId, updateAssessment]);
 
   const handleSubScreenChange = useCallback(
     (next: SubScreen) => {
       setSubScreen(next);
       if (leadId) {
-        updateAssessment(leadId, { ...(data.answers as any), flow_type: data.flowType });
+        updateAssessment(leadId, { ...(data.answers as any), selectedColorId: data.colorId ?? null, flow_type: data.flowType });
       }
     },
-    [leadId, data.answers, data.flowType, updateAssessment],
+    [leadId, data.answers, data.flowType, data.colorId, updateAssessment],
   );
 
   const handleAnswersChange = (next: ChecklistAnswers) => {

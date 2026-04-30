@@ -804,8 +804,8 @@ export function TradeInWizard() {
                   Math.round(pricing.basePrice * (pricing.percentDiscount / 100) * 100) / 100,
                 percentDiscount: pricing.percentDiscount,
                 fixedDeductions: pricing.fixedDeductions,
-                bonusPercent: data.flowType === "trade" ? upgradeBonusPercent : 0,
-                finalValue: pricing.finalValue,
+                bonusPercent: activeBonusPercent,
+                finalValue: finalValueWithBonus,
                 flowLabel: data.flowType === "sale" ? "Venda" : "Troca",
                 evaluationItems,
               }}

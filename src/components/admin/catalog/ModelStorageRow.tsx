@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X, ArrowRightLeft, Banknote } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X, ArrowRightLeft, Banknote, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";

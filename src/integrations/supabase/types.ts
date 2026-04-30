@@ -913,6 +913,15 @@ export type Database = {
         }
         Returns: string
       }
+      find_active_imei_proposal: {
+        Args: { _flow_type: string; _imei: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          flow_type: string
+          id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

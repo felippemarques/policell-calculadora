@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles } from "lucide-react";
+import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

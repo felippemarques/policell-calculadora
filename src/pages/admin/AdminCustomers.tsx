@@ -275,6 +275,17 @@ const AdminCustomers = () => {
     },
   });
 
+  const { data: colors = [] } = useQuery({
+    queryKey: ["admin-leads-colors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("colors").select("id, name, hex_code");
+      if (error) throw error;
+      return (data || []) as Array<{ id: string; name: string; hex_code: string | null }>;
+    },
+  });
+
+  const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase

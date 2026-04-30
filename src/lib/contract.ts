@@ -52,6 +52,7 @@ const DEFAULTS = {
   base_price: "0,00",
   deductions: "0,00",
   bonus_percent: "0",
+  bonus_value: "0,00",
   final_value: "0,00",
   flow_label: "Troca",
   flow_label_upper: "TROCA",
@@ -175,6 +176,12 @@ export function renderContractText(template: string, data: ContractData): string
     !rendered.includes("LAUDO TÉCNICO DA AVALIAÇÃO")
   ) {
     rendered = `${rendered.trimEnd()}\n\n----------------------------------------\n\n${report}\n`;
+  }
+
+  // Bloco extra de revisão comercial (somente quando o admin gera o PDF
+  // ajustado). Vem sempre por último, isolado por divisor visual.
+  if (data.commercialReview && data.commercialReview.trim()) {
+    rendered = `${rendered.trimEnd()}\n\n========================================\n\n${data.commercialReview.trim()}\n`;
   }
 
   return rendered;

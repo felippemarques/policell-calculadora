@@ -22,8 +22,21 @@ interface Props {
   estimatedValue?: number;
   /** Fluxo atual (para decidir se mostra o bônus de troca). */
   flowType?: FlowType | null;
-  /** % do bônus de upgrade configurado em Negócio. */
+  /** % do bônus configurado em Negócio (de troca OU venda, conforme fluxo). */
   upgradeBonusPercent?: number;
+  /** WhatsApp comercial para o botão de contato em caso de erro de duplicidade. */
+  commercialWhatsapp?: string;
+}
+
+function buildWaUrl(input: string): string | null {
+  const v = (input ?? "").trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  const digits = v.replace(/\D/g, "");
+  if (!digits) return null;
+  // assume Brazil if no country code
+  const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+  return `https://wa.me/${withCountry}`;
 }
 
 export function StepImei({
@@ -37,6 +50,7 @@ export function StepImei({
   estimatedValue,
   flowType,
   upgradeBonusPercent = 0,
+  commercialWhatsapp,
 }: Props) {
   const [raw, setRaw] = useState(initialValue);
   const [touched, setTouched] = useState(false);

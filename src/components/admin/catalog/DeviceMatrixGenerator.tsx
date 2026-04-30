@@ -211,6 +211,14 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, active: !r.active } : r)));
   };
 
+  const toggleRowVisible = (key: string) => {
+    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, is_visible: !r.is_visible } : r)));
+  };
+
+  const setAllVisible = (visible: boolean) => {
+    setRows((prev) => prev.map((r) => ({ ...r, is_visible: visible })));
+  };
+
   const activeRows = rows.filter((r) => r.active);
 
   // Track how many rows were skipped on the last save (already existed in DB)

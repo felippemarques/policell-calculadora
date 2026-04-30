@@ -57,12 +57,18 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
     return Array.from(set).sort();
   }, [devices]);
 
-  // models for selected brand
+  // models for selected brand (with their image, picked from the first variant)
   const models = useMemo(() => {
-    if (!selectedBrand) return [];
-    const set = new Set<string>();
-    devices.filter((d) => d.brand === selectedBrand).forEach((d) => set.add(d.model));
-    return Array.from(set).sort();
+    if (!selectedBrand) return [] as { name: string; image_url: string | null }[];
+    const map = new Map<string, string | null>();
+    devices
+      .filter((d) => d.brand === selectedBrand)
+      .forEach((d) => {
+        if (!map.has(d.model)) map.set(d.model, (d as any).image_url ?? null);
+      });
+    return Array.from(map.entries())
+      .map(([name, image_url]) => ({ name, image_url }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [devices, selectedBrand]);
 
   // storages for selected brand+model
@@ -218,16 +224,17 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
         {phase === "model" && (
           <>
             <BackLink label={`Trocar marca (${selectedBrand})`} onClick={() => setPhase("brand")} />
-            <PhaseGrid>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {models.map((m) => (
-                <SelectionCard
-                  key={m}
-                  label={m}
-                  selected={selectedModel === m}
-                  onClick={() => handleModelPick(m)}
+                <ModelCard
+                  key={m.name}
+                  name={m.name}
+                  imageUrl={m.image_url}
+                  selected={selectedModel === m.name}
+                  onClick={() => handleModelPick(m.name)}
                 />
               ))}
-            </PhaseGrid>
+            </div>
           </>
         )}
 
@@ -489,5 +496,66 @@ function BackLink({ label, onClick }: { label: string; onClick: () => void }) {
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="col-span-full text-center text-sm text-muted-foreground py-8">{message}</div>
+  );
+}
+
+/**
+ * Visual model card for the calculator: square aspect ratio, photo fills the
+ * card, name floats over a gradient at the bottom. On hover/touch the photo
+ * gently zooms and the name scales up — mobile-first and highly responsive.
+ */
+function ModelCard({
+  name,
+  imageUrl,
+  selected,
+  onClick,
+}: {
+  name: string;
+  imageUrl: string | null;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative aspect-square w-full overflow-hidden rounded-2xl border bg-card transition-all duration-300
+        ${
+          selected
+            ? "border-primary ring-2 ring-primary/40 shadow-lg"
+            : "border-border hover:border-primary/50 hover:shadow-md hover:ring-2 hover:ring-primary/15"
+        }`}
+      aria-pressed={selected}
+    >
+      {/* Image (or placeholder) */}
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={name}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted/60 to-muted/20">
+          <Smartphone
+            className="h-10 w-10 text-muted-foreground/60 transition-transform duration-500 group-hover:scale-110"
+            aria-hidden
+          />
+        </div>
+      )}
+
+      {/* Bottom gradient + name */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-left">
+        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px] origin-bottom-left">
+          {name}
+        </p>
+      </div>
+
+      {selected && (
+        <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow-md">
+          <Check className="h-3.5 w-3.5 text-primary-foreground" />
+        </div>
+      )}
+    </button>
   );
 }

@@ -7,6 +7,7 @@ export interface CatalogColor {
   name: string;
   hex_code: string | null;
   display_order: number;
+  is_visible: boolean;
 }
 
 export interface CatalogStorage {
@@ -17,6 +18,9 @@ export interface CatalogStorage {
   trade_price: number;
   sale_price: number;
   display_order: number;
+  /** display_order of the global `storages` row (used to sort smallest → largest) */
+  storage_global_order: number;
+  is_visible: boolean;
   colors: CatalogColor[];
 }
 
@@ -24,6 +28,7 @@ export interface CatalogModel {
   model_id: string;
   model_name: string;
   display_order: number;
+  image_url: string | null;
   storages: CatalogStorage[];
 }
 
@@ -42,11 +47,11 @@ export function useCatalogTree() {
     queryFn: async (): Promise<CatalogBrand[]> => {
       const [brandsRes, modelsRes, storagesRes, colorsRes, msRes, vcRes] = await Promise.all([
         supabase.from("brands").select("id, name, display_order").order("display_order").order("name"),
-        supabase.from("device_models").select("id, name, brand_id, display_order").order("display_order").order("name"),
+        supabase.from("device_models").select("id, name, brand_id, display_order, image_url").order("display_order").order("name"),
         supabase.from("storages").select("id, capacity, display_order").order("display_order").order("capacity"),
         supabase.from("colors").select("id, name, hex_code, brand_ids, display_order").order("display_order").order("name"),
-        supabase.from("model_storages").select("id, model_id, storage_id, base_price, trade_price, sale_price, display_order"),
-        supabase.from("variant_colors").select("id, model_storage_id, color_id, display_order"),
+        supabase.from("model_storages").select("id, model_id, storage_id, base_price, trade_price, sale_price, display_order, is_visible"),
+        supabase.from("variant_colors").select("id, model_storage_id, color_id, display_order, is_visible"),
       ]);
 
       for (const r of [brandsRes, modelsRes, storagesRes, colorsRes, msRes, vcRes]) {
@@ -67,6 +72,7 @@ export function useCatalogTree() {
           name: c.name,
           hex_code: c.hex_code,
           display_order: vc.display_order,
+          is_visible: (vc as any).is_visible ?? true,
         });
         colorsByMs.set(vc.model_storage_id, arr);
       }
@@ -87,12 +93,19 @@ export function useCatalogTree() {
           trade_price: Number((ms as any).trade_price ?? ms.base_price),
           sale_price: Number((ms as any).sale_price ?? ms.base_price),
           display_order: ms.display_order,
+          storage_global_order: (s as any).display_order ?? 9999,
+          is_visible: (ms as any).is_visible ?? true,
           colors: colorsByMs.get(ms.id) || [],
         });
         storagesByModel.set(ms.model_id, arr);
       }
+      // Sort by global storage order (smallest → largest), then capacity as tiebreaker
       for (const arr of storagesByModel.values()) {
-        arr.sort((a, b) => a.display_order - b.display_order || a.capacity.localeCompare(b.capacity));
+        arr.sort(
+          (a, b) =>
+            a.storage_global_order - b.storage_global_order ||
+            a.capacity.localeCompare(b.capacity),
+        );
       }
 
       const modelsByBrand = new Map<string, CatalogModel[]>();
@@ -102,6 +115,7 @@ export function useCatalogTree() {
           model_id: m.id,
           model_name: m.name,
           display_order: m.display_order,
+          image_url: (m as any).image_url ?? null,
           storages: storagesByModel.get(m.id) || [],
         });
         modelsByBrand.set(m.brand_id, arr);

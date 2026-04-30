@@ -25,6 +25,7 @@ import {
   type CatalogModel,
 } from "@/hooks/use-catalog-tree";
 import { ModelStorageRow } from "./ModelStorageRow";
+import { ModelImageUploader } from "./ModelImageUploader";
 
 function ModelNode({ brandId, model }: { brandId: string; model: CatalogModel }) {
   const qc = useQueryClient();
@@ -81,6 +82,13 @@ function ModelNode({ brandId, model }: { brandId: string; model: CatalogModel })
             ({model.storages.length})
           </span>
         </button>
+
+        <ModelImageUploader
+          modelId={model.model_id}
+          modelName={model.model_name}
+          imageUrl={model.image_url}
+          compact
+        />
 
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>

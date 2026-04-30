@@ -334,6 +334,7 @@ export type Database = {
           display_order: number
           format_rule: string
           id: string
+          image_url: string | null
           name: string
         }
         Insert: {
@@ -342,6 +343,7 @@ export type Database = {
           display_order?: number
           format_rule?: string
           id?: string
+          image_url?: string | null
           name: string
         }
         Update: {
@@ -350,6 +352,7 @@ export type Database = {
           display_order?: number
           format_rule?: string
           id?: string
+          image_url?: string | null
           name?: string
         }
         Relationships: [
@@ -704,6 +707,7 @@ export type Database = {
           created_at: string
           display_order: number
           id: string
+          is_visible: boolean
           model_id: string
           sale_price: number
           storage_id: string
@@ -714,6 +718,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          is_visible?: boolean
           model_id: string
           sale_price?: number
           storage_id: string
@@ -724,6 +729,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          is_visible?: boolean
           model_id?: string
           sale_price?: number
           storage_id?: string
@@ -821,6 +827,7 @@ export type Database = {
           created_at: string
           display_order: number
           id: string
+          is_visible: boolean
           model_storage_id: string
         }
         Insert: {
@@ -828,6 +835,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          is_visible?: boolean
           model_storage_id: string
         }
         Update: {
@@ -835,6 +843,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           id?: string
+          is_visible?: boolean
           model_storage_id?: string
         }
         Relationships: [

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X, ArrowRightLeft, Banknote } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, Pencil, Trash2, X, ArrowRightLeft, Banknote, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -73,11 +73,32 @@ export function ModelStorageRow({ brandId, storage }: Props) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const toggleVisibility = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("model_storages")
+        .update({ is_visible: !storage.is_visible })
+        .eq("id", storage.model_storage_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CATALOG_TREE_KEY });
+      qc.invalidateQueries({ queryKey: ["devices"] });
+      toast({
+        title: storage.is_visible ? "Capacidade ocultada" : "Capacidade visível",
+        description: storage.is_visible
+          ? "Não aparece mais para o cliente."
+          : "Voltou a aparecer na calculadora.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const tradePrice = storage.trade_price ?? storage.base_price;
   const salePrice = storage.sale_price ?? storage.base_price;
 
   return (
-    <div className="rounded-md border border-border bg-card/50">
+    <div className={`rounded-md border border-border bg-card/50 ${storage.is_visible ? "" : "opacity-60"}`}>
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <button
           type="button"
@@ -150,6 +171,21 @@ export function ModelStorageRow({ brandId, storage }: Props) {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          {!editing && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => toggleVisibility.mutate()}
+              title={storage.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
+            >
+              {storage.is_visible ? (
+                <Eye className="h-3.5 w-3.5" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </Button>
+          )}
           {!editing && (
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(true)}>
               <Pencil className="h-3.5 w-3.5" />

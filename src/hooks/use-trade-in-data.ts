@@ -1,28 +1,53 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface DeviceWithImage {
+  id: string;
+  brand: string;
+  brand_id: string | null;
+  model: string;
+  storage: string;
+  colors: string | null;
+  base_price: number;
+  trade_price: number;
+  sale_price: number;
+  is_visible: boolean;
+  created_at: string;
+  image_url: string | null;
+}
+
 export function useDevices() {
   return useQuery({
     queryKey: ["devices"],
-    queryFn: async () => {
+    queryFn: async (): Promise<DeviceWithImage[]> => {
       // Fetch storages first to get display_order map (smallest → largest)
-      const { data: storages } = await supabase
-        .from("storages")
-        .select("capacity, display_order");
+      const [storagesRes, devicesRes, modelsRes] = await Promise.all([
+        supabase.from("storages").select("capacity, display_order"),
+        supabase.from("devices").select("*").eq("is_visible", true),
+        supabase.from("device_models").select("name, brand_id, image_url"),
+      ]);
+      if (devicesRes.error) throw devicesRes.error;
+
       const orderMap = new Map<string, number>();
-      (storages || []).forEach((s: any) =>
+      (storagesRes.data || []).forEach((s: any) =>
         orderMap.set(String(s.capacity).trim().toLowerCase(), s.display_order ?? 9999),
       );
 
-      const { data, error } = await supabase
-        .from("devices")
-        .select("*")
-        .eq("is_visible", true)
-        .order("model");
-      if (error) throw error;
+      // Build (brand_id, lower(name)) → image_url map
+      const imageMap = new Map<string, string | null>();
+      (modelsRes.data || []).forEach((m: any) => {
+        const key = `${m.brand_id}::${String(m.name).trim().toLowerCase()}`;
+        imageMap.set(key, m.image_url ?? null);
+      });
 
-      // Sort by storage display_order (smallest → largest), then by base_price
-      return (data || []).slice().sort((a: any, b: any) => {
+      const merged: DeviceWithImage[] = (devicesRes.data || []).map((d: any) => ({
+        ...d,
+        image_url:
+          imageMap.get(`${d.brand_id}::${String(d.model).trim().toLowerCase()}`) ?? null,
+      }));
+
+      // Sort by model name → storage display_order (smallest → largest) → base_price
+      return merged.sort((a, b) => {
         if (a.model !== b.model) return String(a.model).localeCompare(String(b.model));
         const ao = orderMap.get(String(a.storage).trim().toLowerCase()) ?? 9999;
         const bo = orderMap.get(String(b.storage).trim().toLowerCase()) ?? 9999;
@@ -112,13 +137,14 @@ export function useColorsByDevice(
     queryKey: ["colors-by-device", deviceId ?? "none", brandId ?? "none"],
     enabled: !!deviceId,
     queryFn: async (): Promise<ColorRow[]> => {
-      // 1. Try variant_colors for this exact device variant
+      // 1. Try variant_colors for this exact device variant (only visible ones)
       const { data: variants, error: vErr } = await supabase
         .from("variant_colors")
         .select(
-          "display_order, colors:color_id (id, name, hex_code, brand_ids, display_order)",
+          "display_order, is_visible, colors:color_id (id, name, hex_code, brand_ids, display_order)",
         )
         .eq("model_storage_id", deviceId!)
+        .eq("is_visible", true)
         .order("display_order");
       if (vErr) throw vErr;
 

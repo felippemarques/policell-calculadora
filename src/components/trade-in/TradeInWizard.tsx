@@ -348,8 +348,15 @@ export function TradeInWizard() {
 
   // Define se a tela "Cupom Especial" deve aparecer.
   const upgradeBonusPercent = businessSettings?.upgradeBonusPercent ?? 0;
+  const saleBonusPercent = businessSettings?.saleBonusPercent ?? 0;
+  const activeBonusPercent =
+    data.flowType === "trade" ? upgradeBonusPercent : data.flowType === "sale" ? saleBonusPercent : 0;
   const showSpecialOffer =
-    data.flowType === "trade" && upgradeBonusPercent > 0 && pricing.finalValue > 0 && !pricing.isRejected;
+    !!data.flowType && activeBonusPercent > 0 && pricing.finalValue > 0 && !pricing.isRejected;
+  // Valor final EFETIVO (com bônus) — gravado na evaluation e exibido no cupom.
+  const finalValueWithBonus = pricing.isRejected
+    ? 0
+    : Math.round(pricing.finalValue * (1 + activeBonusPercent / 100) * 100) / 100;
 
   // ── Handlers ──
   const handleChooseFlow = (type: FlowType) => {
@@ -542,17 +549,19 @@ export function TradeInWizard() {
         basePrice: pricing.basePrice,
         conditionDiscount: pricing.percentDiscount,
         totalDeductions: pricing.fixedDeductions,
-        finalValue: pricing.finalValue,
+        finalValue: finalValueWithBonus,
         leadId,
         flowType: data.flowType ?? "trade",
         imei: data.imei,
       });
     } catch (e: any) {
       if (e instanceof DuplicateImeiError) {
+        const flowLbl = data.flowType === "sale" ? "venda" : "troca";
+        const expTxt = e.expiresAt
+          ? ` Esta proposta é válida até ${e.expiresAt.toLocaleDateString("pt-BR")}.`
+          : "";
         setImeiServerError(
-          `Já existe uma proposta ativa para este IMEI no fluxo de ${
-            data.flowType === "sale" ? "venda" : "troca"
-          }. Use outro aparelho ou fale com um especialista.`,
+          `Localizamos uma proposta em andamento para este IMEI no fluxo de ${flowLbl}.${expTxt} Para evitar duplicidade, fale diretamente com nosso comercial — ele consegue dar continuidade no atendimento ou liberar uma nova avaliação.`,
         );
         setStep(5);
         return;
@@ -745,7 +754,8 @@ export function TradeInWizard() {
           {step === 4 && showSpecialOffer && (
             <StepSpecialOffer
               baseValue={pricing.finalValue}
-              bonusPercent={upgradeBonusPercent}
+              bonusPercent={activeBonusPercent}
+              flowType={data.flowType === "sale" ? "sale" : "trade"}
               onBack={() => setStep(3)}
               onContinue={() => setStep(5)}
             />
@@ -761,7 +771,12 @@ export function TradeInWizard() {
               flowLabel={data.flowType === "sale" ? "Vender" : "Trocar"}
               estimatedValue={pricing.finalValue}
               flowType={data.flowType}
-              upgradeBonusPercent={upgradeBonusPercent}
+              upgradeBonusPercent={data.flowType === "trade" ? upgradeBonusPercent : saleBonusPercent}
+              commercialWhatsapp={
+                businessSettings?.commercialWhatsapp ||
+                flowSettings?.sale?.whatsapp ||
+                ""
+              }
             />
           )}
           {/* Step 6 (Termos) foi unificado ao Contrato (step 8). */}
@@ -789,8 +804,8 @@ export function TradeInWizard() {
                   Math.round(pricing.basePrice * (pricing.percentDiscount / 100) * 100) / 100,
                 percentDiscount: pricing.percentDiscount,
                 fixedDeductions: pricing.fixedDeductions,
-                bonusPercent: data.flowType === "trade" ? upgradeBonusPercent : 0,
-                finalValue: pricing.finalValue,
+                bonusPercent: activeBonusPercent,
+                finalValue: finalValueWithBonus,
                 flowLabel: data.flowType === "sale" ? "Venda" : "Troca",
                 evaluationItems,
               }}

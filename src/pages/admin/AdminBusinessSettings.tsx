@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck } from "lucide-react";
+import { Save, Loader2, FileText, Percent, Eye, ArrowRightLeft, Banknote, ShieldCheck, Clock, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FLOW_SETTINGS_KEY } from "@/hooks/use-flow-settings";
 import { BUSINESS_SETTINGS_KEY } from "@/hooks/use-business-settings";
@@ -18,6 +18,9 @@ const BUSINESS_KEYS = [
   "business_contract_terms_trade",
   "business_contract_terms_sale",
   "business_upgrade_bonus_percent",
+  "business_sale_bonus_percent",
+  "business_proposal_expiration_days",
+  "business_commercial_whatsapp",
   "business_show_realtime_deductions",
   "business_show_reject_label",
   "business_show_no_deduction_label",
@@ -56,6 +59,9 @@ const DEFAULTS: FormState = {
   business_contract_terms_trade: "",
   business_contract_terms_sale: "",
   business_upgrade_bonus_percent: "0",
+  business_sale_bonus_percent: "0",
+  business_proposal_expiration_days: "30",
+  business_commercial_whatsapp: "",
   business_show_realtime_deductions: "true",
   business_show_reject_label: "true",
   business_show_no_deduction_label: "true",
@@ -119,6 +125,14 @@ const AdminBusinessSettings = () => {
       const bonus = Number(form.business_upgrade_bonus_percent);
       if (Number.isNaN(bonus) || bonus < 0 || bonus > 100) {
         throw new Error("Bônus de upgrade deve estar entre 0 e 100.");
+      }
+      const saleBonus = Number(form.business_sale_bonus_percent);
+      if (Number.isNaN(saleBonus) || saleBonus < 0 || saleBonus > 100) {
+        throw new Error("Bônus de venda deve estar entre 0 e 100.");
+      }
+      const expDays = Number(form.business_proposal_expiration_days);
+      if (Number.isNaN(expDays) || expDays < 0 || expDays > 3650) {
+        throw new Error("Dias de expiração deve estar entre 0 e 3650.");
       }
       const entries = BUSINESS_KEYS.map((k) => ({ key: k, value: form[k] }));
       await upsertSettings(entries);
@@ -411,6 +425,96 @@ const AdminBusinessSettings = () => {
             />
             <span className="text-sm text-muted-foreground">%</span>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Bônus em caso de Venda em dinheiro</CardTitle>
+          </div>
+          <CardDescription>
+            Percentual extra somado ao valor da avaliação quando o cliente opta pelo fluxo de
+            venda em dinheiro. Funciona igual ao bônus de troca, mas aplicado ao fluxo de venda.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="sale_bonus">% de Bônus</Label>
+          <div className="flex items-center gap-2 mt-2">
+            <Input
+              id="sale_bonus"
+              type="number"
+              min={0}
+              max={100}
+              step="0.5"
+              value={form.business_sale_bonus_percent}
+              onChange={(e) => set("business_sale_bonus_percent", e.target.value)}
+              className="max-w-[140px]"
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Expiração da proposta por IMEI</CardTitle>
+          </div>
+          <CardDescription>
+            Número de dias durante os quais o sistema bloqueia a criação de uma nova proposta
+            para o mesmo IMEI no mesmo fluxo. Após esse período, o cliente pode refazer a avaliação
+            normalmente. Use <code>0</code> para nunca expirar (bloqueio permanente).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="exp_days">Dias até poder refazer</Label>
+          <div className="flex items-center gap-2 mt-2">
+            <Input
+              id="exp_days"
+              type="number"
+              min={0}
+              max={3650}
+              step="1"
+              value={form.business_proposal_expiration_days}
+              onChange={(e) => set("business_proposal_expiration_days", e.target.value)}
+              className="max-w-[140px]"
+            />
+            <span className="text-sm text-muted-foreground">dias</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Mantém a regra de "uma proposta ativa por IMEI". Quando o cliente tenta refazer dentro
+            do prazo, recebe uma mensagem clara e o botão para falar com o comercial.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">WhatsApp comercial (proposta duplicada)</CardTitle>
+          </div>
+          <CardDescription>
+            Número usado no botão "Falar com o comercial" exibido quando o cliente tenta gerar uma
+            nova proposta para um IMEI que ainda tem proposta em andamento. Se vazio, usa o WhatsApp
+            do fluxo de venda.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="commercial_wa">WhatsApp</Label>
+          <Input
+            id="commercial_wa"
+            value={form.business_commercial_whatsapp}
+            onChange={(e) => set("business_commercial_whatsapp", e.target.value)}
+            placeholder="Ex.: 11999999999 ou https://wa.me/55..."
+            className="mt-2"
+          />
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Pode ser apenas o número (com DDD) ou um link wa.me completo.
+          </p>
         </CardContent>
       </Card>
 

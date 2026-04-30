@@ -1,88 +1,115 @@
+## Plano de implementação
 
-# Esconder valores no fluxo + Toggle de preço base configurável
+### 1. Busca por IMEI (Clientes + Avaliações)
 
-## Decisões confirmadas
-- **IMEI**: mantém como está hoje (cliente preenche IMEI já sabendo o valor — esse momento é proposital).
-- **Cupom Especial**: mantém como está hoje.
-- **Foco**: esconder cifras e percentuais nas etapas de **avaliação** (danos, riscos, bateria, condição, etc.) e tornar o **preço base do aparelho** (o card "SELECIONADO" do print, mostrado nas telas de armazenamento e cor) **configurável via admin**.
+**Clientes (`AdminCustomers.tsx`)**
+- Atualizar placeholder do campo de busca para incluir IMEI.
+- Estender o filtro `filtered` para também buscar pelo `imei` do lead (fazendo `select` do campo `imei` na query e comparando com dígitos normalizados — ex.: `359 123` casa com `359123...`).
+- Mostrar o IMEI no card/sheet de detalhes (já existe no `ProposalDetailSheet`).
 
----
+**Avaliações (`AdminEvaluations.tsx`)**
+- Adicionar campo de busca no topo (hoje não tem nenhum).
+- Buscar `imei` no `select` da query de evaluations e filtrar por nome/email/telefone/IMEI/cupom.
 
-## O que muda na prática
+### 2. Exclusão (arquivamento) de proposta + filtro
 
-### 1. Toggle "Mostrar preço base na calculadora" (Admin)
-Novo controle em **Admin → Configurações de Negócio** (`AdminBusinessSettings.tsx`):
-- Label: "Mostrar preço base do aparelho na calculadora"
-- Descrição: "Quando ligado, o cliente vê o valor base do aparelho ao escolher armazenamento e cor (ideal para campanhas promocionais). Quando desligado, o cliente segue todo o fluxo e só descobre o valor no resultado final."
-- Default: **desligado** (esconder).
-- Persistido em `lp_settings` com a chave `business_show_device_base_price` (segue o padrão das outras flags da tabela — sem mudança de schema).
+Já existe `archived_at` em `leads` e `evaluations`, e RPCs `archive_lead` / `archive_evaluation`. Vamos usar essas funções (soft delete) — proposta "excluída" = arquivada.
 
-### 2. Preço base do aparelho (`StepSelectDevice.tsx`)
-Os 3 lugares que hoje mostram "R$ X" passam a respeitar o toggle:
-- **Lista de armazenamentos** → R$ ao lado de cada capacidade
-- **Card "SELECIONADO" do armazenamento** (o do print)
-- **Card "SELECIONADO" da cor**
+**Em Clientes**
+- Adicionar ação "Excluir proposta" no menu de cada linha → chama `archive_lead(id, true)` com `AlertDialog` de confirmação.
+- Adicionar filtro "Mostrar excluídas" (Select com 3 opções: Ativas / Excluídas / Todas). Por padrão a query carrega só com `archived_at IS NULL`.
+- Em linhas excluídas, mostrar badge "Excluída" e botão "Restaurar" → `archive_lead(id, false)`.
 
-Comportamento:
-- **Toggle ligado**: mostra o valor com tratamento promocional (badge "Oferta especial", cor de destaque) — fica evidente que é uma promoção.
-- **Toggle desligado**: o R$ desaparece dos 3 pontos. O card "SELECIONADO" continua aparecendo, mas só com modelo + capacidade + cor (sem cifra).
+**Em Avaliações**
+- Mesma lógica usando `archive_evaluation`.
+- Botão "Excluir" + filtro de visibilidade + ação "Restaurar".
 
-### 3. Avaliação — esconder TODAS as cifras e percentuais (sempre, sem toggle)
-- **`StepEvaluationChecklist.tsx`**: remover os badges de dedução por resposta (ex: "−R$ 50,00", "−15%", "−R$ 80"). As opções aparecem só com texto + emoji, sem revelar o impacto financeiro.
-- **`TradeInWizard.tsx`** (e equivalente do fluxo de venda, se houver): remover o **rodapé flutuante "Valor estimado: R$ X"** que acompanha o cliente durante toda a avaliação.
-- **Tela de condição geral do aparelho** (impecável / normal / com marcas): se houver percentual ou R$ visível, esconder também.
+### 3. Expiração configurável da proposta (e nova validação de IMEI)
 
-### 4. O que NÃO muda
-- **`StepImei.tsx`**: intacto (mostra "Sua proposta até aqui" e o aviso de bônus +X% — é o momento em que o cliente já precisa ver o valor pra decidir preencher IMEI).
-- **`StepSpecialOffer.tsx`** (Cupom Especial): intacto.
-- **`StepResult.tsx`**: intacto — é onde o cliente finalmente vê o valor cheio.
-- **Lógica de cálculo (`computePricing`)**: intocada. Tudo continua sendo calculado normalmente no backend/estado, só não é exibido.
-- **Banco de dados**: nenhuma mudança de estrutura. Apenas um `INSERT` da nova chave em `lp_settings`.
+**Configuração nova em `AdminBusinessSettings.tsx`**
+- Novo campo `business_proposal_expiration_days` (número, default `30`, `0` = nunca expira).
+- UI: card "Expiração de propostas" — input numérico + helper text explicando que após N dias o cliente pode refazer com o mesmo IMEI.
 
----
+**Mudança no índice único (migração SQL)**
+- Hoje: `uniq_evaluations_imei_flow_active` bloqueia qualquer evaluation `pending|approved|completed` com mesmo `(imei, flow_type)`. Isso é estático, não respeita expiração.
+- Trocar a estratégia: remover o índice único e mover a validação para um **trigger BEFORE INSERT** que:
+  1. Lê `business_proposal_expiration_days` de `lp_settings` (default 30).
+  2. Procura evaluation existente com mesmo `imei + flow_type`, status em `pending|completed|approved`, `archived_at IS NULL`, e `created_at > now() - interval 'N days'` (ou sem janela se N=0).
+  3. Se encontrar, levanta erro `23505` (mantém compatibilidade com `DuplicateImeiError` no front).
 
-## Fluxo do cliente — antes vs depois (com toggle desligado)
+**Mensagem transparente para o cliente**
+- Em `TradeInWizard.tsx` (catch do `DuplicateImeiError`) e em `StepImei.tsx` (via `serverError`): trocar texto atual por algo explícito como:
+  > "Já existe uma proposta em andamento para este IMEI (válida até DD/MM/AAAA). Para garantir a melhor condição, fale diretamente com nosso comercial: [botão WhatsApp]."
+- Adicionar botão "Falar com comercial" abaixo do erro, abrindo o WhatsApp configurado em `flow_sale_whatsapp` (ou criar novo setting `business_commercial_whatsapp` — ver pergunta abaixo).
+- Para isso o erro precisa carregar `expires_at`. Vamos retornar via RPC nova `check_imei_availability(_imei, _flow_type)` chamada antes do submit OU enriquecer o erro consultando a evaluation existente quando o `23505` é detectado.
 
-```text
-ANTES                                    DEPOIS
-─────                                    ──────
-Escolhe modelo                           Escolhe modelo
-Escolhe armazenamento (vê R$)            Escolhe armazenamento (sem R$)
-Escolhe cor (vê R$)                      Escolhe cor (sem R$)
-Avaliação: "Tela trincada −R$ 200"       Avaliação: "Tela trincada" (sem valor)
-Rodapé flutuante: "Valor: R$ 1.450"      [sem rodapé]
-IMEI (vê proposta + bônus)               IMEI (vê proposta + bônus) ← igual
-Cupom especial                           Cupom especial ← igual
-Resultado: R$ final                      Resultado: R$ final ← surpresa
-```
+### 4. Bônus para o fluxo "Vender por dinheiro"
 
-Com **toggle ligado** (modo promocional), o preço base reaparece nas telas de armazenamento/cor com destaque "Oferta", mas as cifras de avaliação continuam escondidas.
+Hoje só existe `business_upgrade_bonus_percent` (aplicado se `flowType === "trade"`). Adicionar simétrico para venda:
+
+- Novo setting `business_sale_bonus_percent` (default `0`).
+- Em `AdminBusinessSettings.tsx`: card "Bônus em caso de Venda em dinheiro" (cópia visual do card de Troca/Upgrade), input %.
+- Em `use-business-settings.ts`: expor `saleBonusPercent`.
+- Aplicar na `StepSpecialOffer` e `StepImei`:
+  - Mostrar a tela de oferta especial também no fluxo `sale` quando `saleBonusPercent > 0`.
+  - Texto adaptado: "Bônus de venda" / "Total a receber em dinheiro".
+- No cálculo final (gravação da evaluation): aplicar o bônus correspondente ao `flowType` no `finalValue` salvo (hoje o bônus de troca é apenas exibido — confirmar com você se deve ser aplicado ao valor salvo do cupom; ver pergunta).
 
 ---
 
-## Detalhes técnicos
+### Detalhes técnicos
 
-### Arquivos alterados
-- `src/hooks/use-business-settings.ts` — adicionar `show_device_base_price: boolean` ao tipo e ao mapeamento (chave `business_show_device_base_price`, default `false`).
-- `src/pages/admin/AdminBusinessSettings.tsx` — novo Switch + descrição.
-- `src/components/trade-in/StepSelectDevice.tsx` — envolver os 3 pontos de R$ em `{showBasePrice && ...}` e aplicar styling promocional quando ativo.
-- `src/components/trade-in/StepEvaluationChecklist.tsx` — remover badges de `−R$` e `−%` das opções.
-- `src/components/trade-in/TradeInWizard.tsx` — remover footer flutuante de valor estimado.
-- Verificar fluxo de venda (`StepSale*` se existir) e aplicar a mesma limpeza visual.
-
-### Banco
-Apenas **1 INSERT** (sem migration de schema):
+**Migração SQL nova:**
 ```sql
-INSERT INTO lp_settings (key, value)
-VALUES ('business_show_device_base_price', 'false')
-ON CONFLICT (key) DO NOTHING;
+-- 1. Drop do índice estático
+DROP INDEX IF EXISTS uniq_evaluations_imei_flow_active;
+
+-- 2. Trigger dinâmico que respeita expiração
+CREATE OR REPLACE FUNCTION public.check_imei_duplicate()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _exp_days int;
+  _exists uuid;
+BEGIN
+  IF NEW.imei IS NULL OR NEW.imei = '' THEN RETURN NEW; END IF;
+  SELECT COALESCE(NULLIF(value,'')::int, 30) INTO _exp_days
+    FROM public.lp_settings WHERE key = 'business_proposal_expiration_days';
+  SELECT id INTO _exists FROM public.evaluations
+    WHERE imei = NEW.imei
+      AND flow_type = NEW.flow_type
+      AND archived_at IS NULL
+      AND status IN ('pending','approved','completed')
+      AND (_exp_days = 0 OR created_at > now() - (_exp_days || ' days')::interval)
+    LIMIT 1;
+  IF _exists IS NOT NULL THEN
+    RAISE EXCEPTION 'Já existe proposta ativa para este IMEI'
+      USING ERRCODE = '23505';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_check_imei_duplicate
+BEFORE INSERT ON public.evaluations
+FOR EACH ROW EXECUTE FUNCTION public.check_imei_duplicate();
 ```
 
-### Reversibilidade
-- Tudo é UI condicional → reverter = remover os `{flag && ...}`.
-- Nenhum dado é apagado, nenhuma coluna é alterada.
-- Se quiser voltar tudo a aparecer: basta ligar o toggle (preço base) — porém as deduções da avaliação ficam escondidas por design (não tem toggle pra elas, conforme pedido).
+**Arquivos editados:**
+- `src/pages/admin/AdminCustomers.tsx` — busca IMEI, ação excluir, filtro arquivadas
+- `src/pages/admin/AdminEvaluations.tsx` — busca, ação excluir, filtro arquivadas
+- `src/pages/admin/AdminBusinessSettings.tsx` — campo expiração + bônus de venda + (opcional) WhatsApp comercial
+- `src/hooks/use-business-settings.ts` — expor `saleBonusPercent`, `proposalExpirationDays`
+- `src/components/trade-in/TradeInWizard.tsx` — usar `saleBonusPercent` no `showSpecialOffer`, mensagem nova de duplicidade
+- `src/components/trade-in/StepSpecialOffer.tsx` — variante "venda"
+- `src/components/trade-in/StepImei.tsx` — passar bônus de venda + UI do erro com botão WhatsApp
+- `src/hooks/use-submit-evaluation.ts` — incluir `expires_at` no erro de duplicidade (consulta extra ao detectar 23505)
+- Nova migração SQL conforme acima
 
 ---
 
-Pode aprovar? Assim que aprovar, eu já implemento.
+### Perguntas antes de começar
+
+1. **Bônus de troca aplicado ao cupom**: hoje o bônus de upgrade aparece nas telas mas o `finalValue` salvo na evaluation é só o valor da avaliação. Quer que tanto o bônus de troca quanto o de venda passem a ser **somados ao valor do cupom gerado**?
+
+2. **Contato comercial na mensagem de duplicidade**: usar o WhatsApp do fluxo de venda (`flow_sale_whatsapp`) ou criar um novo campo "WhatsApp comercial" exclusivo para esse caso?
+
+3. **Default de expiração**: 30 dias ok como padrão, ou prefere outro valor (ex.: 7, 15)?

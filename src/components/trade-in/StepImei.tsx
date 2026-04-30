@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles } from "lucide-react";
+import { ShieldCheck, Loader2, AlertCircle, ArrowLeft, Smartphone, TrendingUp, Gift, Sparkles, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,21 @@ interface Props {
   estimatedValue?: number;
   /** Fluxo atual (para decidir se mostra o bônus de troca). */
   flowType?: FlowType | null;
-  /** % do bônus de upgrade configurado em Negócio. */
+  /** % do bônus configurado em Negócio (de troca OU venda, conforme fluxo). */
   upgradeBonusPercent?: number;
+  /** WhatsApp comercial para o botão de contato em caso de erro de duplicidade. */
+  commercialWhatsapp?: string;
+}
+
+function buildWaUrl(input: string): string | null {
+  const v = (input ?? "").trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  const digits = v.replace(/\D/g, "");
+  if (!digits) return null;
+  // assume Brazil if no country code
+  const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+  return `https://wa.me/${withCountry}`;
 }
 
 export function StepImei({
@@ -37,6 +50,7 @@ export function StepImei({
   estimatedValue,
   flowType,
   upgradeBonusPercent = 0,
+  commercialWhatsapp,
 }: Props) {
   const [raw, setRaw] = useState(initialValue);
   const [touched, setTouched] = useState(false);
@@ -161,14 +175,49 @@ export function StepImei({
               showError ? "text-destructive" : "text-muted-foreground"
             } flex items-center gap-1`}
           >
-            {showError && <AlertCircle className="h-3 w-3" />}
-            {showError ? errorMessage : "Apenas números. Sem espaços ou traços."}
+            {showError && !serverError && <AlertCircle className="h-3 w-3" />}
+            {showError && !serverError
+              ? errorMessage
+              : "Apenas números. Sem espaços ou traços."}
           </span>
           <span className="text-muted-foreground tabular-nums">
             {digits.length}/15
           </span>
         </div>
       </div>
+
+      {serverError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-3 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-xl bg-destructive/15 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-semibold text-destructive">
+                Já existe uma proposta para este IMEI
+              </p>
+              <p className="text-xs leading-relaxed text-foreground/80">
+                {serverError}
+              </p>
+            </div>
+          </div>
+          {(() => {
+            const wa = buildWaUrl(commercialWhatsapp ?? "");
+            if (!wa) return null;
+            return (
+              <Button
+                type="button"
+                variant="default"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => window.open(wa, "_blank", "noopener,noreferrer")}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Falar com o comercial no WhatsApp
+              </Button>
+            );
+          })()}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2 pt-2">
         <Button

@@ -78,6 +78,8 @@ type LeadRow = {
   status: string;
   rejection_reason: string | null;
   assessment_responses: any;
+  imei: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -126,6 +126,14 @@ const AdminBusinessSettings = () => {
       if (Number.isNaN(bonus) || bonus < 0 || bonus > 100) {
         throw new Error("Bônus de upgrade deve estar entre 0 e 100.");
       }
+      const saleBonus = Number(form.business_sale_bonus_percent);
+      if (Number.isNaN(saleBonus) || saleBonus < 0 || saleBonus > 100) {
+        throw new Error("Bônus de venda deve estar entre 0 e 100.");
+      }
+      const expDays = Number(form.business_proposal_expiration_days);
+      if (Number.isNaN(expDays) || expDays < 0 || expDays > 3650) {
+        throw new Error("Dias de expiração deve estar entre 0 e 3650.");
+      }
       const entries = BUSINESS_KEYS.map((k) => ({ key: k, value: form[k] }));
       await upsertSettings(entries);
     },

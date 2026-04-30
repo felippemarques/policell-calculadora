@@ -36,7 +36,7 @@ III. DA PROPOSTA COMERCIAL
 A LOJA, com base nas informações declaradas pelo CLIENTE, apresenta a seguinte proposta:
 - Valor base de mercado: R$ {{base_price}}
 - Deduções aplicadas (estado de conservação, defeitos e danos declarados): R$ {{deductions}}
-- Bônus de upgrade (aplicável apenas em operações de troca): {{bonus_percent}}%
+- Bônus de {{flow_label_lower}} aplicado: R$ {{bonus_value}} ({{bonus_percent}}%)
 - VALOR FINAL DA PROPOSTA: R$ {{final_value}}
 - Modalidade da operação: {{flow_label}}
 

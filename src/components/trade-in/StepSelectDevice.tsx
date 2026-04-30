@@ -31,6 +31,8 @@ interface Props {
 type Phase = "brand" | "model" | "storage" | "color";
 
 export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Props) {
+  const { data: businessSettings } = useBusinessSettings();
+  const showBasePrice = businessSettings?.showDeviceBasePrice ?? false;
   const selectedDevice = devices.find((d) => d.id === data.deviceId) || null;
 
   const [phase, setPhase] = useState<Phase>(

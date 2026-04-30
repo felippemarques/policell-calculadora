@@ -475,6 +475,39 @@ const AdminBusinessSettings = () => {
         </CardContent>
       </Card>
 
+      {/* ── Preço base do aparelho (modo promocional) ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Preço base do aparelho na calculadora</CardTitle>
+          </div>
+          <CardDescription>
+            Controla se o cliente vê o valor base do aparelho ao escolher armazenamento e cor.
+            Ligue para campanhas promocionais. Desligado, o cliente segue todo o fluxo e só
+            descobre o valor final no resultado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <Label className="text-sm font-medium">Mostrar preço base na calculadora</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {form.business_show_device_base_price === "true"
+                  ? "Ativado — o valor base aparece em destaque (modo promocional)."
+                  : "Desativado — o cliente só descobre o valor no resultado final."}
+              </p>
+            </div>
+            <Switch
+              checked={form.business_show_device_base_price === "true"}
+              onCheckedChange={(checked) =>
+                set("business_show_device_base_price", checked ? "true" : "false")
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end sticky bottom-0 bg-background/80 backdrop-blur-sm py-3 -mx-6 px-6 border-t">
         <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
           {mutation.isPending ? (

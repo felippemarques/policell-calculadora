@@ -876,6 +876,15 @@ export type Database = {
         Args: { _lead_id: string; _version: string }
         Returns: undefined
       }
+      apply_proposal_override: {
+        Args: {
+          _base_price: number
+          _evaluation_id: string
+          _final_value: number
+          _internal_notes: string
+        }
+        Returns: undefined
+      }
       archive_evaluation: {
         Args: { _archive?: boolean; _evaluation_id: string }
         Returns: undefined
@@ -931,6 +940,15 @@ export type Database = {
       }
       is_valid_imei: { Args: { _imei: string }; Returns: boolean }
       normalize_phone: { Args: { _phone: string }; Returns: string }
+      revert_proposal_override: {
+        Args: {
+          _evaluation_id: string
+          _internal_notes: string
+          _original_base_price: number
+          _original_final_value: number
+        }
+        Returns: undefined
+      }
       set_evaluation_notes: {
         Args: { _evaluation_id: string; _notes: string }
         Returns: undefined

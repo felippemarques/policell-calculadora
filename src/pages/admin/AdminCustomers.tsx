@@ -287,7 +287,21 @@ const AdminCustomers = () => {
     onError: (e: any) => toast.error(`Falha ao atualizar status: ${e.message}`),
   });
 
-  const deviceMap = useMemo(
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
+      const { error } = await (supabase.rpc as any)("archive_lead", {
+        _lead_id: id,
+        _archive: archive,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin-leads"] });
+      toast.success(vars.archive ? "Proposta arquivada." : "Proposta restaurada.");
+    },
+    onError: (e: any) => toast.error(`Falha ao arquivar: ${e.message}`),
+  });
+
     () => new Map(devices.map((d) => [d.id, d])),
     [devices]
   );

@@ -137,13 +137,14 @@ export function useColorsByDevice(
     queryKey: ["colors-by-device", deviceId ?? "none", brandId ?? "none"],
     enabled: !!deviceId,
     queryFn: async (): Promise<ColorRow[]> => {
-      // 1. Try variant_colors for this exact device variant
+      // 1. Try variant_colors for this exact device variant (only visible ones)
       const { data: variants, error: vErr } = await supabase
         .from("variant_colors")
         .select(
-          "display_order, colors:color_id (id, name, hex_code, brand_ids, display_order)",
+          "display_order, is_visible, colors:color_id (id, name, hex_code, brand_ids, display_order)",
         )
         .eq("model_storage_id", deviceId!)
+        .eq("is_visible", true)
         .order("display_order");
       if (vErr) throw vErr;
 

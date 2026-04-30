@@ -72,7 +72,15 @@ export function DevicesTab() {
   // Extract unique values for filters
   const uniqueBrands = useMemo(() => [...new Set(devices?.map((d) => d.brand) || [])].sort(), [devices]);
   const uniqueModels = useMemo(() => [...new Set(devices?.map((d) => d.model) || [])].sort(), [devices]);
-  const uniqueStorages = useMemo(() => [...new Set(devices?.map((d) => d.storage) || [])].sort(), [devices]);
+  const uniqueStorages = useMemo(
+    () =>
+      [...new Set(devices?.map((d) => d.storage) || [])].sort((a, b) => {
+        const ao = storageOrderMap.get(String(a).trim().toLowerCase()) ?? 9999;
+        const bo = storageOrderMap.get(String(b).trim().toLowerCase()) ?? 9999;
+        return ao - bo;
+      }),
+    [devices, storageOrderMap],
+  );
   const uniqueColors = useMemo(() => {
     const allColors = devices?.flatMap((d) => (d.colors || "").split(",").map((c) => c.trim()).filter(Boolean)) || [];
     return [...new Set(allColors)].sort();

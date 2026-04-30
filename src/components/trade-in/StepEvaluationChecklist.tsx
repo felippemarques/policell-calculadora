@@ -611,11 +611,6 @@ export function StepEvaluationChecklist({
                   onClick={() => handlePickCondition(cond.id)}
                   label={cond.condition_name}
                   help={cond.help_text}
-                  badge={
-                    cond.discount_percentage > 0
-                      ? `−${cond.discount_percentage}%`
-                      : "Sem desconto"
-                  }
                 />
               ))}
             </div>
@@ -631,15 +626,7 @@ export function StepEvaluationChecklist({
                   label={opt.option_name}
                   isReject={opt.is_rejected}
                   badge={
-                    opt.is_rejected
-                      ? showRejectLabel
-                        ? "Inviabiliza"
-                        : undefined
-                      : Number(opt.deduction_value) > 0
-                        ? `−${formatBRL(Number(opt.deduction_value))}`
-                        : showNoDeductionLabel
-                          ? "Sem dedução"
-                          : undefined
+                    opt.is_rejected && showRejectLabel ? "Inviabiliza" : undefined
                   }
                 />
               ))}

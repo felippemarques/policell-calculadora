@@ -67,6 +67,8 @@ import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
 import { CommercialAdjustmentSection } from "@/components/admin/CommercialAdjustmentSection";
 import { ContractDownloadButtons } from "@/components/admin/ContractDownloadButtons";
 import { useAuth } from "@/hooks/use-auth";
+import { parseProposalOverride } from "@/lib/proposal-override";
+import { ArrowLeftRight, ShoppingBag, Palette, HardDrive } from "lucide-react";
 
 
 type LeadRow = {
@@ -916,6 +918,7 @@ function LeadDetail({
   parsed,
   evaluation,
   adminEmail,
+  colorMap,
   onSendProposal,
   onClose,
 }: {
@@ -925,11 +928,29 @@ function LeadDetail({
   parsed: ParsedAnswer[];
   evaluation: EvaluationRow | null;
   adminEmail: string | null;
+  colorMap: Map<string, { id: string; name: string; hex_code: string | null }>;
   onSendProposal: () => void;
   onClose: () => void;
 }) {
   const meta = STATUS_META[lead.status] ?? STATUS_META.in_progress;
   const Icon = meta.icon;
+
+  // Flow type — vem de assessment_responses.flow_type (ou evaluations.flow_type)
+  const flowType: "trade" | "sale" =
+    (evaluation?.flow_type as any) ||
+    ((lead.assessment_responses as any)?.flow_type as any) ||
+    "trade";
+  const isTrade = flowType === "trade";
+  const flowLabel = isTrade ? "Troca" : "Venda direta";
+  const FlowIcon = isTrade ? ArrowLeftRight : ShoppingBag;
+
+  // Cor escolhida (id em assessment_responses.selectedColorId, nome em colorMap)
+  const colorId = (lead.assessment_responses as any)?.selectedColorId as string | null | undefined;
+  const chosenColor = colorId ? colorMap.get(colorId) : null;
+
+  // Override comercial (se houver) — para destacar bônus extra no resumo
+  const override = parseProposalOverride(evaluation?.internal_notes ?? null);
+  const extraBonus = override?.extraBonus ?? 0;
 
   const canSendProposal =
     lead.status !== "rejected" &&

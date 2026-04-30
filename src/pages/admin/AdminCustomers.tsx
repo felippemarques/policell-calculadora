@@ -1302,55 +1302,71 @@ function LeadDetail({
                 </div>
 
                 <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
-                  <FinanceRow
-                    label={isTrade ? "Crédito base do aparelho" : "Preço base de compra"}
-                    value={formatBRLNum(override?.original.basePrice ?? evaluation.base_price)}
-                  />
-                  {Number(evaluation.condition_discount) > 0 && (
-                    <FinanceRow
-                      label="Desconto por condição"
-                      value={`− ${formatBRLNum(evaluation.condition_discount)}`}
-                    />
-                  )}
-                  {Number(evaluation.total_deductions) > 0 && (
-                    <FinanceRow
-                      label="Deduções por defeitos"
-                      value={`− ${formatBRLNum(evaluation.total_deductions)}`}
-                    />
-                  )}
-
-                  {/* Valor original que o cliente fechou */}
-                  <FinanceRow
-                    label={
-                      override
-                        ? isTrade
-                          ? "Crédito original ao cliente"
-                          : "Valor original ao cliente"
-                        : isTrade
-                          ? "Crédito final ao cliente"
-                          : "Valor final ao cliente"
-                    }
-                    value={formatBRLNum(override?.original.finalValue ?? evaluation.final_value)}
-                    bold={!override}
-                  />
-
-                  {/* Bônus extra do comercial — só aparece quando há override */}
-                  {override && extraBonus !== 0 && (
-                    <FinanceRow
-                      label="Bônus extra do comercial"
-                      value={`${extraBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(extraBonus))}`}
-                      accent={extraBonus >= 0 ? "success" : "destructive"}
-                    />
-                  )}
-
-                  {/* Valor final efetivo (após ajuste) */}
-                  {override && (
-                    <FinanceRow
-                      label={isTrade ? "Crédito final negociado" : "Valor final negociado"}
-                      value={formatBRLNum(evaluation.final_value)}
-                      bold
-                    />
-                  )}
+                  {(() => {
+                    const basePrice = Number(override?.original.basePrice ?? evaluation.base_price) || 0;
+                    const condDisc = Number(evaluation.condition_discount) || 0;
+                    const deductions = Number(evaluation.total_deductions) || 0;
+                    const originalFinal = Number(override?.original.finalValue ?? evaluation.final_value) || 0;
+                    const subtotalAfterDamages = basePrice - condDisc - deductions;
+                    // Bônus do fluxo (troca/venda) embutido no final original = original − (base − descontos)
+                    const flowBonus = Math.round((originalFinal - subtotalAfterDamages) * 100) / 100;
+                    return (
+                      <>
+                        <FinanceRow
+                          label={isTrade ? "Crédito base do aparelho" : "Preço base de compra"}
+                          value={formatBRLNum(basePrice)}
+                        />
+                        {condDisc > 0 && (
+                          <FinanceRow
+                            label="Desconto por condição"
+                            value={`− ${formatBRLNum(condDisc)}`}
+                          />
+                        )}
+                        {deductions > 0 && (
+                          <FinanceRow
+                            label="Deduções por defeitos"
+                            value={`− ${formatBRLNum(deductions)}`}
+                          />
+                        )}
+                        <FinanceRow
+                          label="Subtotal após defeitos e condição"
+                          value={formatBRLNum(subtotalAfterDamages)}
+                        />
+                        {flowBonus !== 0 && (
+                          <FinanceRow
+                            label={isTrade ? "Bônus de troca (fluxo)" : "Bônus de venda (fluxo)"}
+                            value={`${flowBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(flowBonus))}`}
+                            accent={flowBonus >= 0 ? "success" : undefined}
+                          />
+                        )}
+                        <FinanceRow
+                          label={
+                            override
+                              ? "Valor final original do cliente"
+                              : isTrade
+                                ? "Crédito final ao cliente"
+                                : "Valor final ao cliente"
+                          }
+                          value={formatBRLNum(originalFinal)}
+                          bold={!override}
+                        />
+                        {override && extraBonus !== 0 && (
+                          <FinanceRow
+                            label="Bônus extra do comercial"
+                            value={`${extraBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(extraBonus))}`}
+                            accent={extraBonus >= 0 ? "success" : "destructive"}
+                          />
+                        )}
+                        {override && (
+                          <FinanceRow
+                            label={isTrade ? "Crédito total negociado (cupom)" : "Valor total negociado (cupom)"}
+                            value={formatBRLNum(evaluation.final_value)}
+                            bold
+                          />
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {evaluation.coupon_code && (

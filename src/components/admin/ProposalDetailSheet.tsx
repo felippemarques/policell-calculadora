@@ -73,6 +73,9 @@ export function ProposalDetailSheet({
   const [notes, setNotes] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  const { user } = useAuth();
+  const adminEmail = user?.email ?? null;
+
   const { data, isLoading } = useQuery({
     enabled: open,
     queryKey: ["proposal-detail", kind, id],

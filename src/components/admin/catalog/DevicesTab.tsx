@@ -87,7 +87,7 @@ export function DevicesTab() {
   }, [devices]);
 
   const filtered = useMemo(() => {
-    return devices?.filter((d) => {
+    const list = devices?.filter((d) => {
       if (search && !`${d.brand} ${d.model} ${d.storage} ${d.colors}`.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterBrand !== "all" && d.brand !== filterBrand) return false;
       if (filterModel !== "all" && d.model !== filterModel) return false;
@@ -99,8 +99,17 @@ export function DevicesTab() {
       if (priceMin && Number(d.base_price) < Number(priceMin)) return false;
       if (priceMax && Number(d.base_price) > Number(priceMax)) return false;
       return true;
+    }) || [];
+    // Sort: brand → model → storage display_order (smallest → largest) → color
+    return list.slice().sort((a: any, b: any) => {
+      if (a.brand !== b.brand) return String(a.brand).localeCompare(String(b.brand));
+      if (a.model !== b.model) return String(a.model).localeCompare(String(b.model));
+      const ao = storageOrderMap.get(String(a.storage).trim().toLowerCase()) ?? 9999;
+      const bo = storageOrderMap.get(String(b.storage).trim().toLowerCase()) ?? 9999;
+      if (ao !== bo) return ao - bo;
+      return String(a.colors || "").localeCompare(String(b.colors || ""));
     });
-  }, [devices, search, filterBrand, filterModel, filterStorage, filterColor, priceMin, priceMax]);
+  }, [devices, search, filterBrand, filterModel, filterStorage, filterColor, priceMin, priceMax, storageOrderMap]);
 
   const saveMutation = useMutation({
     mutationFn: async (device: any) => {

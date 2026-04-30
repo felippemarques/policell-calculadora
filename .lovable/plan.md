@@ -1,67 +1,54 @@
+## Humanização das perguntas e respostas da avaliação
 
+### Backup (já feito)
+Arquivos CSV gravados em `/mnt/documents/backup-humanizacao-2026-04-30/`:
+- `damage_categories_BACKUP.csv` (perguntas)
+- `damage_deductions_BACKUP.csv` (respostas)
+- `condition_discounts_BACKUP.csv` (condições gerais)
 
-## Refatorar o Drawer de Proposta para o time comercial
+Para reverter, basta me pedir "voltar para o backup" — eu releio os CSVs e restauro os textos originais.
 
-Tornar o `ProposalDetailSheet` num "dossiê do cliente" completo, com tudo que o vendedor precisa antes de ligar — sem nova migration (todos os campos já existem em `leads` / `evaluations`).
+### O que muda
+Apenas o texto (`name`, `option_name`, `help_text`). **Não muda**: IDs, valores de desconto (`%`/`R$`), regras `is_rejected`, `is_required`, `display_order`, ordem das categorias, vínculos pai/filho (`parent_id`, `parent_option_id`).
 
-### O que muda no drawer
+### Perguntas (damage_categories) — 17 atualizadas
 
-**1. Cabeçalho rico** (sempre visível, sticky)
-- Nome do cliente em destaque + telefone clicável (`tel:`) + e-mail (`mailto:`)
-- Badge da modalidade (Troca/Venda) e status (Em andamento / Concluído / Rejeitado)
-- 3 botões grandes lado a lado: **WhatsApp** (mensagem pré-preenchida com aparelho + valor + cupom se houver), **Ligar agora**, **Copiar dossiê**
+| Antes | Depois |
+|---|---|
+| O seu aparelho liga? | 🔌 Seu aparelho liga normalmente? |
+| O aparelho faz e recebe ligações… | 📞 Você consegue fazer e receber ligações pela operadora? |
+| A conectividade com wifi e bluetooth… | 📶 Wi-Fi e Bluetooth funcionam direitinho? |
+| Tem marcas de uso? | 👀 O aparelho tem marcas de uso? |
+| O aparelho está com a parte traseira… | 📱 A traseira ou as laterais têm algum dano? |
+| O aparelho está com a tela quebrada… | 🖥️ A tela do aparelho tem algum problema? |
+| O aparelho possui funcionalidade de Leitores Biométricos… | 🔐 A biometria (Face ID ou digital) está funcionando? |
+| As câmeras do dispositivo apresentam algum problema… | 📸 As câmeras (frontal e traseira) tiram foto bem? |
+| Qual o nível de saúde da sua bateria? | 🔋 Qual a saúde da bateria do seu aparelho? |
+| O dispositivo apresenta mensagem de peça… | ⚙️ Aparece algum aviso de "peça não original" nos ajustes? |
+| Voce consegue fazer pagamentos por proximidade? | 💳 O pagamento por aproximação (NFC) funciona? |
+| Aparece mensagem de qual peça? | 🔧 Qual peça aparece no aviso? |
+| Qual mensagem? *(disparada por "Mensagem de tela")* | 🛠️ E para a tela, é peça genuína ou desconhecida? |
+| Qual mensagemm? *(disparada por "Mensagem de câmera")* | 🛠️ E para a câmera, é peça genuína ou desconhecida? |
+| Qual mensagemmm? *(disparada por "Mensagem de bateria")* | 🛠️ E para a bateria, é peça genuína ou desconhecida? |
+| Como seria esse dano na tela? | 🩹 Como é o dano na tela? |
+| Como seria esse dano? | 🩹 Como é o dano? |
 
-**2. Bloco "Aparelho do cliente"** (novo, sempre visível)
-- Marca, modelo, armazenamento, cor (se houver no catálogo)
-- Preço base do aparelho no catálogo (referência)
-- IMEI em fonte mono **com botão copiar individual** (funciona pra lead E pra evaluation)
-- Aviso visual se IMEI inválido/ausente
+### Respostas (damage_deductions)
+- Sim/Não viram frases com personalidade: "✅ Sim, liga e funciona certinho", "❌ Não estou conseguindo", "❌ Não funciona ou não cadastra", etc.
+- Marcas de uso: ✨ impecável / 🙂 quase invisíveis / 👌 visíveis
+- Bateria: 💚 acima de 90% (ótima) / 💛 80-90% (boa) / 🧡 abaixo de 80% (precisa trocar)
+- Subopções de aviso de peça: 🖥️ Mensagem na tela / 📸 Mensagem na câmera / 🔋 Mensagem na bateria / 🚫 Mensagem no Face ID ou rede celular
+- Sub-sub: ✅ Peça genuína (original) / ⚠️ Peça desconhecida (não original)
+- Danos na tela: 💥 quebrada/manchas/toques fantasmas, ✏️ apenas com riscos
+- Danos traseira: 🔨 traseira trincada, 🔨 lateral com riscos, 🔘 botão faltando
 
-**3. Bloco "Resumo financeiro"** (nas evaluations)
-- Mantém o breakdown atual (base / desconto condição / deduções / final)
-- Adiciona: condição declarada (normal/usado/etc) e número de defeitos
-- Cupom em destaque com copiar
+### Help text (textos de apoio)
+Reescritos em tom amigável onde já existem (Liga, Ligações, Wi-Fi/BT, Câmeras) e adicionados nos que faziam sentido (Traseira/laterais, Tela, Biometria, Aviso de peça).
 
-**4. Bloco "Defeitos declarados"** (já existe, melhorar)
-- Mostrar o impacto monetário/% de cada defeito (não só o nome)
+### Como será aplicado
+1. Uma migration única com ~50 statements `UPDATE` em `damage_categories` e `damage_deductions`
+2. Não toca em estrutura, só em texto
+3. As 3 perguntas duplicadas ("Qual mensagem?" / "Qual mensagemm?" / "Qual mensagemmm?") são na verdade subperguntas legítimas disparadas por opções diferentes (tela/câmera/bateria) — vou renomear cada uma para refletir o contexto, sem deletar nem desativar nenhuma
 
-**5. Bloco "Onde parou" (só nos leads in_progress)** — novo
-- Lista o que já foi preenchido vs faltando: aparelho ✓, IMEI ✓/✗, endereço ✓/✗, termos ✓/✗, contrato ✓/✗
-- Ajuda o comercial saber exatamente o que pedir no WhatsApp
-
-**6. Endereço** (como já está, mas com botão "Copiar endereço")
-
-**7. Linha do tempo curta**
-- Criado em / atualizado em / termos aceitos / contrato aceito / cupom emitido
-- Em uma linha cada, com ícones
-
-**8. Anotação interna + Arquivar** (mantém como está)
-
-### Função "Copiar dossiê"
-
-Gera texto pronto para colar no CRM/WhatsApp interno, ex.:
-```
-Cliente: Carlos Lopes — (11) 97187-2128
-Aparelho: Apple iPhone 15 Pro Max 128GB
-IMEI: 356335104637640
-Modalidade: Troca · Em andamento
-Valor estimado: R$ 2.808,00 (cupom: ABC123)
-Endereço: Rua X, 123 — Assis/SP
-Pendente: contrato não aceito
-```
-
-### WhatsApp pré-preenchido (melhor)
-
-Mensagem adaptada por contexto:
-- **Lead parado**: "Olá Carlos! Vi que você começou a avaliar um iPhone 15 Pro Max 128GB. Posso te ajudar a finalizar?"
-- **Evaluation com cupom**: "Olá Carlos! Seu cupom **ABC123** de R$ 2.808 para o iPhone 15 Pro Max está ativo. Posso te ajudar a usar?"
-- **Rejeitado**: "Olá Carlos! Sobre seu iPhone 15 Pro Max — temos outras opções, posso te apresentar?"
-
-### Arquivos afetados
-
-- `src/components/admin/ProposalDetailSheet.tsx` — refatoração completa do conteúdo
-- `src/lib/whatsapp.ts` — adicionar `buildContextualMessage(kind, lead/eval, device)` 
-- `src/lib/proposal-dossier.ts` (novo, ~30 linhas) — função `buildDossierText(...)` reaproveitável
-
-Sem mudanças no banco, sem novas dependências.
-
+### Como reverter depois
+Posso restaurar tudo a partir dos CSVs em `/mnt/documents/backup-humanizacao-2026-04-30/` rodando uma migration de UPDATE inversa. É só pedir.

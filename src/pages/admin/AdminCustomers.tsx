@@ -67,6 +67,8 @@ import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
 import { CommercialAdjustmentSection } from "@/components/admin/CommercialAdjustmentSection";
 import { ContractDownloadButtons } from "@/components/admin/ContractDownloadButtons";
 import { useAuth } from "@/hooks/use-auth";
+import { parseProposalOverride } from "@/lib/proposal-override";
+import { ArrowLeftRight, ShoppingBag, Palette, HardDrive } from "lucide-react";
 
 
 type LeadRow = {
@@ -274,6 +276,17 @@ const AdminCustomers = () => {
       return (data || []) as unknown as DamageOption[];
     },
   });
+
+  const { data: colors = [] } = useQuery({
+    queryKey: ["admin-leads-colors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("colors").select("id, name, hex_code");
+      if (error) throw error;
+      return (data || []) as Array<{ id: string; name: string; hex_code: string | null }>;
+    },
+  });
+
+  const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -691,6 +704,7 @@ const AdminCustomers = () => {
               parsed={selectedParsed}
               evaluation={selectedEvaluation}
               adminEmail={adminEmail}
+              colorMap={colorMap}
               onSendProposal={() => setProposalDialogOpen(true)}
               onClose={() => setSelectedLead(null)}
             />
@@ -904,6 +918,7 @@ function LeadDetail({
   parsed,
   evaluation,
   adminEmail,
+  colorMap,
   onSendProposal,
   onClose,
 }: {
@@ -913,11 +928,29 @@ function LeadDetail({
   parsed: ParsedAnswer[];
   evaluation: EvaluationRow | null;
   adminEmail: string | null;
+  colorMap: Map<string, { id: string; name: string; hex_code: string | null }>;
   onSendProposal: () => void;
   onClose: () => void;
 }) {
   const meta = STATUS_META[lead.status] ?? STATUS_META.in_progress;
   const Icon = meta.icon;
+
+  // Flow type — vem de assessment_responses.flow_type (ou evaluations.flow_type)
+  const flowType: "trade" | "sale" =
+    (evaluation?.flow_type as any) ||
+    ((lead.assessment_responses as any)?.flow_type as any) ||
+    "trade";
+  const isTrade = flowType === "trade";
+  const flowLabel = isTrade ? "Troca" : "Venda direta";
+  const FlowIcon = isTrade ? ArrowLeftRight : ShoppingBag;
+
+  // Cor escolhida (id em assessment_responses.selectedColorId, nome em colorMap)
+  const colorId = (lead.assessment_responses as any)?.selectedColorId as string | null | undefined;
+  const chosenColor = colorId ? colorMap.get(colorId) : null;
+
+  // Override comercial (se houver) — para destacar bônus extra no resumo
+  const override = parseProposalOverride(evaluation?.internal_notes ?? null);
+  const extraBonus = override?.extraBonus ?? 0;
 
   const canSendProposal =
     lead.status !== "rejected" &&
@@ -951,6 +984,18 @@ function LeadDetail({
               >
                 <Icon className="h-3 w-3" />
                 {meta.label}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 font-normal",
+                  isTrade
+                    ? "bg-violet-100 text-violet-800 border-violet-200"
+                    : "bg-blue-100 text-blue-800 border-blue-200",
+                )}
+              >
+                <FlowIcon className="h-3 w-3" />
+                {flowLabel}
               </Badge>
             </DialogDescription>
           </div>
@@ -1019,24 +1064,66 @@ function LeadDetail({
                 Aparelho selecionado
               </h4>
               {device ? (
-                <Card className="p-4 bg-muted/30">
+                <Card className="p-4 bg-muted/30 space-y-3">
                   <div className="flex items-start gap-3">
                     <Smartphone className="h-5 w-5 mt-0.5 text-primary" />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold">
                         {device.brand} {device.model}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Armazenamento: {device.storage}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Preço base:{" "}
-                        {device.base_price.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isTrade
+                          ? "Aparelho que o cliente vai entregar na troca"
+                          : "Aparelho que o cliente quer vender"}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Specs grid */}
+                  <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-border/60">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Armazenamento
+                        </p>
+                        <p className="font-medium truncate">{device.storage || "—"}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Cor escolhida
+                        </p>
+                        {chosenColor ? (
+                          <div className="flex items-center gap-1.5">
+                            {chosenColor.hex_code && (
+                              <span
+                                className="inline-block h-3 w-3 rounded-full border border-border"
+                                style={{ backgroundColor: chosenColor.hex_code }}
+                              />
+                            )}
+                            <p className="font-medium truncate">{chosenColor.name}</p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Não informada</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {isTrade ? "Crédito base na troca" : "Preço base de compra"}
+                    </span>
+                    <span className="font-bold text-primary tabular-nums">
+                      {device.base_price.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
                   </div>
                 </Card>
               ) : (
@@ -1196,15 +1283,83 @@ function LeadDetail({
             {/* Resumo financeiro */}
             {evaluation && (
               <section className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Resumo financeiro
-                </h4>
-                <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
-                  <FinanceRow label="Preço base" value={formatBRLNum(evaluation.base_price)} />
-                  <FinanceRow label="Desconto de condição" value={`− ${formatBRLNum(evaluation.condition_discount)}`} />
-                  <FinanceRow label="Total de deduções" value={`− ${formatBRLNum(evaluation.total_deductions)}`} />
-                  <FinanceRow label="Valor final" value={formatBRLNum(evaluation.final_value)} bold />
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Resumo financeiro
+                  </h4>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1 text-[10px]",
+                      isTrade
+                        ? "bg-violet-50 text-violet-700 border-violet-200"
+                        : "bg-blue-50 text-blue-700 border-blue-200",
+                    )}
+                  >
+                    <FlowIcon className="h-3 w-3" />
+                    {flowLabel}
+                  </Badge>
                 </div>
+
+                <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
+                  <FinanceRow
+                    label={isTrade ? "Crédito base do aparelho" : "Preço base de compra"}
+                    value={formatBRLNum(override?.original.basePrice ?? evaluation.base_price)}
+                  />
+                  {Number(evaluation.condition_discount) > 0 && (
+                    <FinanceRow
+                      label="Desconto por condição"
+                      value={`− ${formatBRLNum(evaluation.condition_discount)}`}
+                    />
+                  )}
+                  {Number(evaluation.total_deductions) > 0 && (
+                    <FinanceRow
+                      label="Deduções por defeitos"
+                      value={`− ${formatBRLNum(evaluation.total_deductions)}`}
+                    />
+                  )}
+
+                  {/* Valor original que o cliente fechou */}
+                  <FinanceRow
+                    label={
+                      override
+                        ? isTrade
+                          ? "Crédito original ao cliente"
+                          : "Valor original ao cliente"
+                        : isTrade
+                          ? "Crédito final ao cliente"
+                          : "Valor final ao cliente"
+                    }
+                    value={formatBRLNum(override?.original.finalValue ?? evaluation.final_value)}
+                    bold={!override}
+                  />
+
+                  {/* Bônus extra do comercial — só aparece quando há override */}
+                  {override && extraBonus !== 0 && (
+                    <FinanceRow
+                      label="Bônus extra do comercial"
+                      value={`${extraBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(extraBonus))}`}
+                      accent={extraBonus >= 0 ? "success" : "destructive"}
+                    />
+                  )}
+
+                  {/* Valor final efetivo (após ajuste) */}
+                  {override && (
+                    <FinanceRow
+                      label={isTrade ? "Crédito final negociado" : "Valor final negociado"}
+                      value={formatBRLNum(evaluation.final_value)}
+                      bold
+                    />
+                  )}
+                </div>
+
+                {evaluation.coupon_code && (
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    {isTrade
+                      ? "O cliente usa o cupom como crédito ao adquirir um novo aparelho."
+                      : "O cliente recebe o valor após a entrega e validação do aparelho."}
+                  </p>
+                )}
               </section>
             )}
 
@@ -1230,16 +1385,51 @@ function LeadDetail({
   );
 }
 
-function FinanceRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function FinanceRow({
+  label,
+  value,
+  bold,
+  accent,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  accent?: "success" | "destructive";
+}) {
+  const accentText =
+    accent === "success"
+      ? "text-success"
+      : accent === "destructive"
+        ? "text-destructive"
+        : null;
+  const accentBg =
+    accent === "success"
+      ? "bg-success/5"
+      : accent === "destructive"
+        ? "bg-destructive/5"
+        : null;
   return (
-    <div className={cn("flex items-center justify-between px-3 py-2", bold && "bg-muted/40")}>
-      <span className={cn("text-muted-foreground", bold && "text-foreground font-semibold")}>
+    <div
+      className={cn(
+        "flex items-center justify-between px-3 py-2",
+        bold && "bg-muted/40",
+        accentBg,
+      )}
+    >
+      <span
+        className={cn(
+          "text-muted-foreground",
+          bold && "text-foreground font-semibold",
+          accentText && `${accentText} font-medium`,
+        )}
+      >
         {label}
       </span>
       <span
         className={cn(
           "tabular-nums",
           bold ? "font-bold text-primary" : "text-foreground",
+          accentText && `${accentText} font-semibold`,
         )}
       >
         {value}

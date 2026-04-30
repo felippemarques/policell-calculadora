@@ -12,6 +12,7 @@ export interface DeviceWithImage {
   trade_price: number;
   sale_price: number;
   is_visible: boolean;
+  created_at: string;
   image_url: string | null;
 }
 

@@ -200,6 +200,8 @@ const DEFAULT_VISIBLE: Record<ColumnKey, boolean> = {
 
 const AdminCustomers = () => {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const adminEmail = user?.email ?? null;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -376,9 +378,10 @@ const AdminCustomers = () => {
   const selectedDevice = selectedLead?.device_id
     ? deviceMap.get(selectedLead.device_id) ?? null
     : null;
-  const selectedFinalValue = selectedLead
-    ? finalValueMap.get(selectedLead.customer_email)
-    : undefined;
+  const selectedEvaluation = selectedLead
+    ? evaluationByEmail.get(selectedLead.customer_email) ?? null
+    : null;
+  const selectedFinalValue = selectedEvaluation?.final_value;
   const selectedDeviceLabel = selectedDevice
     ? `${selectedDevice.brand} ${selectedDevice.model} ${selectedDevice.storage}`.trim()
     : "Aparelho não informado";

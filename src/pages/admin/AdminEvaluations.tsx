@@ -186,18 +186,48 @@ const AdminEvaluations = () => {
   const qc = useQueryClient();
   const [revokeTarget, setRevokeTarget] = useState<Evaluation | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [archivedFilter, setArchivedFilter] = useState<"active" | "archived" | "all">("active");
 
   const { data: evaluations = [], isLoading } = useQuery({
     queryKey: ["admin-evaluations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evaluations")
-        .select("id, created_at, customer_name, customer_email, customer_phone, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
+        .select("id, created_at, customer_name, customer_email, customer_phone, imei, archived_at, final_value, coupon_code, coupon_id, status, devices(brand, model, storage)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as unknown as Evaluation[];
     },
   });
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
+      const { error } = await (supabase.rpc as any)("archive_evaluation", {
+        _evaluation_id: id,
+        _archive: archive,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin-evaluations"] });
+      toast.success(vars.archive ? "Avaliação arquivada." : "Avaliação restaurada.");
+    },
+    onError: (e: any) => toast.error(`Falha ao arquivar: ${e.message}`),
+  });
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return evaluations.filter((ev) => {
+      if (archivedFilter === "active" && ev.archived_at) return false;
+      if (archivedFilter === "archived" && !ev.archived_at) return false;
+      if (term) {
+        const hay = `${ev.customer_name} ${ev.customer_email} ${ev.customer_phone} ${ev.imei ?? ""} ${ev.coupon_code ?? ""}`.toLowerCase();
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [evaluations, search, archivedFilter]);
 
   const revokeMutation = useMutation({
     mutationFn: async (ev: Evaluation) => {

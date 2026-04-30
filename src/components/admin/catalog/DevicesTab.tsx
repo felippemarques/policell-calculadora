@@ -532,7 +532,7 @@ export function DevicesTab() {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Nenhum aparelho encontrado.</td></tr>
               )}
               {filtered?.map((d) => (
-                <tr key={d.id} className={`hover:bg-muted/30 transition-colors ${selected.has(d.id) ? "bg-primary/5" : ""}`}>
+                <tr key={d.id} className={`hover:bg-muted/30 transition-colors ${selected.has(d.id) ? "bg-primary/5" : ""} ${(d as any).is_visible === false ? "opacity-60" : ""}`}>
                   <td className="px-3 py-3">
                     <Checkbox checked={selected.has(d.id)} onCheckedChange={() => toggleSelect(d.id)} />
                   </td>
@@ -546,6 +546,19 @@ export function DevicesTab() {
                   <td className="px-4 py-3"><span className="bg-muted px-2 py-0.5 rounded text-xs">{d.storage}</span></td>
                   <td className="px-4 py-3">R$ {Number(d.base_price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{d.colors || "—"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={(d as any).is_visible !== false}
+                        onCheckedChange={(checked) => toggleVisibilityMutation.mutate({ id: d.id, is_visible: checked })}
+                      />
+                      {(d as any).is_visible === false ? (
+                        <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5 text-primary" />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" title="Gerenciar variações" onClick={() => startManageVariations(d.brand, d.model)}>

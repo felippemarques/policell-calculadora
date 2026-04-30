@@ -25,6 +25,7 @@ import {
   type CatalogModel,
 } from "@/hooks/use-catalog-tree";
 import { ModelStorageRow } from "./ModelStorageRow";
+import { ModelImageUploader } from "./ModelImageUploader";
 
 function ModelNode({ brandId, model }: { brandId: string; model: CatalogModel }) {
   const qc = useQueryClient();

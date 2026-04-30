@@ -98,7 +98,7 @@ export function ModelStorageRow({ brandId, storage }: Props) {
   const salePrice = storage.sale_price ?? storage.base_price;
 
   return (
-    <div className="rounded-md border border-border bg-card/50">
+    <div className={`rounded-md border border-border bg-card/50 ${storage.is_visible ? "" : "opacity-60"}`}>
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <button
           type="button"

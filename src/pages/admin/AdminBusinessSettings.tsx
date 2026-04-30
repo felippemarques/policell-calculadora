@@ -59,6 +59,7 @@ const DEFAULTS: FormState = {
   business_show_realtime_deductions: "true",
   business_show_reject_label: "true",
   business_show_no_deduction_label: "true",
+  business_show_device_base_price: "false",
   flow_trade_enabled: "true",
   flow_trade_title: "Trocar por outro aparelho",
   flow_trade_description:

@@ -164,6 +164,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           base_price: existing ? Number(existing.base_price) : (globalPrice ? Number(globalPrice) : 0),
           active: true,
           wasActive: Boolean(existing),
+          is_visible: existing ? existing.is_visible !== false : true,
         });
       }
     }

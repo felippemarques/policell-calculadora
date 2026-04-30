@@ -13,22 +13,19 @@ import {
   parseProposalOverride,
   serializeOverride,
   stripOverrideBlock,
-  bonusToMoney,
-  recalcFinalValue,
   type BonusType,
   type ProposalOverrideRecord,
 } from "@/lib/proposal-override";
 
 interface Props {
   evaluation: any;
-  /** E-mail do admin logado (para auditoria). */
   adminEmail?: string | null;
 }
 
 /**
- * Bloco "Ajuste comercial" que vive dentro do ProposalDetailSheet
- * (apenas para evaluations). Permite ao comercial sobrescrever preço base
- * e bônus para conceder um bônus extra e fechar o negócio.
+ * Bloco "Ajuste comercial" — concede um BÔNUS EXTRA sobre o valor final que
+ * o cliente já fechou (preço base − defeitos − condição + bônus do fluxo).
+ * Não recalcula a proposta: apenas SOMA por cima do final_value vigente.
  */
 export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
   const qc = useQueryClient();
@@ -37,8 +34,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
     [evaluation?.internal_notes],
   );
 
-  // Snapshot original: se já houver um override salvo, usamos `original` dele;
-  // caso contrário, usamos os valores vivos da evaluation (que ainda são os do cliente).
+  // Snapshot do "valor final do cliente" (antes de qualquer bônus extra do comercial).
   const original = useMemo(() => {
     if (existingOverride) return existingOverride.original;
     return {
@@ -49,12 +45,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
     };
   }, [existingOverride, evaluation]);
 
-  const conditionDiscount = Number(evaluation?.condition_discount) || 0;
-  const totalDeductions = Number(evaluation?.total_deductions) || 0;
-
-  const [basePrice, setBasePrice] = useState<number>(
-    existingOverride?.override.basePrice ?? original.basePrice,
-  );
+  // Bônus extra por cima do valor final do cliente.
   const [bonusType, setBonusType] = useState<BonusType>(
     existingOverride?.override.bonusType ?? "money",
   );
@@ -62,13 +53,15 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
     existingOverride?.override.bonusValue ?? 0,
   );
 
-  const bonusMoney = bonusToMoney(basePrice, bonusType, bonusValue);
-  const newFinalValue = recalcFinalValue({
-    basePrice,
-    conditionDiscount,
-    totalDeductions,
-    bonusMoney,
-  });
+  // Cálculo: bônus em R$ é sempre SOMADO ao final do cliente.
+  // Quando %, a porcentagem é aplicada sobre o final do cliente (não sobre o base).
+  const bonusMoney = useMemo(() => {
+    if (!bonusValue || bonusValue <= 0) return 0;
+    if (bonusType === "money") return Math.round(bonusValue * 100) / 100;
+    return Math.round(original.finalValue * (bonusValue / 100) * 100) / 100;
+  }, [bonusType, bonusValue, original.finalValue]);
+
+  const newFinalValue = Math.round((original.finalValue + bonusMoney) * 100) / 100;
   const extraBonus = Math.round((newFinalValue - original.finalValue) * 100) / 100;
 
   const saveMut = useMutation({
@@ -76,7 +69,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
       const record: ProposalOverrideRecord = {
         original,
         override: {
-          basePrice,
+          basePrice: original.basePrice, // mantém o preço base original
           bonusType,
           bonusValue,
           bonusValueMoney: bonusMoney,
@@ -90,17 +83,19 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
       const newNotes = serializeOverride(freeText, record);
       const { error } = await (supabase.rpc as any)("apply_proposal_override", {
         _evaluation_id: evaluation.id,
-        _base_price: basePrice,
+        _base_price: original.basePrice,
         _final_value: newFinalValue,
         _internal_notes: newNotes,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Ajuste salvo", description: "Os novos valores foram aplicados à proposta." });
+      toast({ title: "Bônus extra salvo", description: "O cupom passa a usar o novo valor total." });
+      // Invalida TODAS as queries de evaluations usadas no admin
       qc.invalidateQueries({ queryKey: ["proposal-detail"] });
       qc.invalidateQueries({ queryKey: ["admin-customer-view-evaluations"] });
       qc.invalidateQueries({ queryKey: ["admin-evaluations"] });
+      qc.invalidateQueries({ queryKey: ["admin-leads-evaluations"] });
     },
     onError: (e: any) =>
       toast({ title: "Erro ao salvar", description: e?.message ?? "—", variant: "destructive" }),
@@ -119,21 +114,19 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Ajuste revertido" });
-      // Reset local state
-      setBasePrice(original.basePrice);
+      toast({ title: "Bônus extra removido" });
       setBonusType("money");
       setBonusValue(0);
       qc.invalidateQueries({ queryKey: ["proposal-detail"] });
       qc.invalidateQueries({ queryKey: ["admin-customer-view-evaluations"] });
       qc.invalidateQueries({ queryKey: ["admin-evaluations"] });
+      qc.invalidateQueries({ queryKey: ["admin-leads-evaluations"] });
     },
     onError: (e: any) =>
       toast({ title: "Erro ao reverter", description: e?.message ?? "—", variant: "destructive" }),
   });
 
   const dirty =
-    basePrice !== (existingOverride?.override.basePrice ?? original.basePrice) ||
     bonusType !== (existingOverride?.override.bonusType ?? "money") ||
     bonusValue !== (existingOverride?.override.bonusValue ?? 0);
 
@@ -151,25 +144,19 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Conceda um bônus extra para fechar o negócio. O cupom usará o novo valor total;
+        Conceda um bônus extra <strong>por cima</strong> do valor final que o cliente fechou
+        (já com descontos de defeitos, condição e bônus do fluxo). O cupom usará o novo total;
         o contrato ajustado mostra o histórico “de / para”.
       </p>
 
-      {/* Preço base */}
-      <div className="space-y-1.5">
-        <Label className="text-xs">Preço base</Label>
-        <CurrencyInput
-          value={basePrice}
-          onValueChange={(v) => setBasePrice(v || 0)}
-        />
-        <p className="text-[11px] text-muted-foreground">
-          Original: {formatBRL(original.basePrice)}
-        </p>
+      <div className="rounded-md bg-background border border-border p-2.5 text-xs flex items-center justify-between">
+        <span className="text-muted-foreground">Valor final atual do cliente</span>
+        <span className="font-semibold tabular-nums">{formatBRL(original.finalValue)}</span>
       </div>
 
-      {/* Bônus */}
+      {/* Bônus extra */}
       <div className="space-y-1.5">
-        <Label className="text-xs">Bônus extra</Label>
+        <Label className="text-xs">Bônus extra do comercial</Label>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
             <button
@@ -211,7 +198,9 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Original: {original.bonusPercent > 0 ? `${original.bonusPercent}% (${formatBRL(original.bonusValue)})` : formatBRL(original.bonusValue)}
+          {bonusType === "percent"
+            ? "% calculado sobre o valor final atual do cliente."
+            : "Valor somado por cima do valor final atual do cliente."}
         </p>
       </div>
 
@@ -244,7 +233,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
           size="sm"
         >
           {saveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          Salvar ajuste
+          Salvar bônus extra
         </Button>
         {existingOverride && (
           <Button
@@ -255,7 +244,7 @@ export function CommercialAdjustmentSection({ evaluation, adminEmail }: Props) {
             className="gap-1.5"
           >
             {revertMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-            Reverter
+            Remover
           </Button>
         )}
       </div>

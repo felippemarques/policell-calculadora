@@ -681,23 +681,29 @@ const AdminCustomers = () => {
         </div>
       </Card>
 
-      {/* Detail Sheet */}
-      <Sheet
+      {/* Detail — Full screen modal */}
+      <Dialog
         open={!!selectedLead}
         onOpenChange={(o) => !o && setSelectedLead(null)}
       >
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <DialogContent
+          className="p-0 gap-0 max-w-none w-[96vw] h-[94vh] sm:rounded-xl flex flex-col overflow-hidden"
+          showCloseButton={false}
+        >
           {selectedLead && (
             <LeadDetail
               lead={selectedLead}
               device={selectedDevice}
               finalValue={selectedFinalValue}
               parsed={selectedParsed}
+              evaluation={selectedEvaluation}
+              adminEmail={adminEmail}
               onSendProposal={() => setProposalDialogOpen(true)}
+              onClose={() => setSelectedLead(null)}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Proposal Confirmation Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>

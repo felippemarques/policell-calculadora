@@ -469,6 +469,14 @@ export function ProposalDetailSheet({
                 </section>
               )}
 
+              {/* Ajuste comercial + download de PDFs */}
+              {evalRow && (
+                <>
+                  <CommercialAdjustmentSection evaluation={evalRow} adminEmail={adminEmail} />
+                  <ContractDownloadButtons evaluation={evalRow} />
+                </>
+              )}
+
               {/* Defeitos detalhados */}
               {damages.length > 0 && (
                 <section className="space-y-2">

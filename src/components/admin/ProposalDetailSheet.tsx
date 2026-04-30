@@ -335,23 +335,33 @@ export function ProposalDetailSheet({
               )}
 
               {/* Coupon highlight */}
-              {couponCode && (
-                <div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                    <Tag className="h-3 w-3" /> Cupom
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(couponCode, "coupon", "Cupom copiado")}
-                    className="w-full text-left font-mono text-lg font-bold tracking-wider text-primary hover:underline"
-                  >
-                    {couponCode}
-                  </button>
-                  {typeof finalValue === "number" && (
-                    <p className="text-2xl font-bold text-foreground">{formatBRL(finalValue)}</p>
-                  )}
-                </div>
-              )}
+              {couponCode && (() => {
+                const ov = parseProposalOverride((evalRow as any)?.internal_notes);
+                return (
+                  <div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                        <Tag className="h-3 w-3" /> Cupom
+                      </p>
+                      {ov && (
+                        <Badge variant="outline" className="text-[10px] bg-accent/10 text-accent border-accent/40">
+                          Ajustado pelo comercial
+                        </Badge>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(couponCode, "coupon", "Cupom copiado")}
+                      className="w-full text-left font-mono text-lg font-bold tracking-wider text-primary hover:underline"
+                    >
+                      {couponCode}
+                    </button>
+                    {typeof finalValue === "number" && (
+                      <p className="text-2xl font-bold text-foreground">{formatBRL(finalValue)}</p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Aparelho do cliente */}
               <section className="space-y-2">

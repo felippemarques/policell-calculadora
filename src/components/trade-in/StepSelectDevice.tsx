@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette } from "lucide-react";
+import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useColorsByDevice } from "@/hooks/use-trade-in-data";
+import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { hasAnyAnswers } from "@/lib/trade-in-sanity";
 import { emptyAnswers } from "@/lib/trade-in-pricing";
 import {

@@ -1385,16 +1385,51 @@ function LeadDetail({
   );
 }
 
-function FinanceRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function FinanceRow({
+  label,
+  value,
+  bold,
+  accent,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  accent?: "success" | "destructive";
+}) {
+  const accentText =
+    accent === "success"
+      ? "text-success"
+      : accent === "destructive"
+        ? "text-destructive"
+        : null;
+  const accentBg =
+    accent === "success"
+      ? "bg-success/5"
+      : accent === "destructive"
+        ? "bg-destructive/5"
+        : null;
   return (
-    <div className={cn("flex items-center justify-between px-3 py-2", bold && "bg-muted/40")}>
-      <span className={cn("text-muted-foreground", bold && "text-foreground font-semibold")}>
+    <div
+      className={cn(
+        "flex items-center justify-between px-3 py-2",
+        bold && "bg-muted/40",
+        accentBg,
+      )}
+    >
+      <span
+        className={cn(
+          "text-muted-foreground",
+          bold && "text-foreground font-semibold",
+          accentText && `${accentText} font-medium`,
+        )}
+      >
         {label}
       </span>
       <span
         className={cn(
           "tabular-nums",
           bold ? "font-bold text-primary" : "text-foreground",
+          accentText && `${accentText} font-semibold`,
         )}
       >
         {value}

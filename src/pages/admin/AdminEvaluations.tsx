@@ -353,6 +353,9 @@ const AdminEvaluations = () => {
                         <td className="px-4 py-3 text-muted-foreground">
                           {ev.devices ? `${ev.devices.brand} ${ev.devices.model} ${ev.devices.storage}` : "—"}
                         </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {ev.imei || "—"}
+                        </td>
                         <td className="px-4 py-3 font-medium tabular-nums">
                           {ev.final_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                         </td>
@@ -405,6 +408,25 @@ const AdminEvaluations = () => {
                                 Revogar
                               </Button>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={ev.archived_at ? "Restaurar" : "Arquivar/Excluir"}
+                              onClick={() =>
+                                archiveMutation.mutate({ id: ev.id, archive: !ev.archived_at })
+                              }
+                              className={cn(
+                                ev.archived_at
+                                  ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                  : "text-destructive hover:text-destructive hover:bg-destructive/10",
+                              )}
+                            >
+                              {ev.archived_at ? (
+                                <ArchiveRestore className="h-3.5 w-3.5" />
+                              ) : (
+                                <Archive className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
                           </div>
                         </td>
                       </tr>

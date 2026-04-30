@@ -302,6 +302,7 @@ const AdminCustomers = () => {
     onError: (e: any) => toast.error(`Falha ao arquivar: ${e.message}`),
   });
 
+  const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
     [devices]
   );

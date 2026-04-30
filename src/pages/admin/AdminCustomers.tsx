@@ -38,13 +38,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -74,7 +67,7 @@ import { buildWhatsAppLink, openProposalInNewTab } from "@/lib/proposal";
 import { CommercialAdjustmentSection } from "@/components/admin/CommercialAdjustmentSection";
 import { ContractDownloadButtons } from "@/components/admin/ContractDownloadButtons";
 import { useAuth } from "@/hooks/use-auth";
-import { Badge as UIBadge } from "@/components/ui/badge";
+
 
 type LeadRow = {
   id: string;

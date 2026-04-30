@@ -63,13 +63,32 @@ export function VariantColorChips({ modelStorageId, brandId, colors }: Props) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const toggleColorVisibility = useMutation({
+    mutationFn: async ({ id, is_visible }: { id: string; is_visible: boolean }) => {
+      const { error } = await supabase
+        .from("variant_colors")
+        .update({ is_visible: !is_visible })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CATALOG_TREE_KEY });
+      qc.invalidateQueries({ queryKey: ["devices"] });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {colors.length === 0 && (
         <span className="text-xs text-muted-foreground">Nenhuma cor cadastrada</span>
       )}
       {colors.map((c) => (
-        <Badge key={c.variant_color_id} variant="secondary" className="gap-1.5 pr-1">
+        <Badge
+          key={c.variant_color_id}
+          variant="secondary"
+          className={`gap-1.5 pr-1 ${c.is_visible ? "" : "opacity-50 line-through"}`}
+        >
           {c.hex_code && (
             <span
               className="inline-block h-3 w-3 rounded-full border border-border"
@@ -79,9 +98,21 @@ export function VariantColorChips({ modelStorageId, brandId, colors }: Props) {
           <span>{c.name}</span>
           <button
             type="button"
+            onClick={() =>
+              toggleColorVisibility.mutate({ id: c.variant_color_id, is_visible: c.is_visible })
+            }
+            className="ml-0.5 rounded-sm p-0.5 hover:bg-foreground/10"
+            aria-label={c.is_visible ? `Ocultar ${c.name}` : `Mostrar ${c.name}`}
+            title={c.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
+          >
+            {c.is_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+          </button>
+          <button
+            type="button"
             onClick={() => removeColor.mutate(c.variant_color_id)}
             className="ml-0.5 rounded-sm p-0.5 hover:bg-destructive/20"
             aria-label={`Remover ${c.name}`}
+            title="Remover cor"
           >
             <X className="h-3 w-3" />
           </button>

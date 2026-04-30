@@ -644,11 +644,7 @@ export function TradeInWizard() {
       ? 100
       : Math.round(((displayStepIndex + 1) / (visibleStepsCount + 1)) * 100);
 
-  const showPriceFooter =
-    (businessSettings?.showRealtimeDeductions ?? true) &&
-    step === 3 &&
-    (subScreen === "condition" || subScreen === "damages") &&
-    basePrice > 0;
+  // (Removido) showPriceFooter — o rodapé flutuante de valor estimado foi descontinuado.
 
   // Build contract data once (used by step 8)
   const deviceLabel = selectedDevice

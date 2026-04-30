@@ -563,6 +563,13 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
                         disabled={!r.active}
                       />
                     </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={r.is_visible}
+                        onCheckedChange={() => toggleRowVisible(r.key)}
+                        disabled={!r.active}
+                      />
+                    </TableCell>
                     {isEditMode && (
                       <TableCell>
                         {r.existingId ? (

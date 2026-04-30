@@ -309,6 +309,9 @@ const AdminCustomers = () => {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return leads.filter((l) => {
+      if (archivedFilter === "active" && l.archived_at) return false;
+      if (archivedFilter === "archived" && !l.archived_at) return false;
+
       if (statusFilter !== "all") {
         if (statusFilter === "lead_only") {
           if (!(l.status === "in_progress" && !l.device_id)) return false;
@@ -320,7 +323,7 @@ const AdminCustomers = () => {
       }
 
       if (term) {
-        const hay = `${l.customer_name} ${l.customer_email} ${l.customer_phone}`.toLowerCase();
+        const hay = `${l.customer_name} ${l.customer_email} ${l.customer_phone} ${l.imei ?? ""}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
 
@@ -331,7 +334,7 @@ const AdminCustomers = () => {
 
       return true;
     });
-  }, [leads, search, statusFilter, brandFilter, deviceMap]);
+  }, [leads, search, statusFilter, brandFilter, archivedFilter, deviceMap]);
 
   const formatBRL = (n: number | null | undefined) =>
     typeof n === "number"

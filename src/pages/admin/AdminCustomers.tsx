@@ -89,6 +89,7 @@ type LeadRow = {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  [k: string]: any;
 };
 
 type DeviceRow = {

@@ -141,7 +141,7 @@ export function StepEvaluationChecklist({
   const { data: groupsConfig } = useEvaluationGroupsConfig();
   const { data: businessSettings } = useBusinessSettings();
   const showRejectLabel = businessSettings?.showRejectLabel ?? true;
-  const showNoDeductionLabel = businessSettings?.showNoDeductionLabel ?? true;
+  // showNoDeductionLabel não é mais usado — badges de "Sem dedução" foram removidos do fluxo público.
 
   const adminOrderedSubScreens = useMemo<SubScreen[]>(() => {
     const order = groupsConfig?.order ?? ["conditions", "defects", "rejection"];

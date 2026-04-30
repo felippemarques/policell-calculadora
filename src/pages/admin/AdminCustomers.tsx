@@ -20,6 +20,8 @@ import {
   ExternalLink,
   Loader2,
   Sparkles,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -195,6 +197,7 @@ const AdminCustomers = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [archivedFilter, setArchivedFilter] = useState<"active" | "archived" | "all">("active");
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [visible, setVisible] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);

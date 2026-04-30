@@ -310,6 +310,7 @@ export function DeviceMatrixGenerator({ onClose, editModel, editBrand, existingD
           storage: r.storage,
           colors: r.color,
           base_price: r.base_price,
+          is_visible: r.is_visible,
         }));
         const { error } = await supabase.from("devices").insert(inserts);
         if (error) throw error;

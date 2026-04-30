@@ -137,6 +137,9 @@ export function DevicesTab() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase.from("devices").delete().eq("id", id);
       if (error) throw error;
     },

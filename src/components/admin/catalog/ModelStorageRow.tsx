@@ -73,6 +73,27 @@ export function ModelStorageRow({ brandId, storage }: Props) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const toggleVisibility = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("model_storages")
+        .update({ is_visible: !storage.is_visible })
+        .eq("id", storage.model_storage_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CATALOG_TREE_KEY });
+      qc.invalidateQueries({ queryKey: ["devices"] });
+      toast({
+        title: storage.is_visible ? "Capacidade ocultada" : "Capacidade visível",
+        description: storage.is_visible
+          ? "Não aparece mais para o cliente."
+          : "Voltou a aparecer na calculadora.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const tradePrice = storage.trade_price ?? storage.base_price;
   const salePrice = storage.sale_price ?? storage.base_price;
 

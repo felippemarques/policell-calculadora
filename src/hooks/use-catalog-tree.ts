@@ -7,6 +7,7 @@ export interface CatalogColor {
   name: string;
   hex_code: string | null;
   display_order: number;
+  is_visible: boolean;
 }
 
 export interface CatalogStorage {
@@ -17,6 +18,9 @@ export interface CatalogStorage {
   trade_price: number;
   sale_price: number;
   display_order: number;
+  /** display_order of the global `storages` row (used to sort smallest → largest) */
+  storage_global_order: number;
+  is_visible: boolean;
   colors: CatalogColor[];
 }
 
@@ -24,6 +28,7 @@ export interface CatalogModel {
   model_id: string;
   model_name: string;
   display_order: number;
+  image_url: string | null;
   storages: CatalogStorage[];
 }
 

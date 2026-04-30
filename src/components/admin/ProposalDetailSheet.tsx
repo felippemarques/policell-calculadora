@@ -35,9 +35,6 @@ import { openWhatsapp, buildContextualMessage } from "@/lib/whatsapp";
 import { buildDossierText, buildAddressText } from "@/lib/proposal-dossier";
 import { formatImei, isValidImei } from "@/lib/imei";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
-import { CommercialAdjustmentSection } from "./CommercialAdjustmentSection";
-import { ContractDownloadButtons } from "./ContractDownloadButtons";
 import { parseProposalOverride } from "@/lib/proposal-override";
 
 export type ProposalKind = "lead" | "evaluation";
@@ -72,9 +69,6 @@ export function ProposalDetailSheet({
   const qc = useQueryClient();
   const [notes, setNotes] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
-  const { user } = useAuth();
-  const adminEmail = user?.email ?? null;
 
   const { data, isLoading } = useQuery({
     enabled: open,
@@ -467,14 +461,6 @@ export function ProposalDetailSheet({
                     <BreakdownRow label="Valor final" value={formatBRL(evalRow.final_value)} bold />
                   </div>
                 </section>
-              )}
-
-              {/* Ajuste comercial + download de PDFs */}
-              {evalRow && (
-                <>
-                  <CommercialAdjustmentSection evaluation={evalRow} adminEmail={adminEmail} />
-                  <ContractDownloadButtons evaluation={evalRow} />
-                </>
               )}
 
               {/* Defeitos detalhados */}

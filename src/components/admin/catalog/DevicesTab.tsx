@@ -523,6 +523,7 @@ export function DevicesTab() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Armazenamento</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Preço Base</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cores</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Visível</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>

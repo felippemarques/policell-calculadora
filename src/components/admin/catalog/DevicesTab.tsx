@@ -126,8 +126,17 @@ export function DevicesTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, is_visible }: { id: string; is_visible: boolean }) => {
+      const { error } = await supabase.from("devices").update({ is_visible }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidate();
+      toast.success(vars.is_visible ? "Visível ao cliente" : "Oculto do cliente");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
       const { error } = await supabase.from("devices").delete().eq("id", id);
       if (error) throw error;
     },

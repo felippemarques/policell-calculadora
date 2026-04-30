@@ -224,16 +224,17 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
         {phase === "model" && (
           <>
             <BackLink label={`Trocar marca (${selectedBrand})`} onClick={() => setPhase("brand")} />
-            <PhaseGrid>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
               {models.map((m) => (
-                <SelectionCard
-                  key={m}
-                  label={m}
-                  selected={selectedModel === m}
-                  onClick={() => handleModelPick(m)}
+                <ModelCard
+                  key={m.name}
+                  name={m.name}
+                  imageUrl={m.image_url}
+                  selected={selectedModel === m.name}
+                  onClick={() => handleModelPick(m.name)}
                 />
               ))}
-            </PhaseGrid>
+            </div>
           </>
         )}
 

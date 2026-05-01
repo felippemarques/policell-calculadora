@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDevices, resolveBasePrice } from "@/hooks/use-trade-in-data";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
+import { useCalcHeroSettings } from "@/hooks/use-calc-hero-settings";
 import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { useSubmitEvaluation, DuplicateImeiError } from "@/hooks/use-submit-evaluation";
 import { useLead } from "@/hooks/use-lead";

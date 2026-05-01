@@ -1304,28 +1304,38 @@ function LeadDetail({
                 <div className="rounded-md border border-border divide-y divide-border text-sm bg-background">
                   {(() => {
                     const basePrice = Number(override?.original.basePrice ?? evaluation.base_price) || 0;
-                    const condDisc = Number(evaluation.condition_discount) || 0;
-                    const deductions = Number(evaluation.total_deductions) || 0;
+                    // IMPORTANTE: `condition_discount` é gravado como % (percentDiscount somado),
+                    // e `total_deductions` é o R$ fixo de defeitos. A fórmula final é:
+                    //   subtotal = base − (base × condPct/100) − fixedDeductions
+                    //   final    = subtotal × (1 + bônusFluxo%)
+                    const condPct = Number(evaluation.condition_discount) || 0;
+                    const fixedDeductions = Number(evaluation.total_deductions) || 0;
+                    const condDiscMoney = Math.round(basePrice * (condPct / 100) * 100) / 100;
                     const originalFinal = Number(override?.original.finalValue ?? evaluation.final_value) || 0;
-                    const subtotalAfterDamages = basePrice - condDisc - deductions;
-                    // Bônus do fluxo (troca/venda) embutido no final original = original − (base − descontos)
+                    const subtotalAfterDamages =
+                      Math.round((basePrice - condDiscMoney - fixedDeductions) * 100) / 100;
+                    // Bônus do fluxo (troca/venda) embutido no final original = original − subtotal
                     const flowBonus = Math.round((originalFinal - subtotalAfterDamages) * 100) / 100;
+                    const flowBonusPct =
+                      subtotalAfterDamages > 0
+                        ? Math.round((flowBonus / subtotalAfterDamages) * 1000) / 10
+                        : 0;
                     return (
                       <>
                         <FinanceRow
                           label={isTrade ? "Crédito base do aparelho" : "Preço base de compra"}
                           value={formatBRLNum(basePrice)}
                         />
-                        {condDisc > 0 && (
+                        {condPct > 0 && (
                           <FinanceRow
-                            label="Desconto por condição"
-                            value={`− ${formatBRLNum(condDisc)}`}
+                            label={`Desconto por condição (${condPct}%)`}
+                            value={`− ${formatBRLNum(condDiscMoney)}`}
                           />
                         )}
-                        {deductions > 0 && (
+                        {fixedDeductions > 0 && (
                           <FinanceRow
                             label="Deduções por defeitos"
-                            value={`− ${formatBRLNum(deductions)}`}
+                            value={`− ${formatBRLNum(fixedDeductions)}`}
                           />
                         )}
                         <FinanceRow
@@ -1334,9 +1344,13 @@ function LeadDetail({
                         />
                         {flowBonus !== 0 && (
                           <FinanceRow
-                            label={isTrade ? "Bônus de troca (fluxo)" : "Bônus de venda (fluxo)"}
+                            label={
+                              isTrade
+                                ? `Bônus de troca (fluxo${flowBonusPct ? ` +${flowBonusPct}%` : ""})`
+                                : `Bônus de venda (fluxo${flowBonusPct ? ` +${flowBonusPct}%` : ""})`
+                            }
                             value={`${flowBonus >= 0 ? "+" : "−"} ${formatBRLNum(Math.abs(flowBonus))}`}
-                            accent={flowBonus >= 0 ? "success" : undefined}
+                            accent={flowBonus >= 0 ? "success" : "destructive"}
                           />
                         )}
                         <FinanceRow

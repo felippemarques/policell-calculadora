@@ -1,8 +1,7 @@
 import { ArrowRightLeft, Banknote, ArrowRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
+import { useCalcHeroSettings } from "@/hooks/use-calc-hero-settings";
 
 export type FlowType = "trade" | "sale";
 

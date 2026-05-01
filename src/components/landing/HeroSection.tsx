@@ -55,9 +55,20 @@ interface HeroSlide {
   textAlign?: keyof typeof textAlignClass;
   bgPosX?: number;
   bgPosY?: number;
+  bg_color?: string;
   cta1?: HeroCta;
   cta2?: HeroCta & { enabled?: boolean };
 }
+
+type MobileFit = "cover" | "contain";
+type MobileAspect = "16/10" | "4/5" | "1/1" | "3/4";
+
+const MOBILE_ASPECT_CLASS: Record<MobileAspect, string> = {
+  "16/10": "aspect-[16/10]",
+  "4/5": "aspect-[4/5]",
+  "1/1": "aspect-square",
+  "3/4": "aspect-[3/4]",
+};
 
 const buildCtaTarget = (cta: HeroCta): string => {
   if (cta.url && cta.url.trim()) return cta.url.trim();
@@ -105,9 +116,11 @@ const renderCta = (cta: HeroCta | undefined, key: string, primary: boolean, prev
 function SlideContent({
   slide,
   previewMode,
+  mobileFit,
 }: {
   slide: HeroSlide;
   previewMode: boolean;
+  mobileFit: MobileFit;
 }) {
   const vAlign = (slide.vAlign || "center") as keyof typeof vAlignClass;
   const hAlign = (slide.hAlign || "center") as keyof typeof hAlignClass;
@@ -124,8 +137,20 @@ function SlideContent({
   const hasAnyCta = !!cta1.text || cta2Enabled;
   const isClickable = !!rawLink && !previewMode && !hasAnyCta;
 
+  // No mobile, se "contain", a imagem aparece inteira (sem corte) e usamos a
+  // cor de fundo para preencher as bandas. No desktop sempre usa cover.
+  const imgFitClass =
+    mobileFit === "contain" ? "object-contain sm:object-cover" : "object-cover";
+
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background">
+    <div
+      className="relative w-full h-full overflow-hidden bg-background"
+      style={
+        slide.bg_color && mobileFit === "contain"
+          ? { backgroundColor: slide.bg_color }
+          : undefined
+      }
+    >
       {isClickable && (
         isExternalLink ? (
           <a
@@ -150,7 +175,7 @@ function SlideContent({
         <img
           src={slide.image_url}
           alt={slide.title || ""}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={cn("absolute inset-0 w-full h-full", imgFitClass)}
           style={{ objectPosition: `${bgPosX}% ${bgPosY}%` }}
           loading="eager"
         />
@@ -254,6 +279,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
     textAlign: layoutData.textAlign,
     bgPosX: layoutData.bgPosX,
     bgPosY: layoutData.bgPosY,
+    bg_color: section.bg_color,
     cta1: cta1FromSection,
     cta2: cta2FromSection,
   };
@@ -265,6 +291,13 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
 
   const autoplayMs = Number(layoutData.autoplay_ms ?? 5000);
   const isCarousel = slides.length > 1 && !previewMode;
+
+  const mobileFit: MobileFit = layoutData.mobile_fit === "contain" ? "contain" : "cover";
+  const mobileAspect: MobileAspect = (
+    ["16/10", "4/5", "1/1", "3/4"].includes(layoutData.mobile_aspect)
+      ? layoutData.mobile_aspect
+      : "16/10"
+  ) as MobileAspect;
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: "start" },
@@ -291,12 +324,16 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   // Wrapper sizing: in preview, fill parent; in production, responsive aspect.
   const wrapperClass = previewMode
     ? "relative w-full h-full"
-    : "relative w-full aspect-[4/5] sm:aspect-[16/10] md:aspect-[16/7] lg:aspect-[21/8]";
+    : cn(
+        "relative w-full",
+        MOBILE_ASPECT_CLASS[mobileAspect],
+        "sm:aspect-[16/10] md:aspect-[16/7] lg:aspect-[21/8]",
+      );
 
   if (!isCarousel) {
     return (
       <section className={wrapperClass}>
-        <SlideContent slide={slides[0] || baseSlide} previewMode={previewMode} />
+        <SlideContent slide={slides[0] || baseSlide} previewMode={previewMode} mobileFit={mobileFit} />
       </section>
     );
   }
@@ -307,7 +344,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
         <div className="flex h-full">
           {slides.map((slide, i) => (
             <div key={i} className="relative flex-[0_0_100%] min-w-0 h-full">
-              <SlideContent slide={slide} previewMode={previewMode} />
+              <SlideContent slide={slide} previewMode={previewMode} mobileFit={mobileFit} />
             </div>
           ))}
         </div>

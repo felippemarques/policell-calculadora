@@ -2012,6 +2012,46 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
             </div>
           </div>
 
+          {/* Ajustes específicos do celular */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+            <div>
+              <LabelWithHint
+                label="Proporção no celular"
+                hint="Define o formato do banner em telas pequenas. 16:10 é mais largo (menos altura), 4:5 ocupa mais tela vertical."
+              />
+              <Select
+                value={(layoutData.mobile_aspect as string) || "16/10"}
+                onValueChange={(v) => setLayoutField("mobile_aspect", v)}
+              >
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="16/10">16:10 (recomendado)</SelectItem>
+                  <SelectItem value="3/4">3:4</SelectItem>
+                  <SelectItem value="1/1">1:1 (quadrado)</SelectItem>
+                  <SelectItem value="4/5">4:5 (alto)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FieldHint text="Use 16:10 quando a imagem for horizontal." />
+            </div>
+            <div>
+              <LabelWithHint
+                label="Ajuste da imagem no celular"
+                hint="'Cobrir' preenche toda a área cortando as laterais. 'Conter' mostra a imagem inteira sem cortar (pode aparecer borda da cor de fundo)."
+              />
+              <Select
+                value={(layoutData.mobile_fit as string) || "cover"}
+                onValueChange={(v) => setLayoutField("mobile_fit", v)}
+              >
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cover">Cobrir (corta laterais)</SelectItem>
+                  <SelectItem value="contain">Conter (sem cortar)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FieldHint text="Use 'Conter' se a imagem horizontal estiver sendo cortada no celular." />
+            </div>
+          </div>
+
           {[0, 1].map((idx) => {
             const slides = Array.isArray(layoutData.slides) ? layoutData.slides : [];
             const slide = slides[idx] || {};

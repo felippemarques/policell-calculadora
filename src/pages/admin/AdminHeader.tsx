@@ -79,17 +79,16 @@ const AdminHeader = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (entries: { key: string; value: string }[]) => {
-      for (const entry of entries) {
-        const { error } = await supabase
-          .from("lp_settings")
-          .update({ value: entry.value })
-          .eq("key", entry.key);
-        if (error) throw error;
-      }
+      // upsert garante que chaves novas sejam criadas e existentes atualizadas
+      const { error } = await supabase
+        .from("lp_settings")
+        .upsert(entries, { onConflict: "key" });
+      if (error) throw error;
+      return entries.length;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["lp-settings"] });
-      toast.success("Configurações salvas!");
+      toast.success(`Configurações salvas (${count} campos)!`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -133,8 +132,7 @@ const AdminHeader = () => {
     try {
       const { error: dbErr } = await supabase
         .from("lp_settings")
-        .update({ value: newUrl })
-        .eq("key", "logo_url");
+        .upsert({ key: "logo_url", value: newUrl }, { onConflict: "key" });
       if (dbErr) throw dbErr;
       queryClient.invalidateQueries({ queryKey: ["lp-settings"] });
       toast.success("Logo enviada e publicada!");

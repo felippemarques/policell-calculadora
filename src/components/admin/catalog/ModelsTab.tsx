@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { applyAppleCasing } from "@/lib/apple-naming";
 
-type FormatRule = "lowercase" | "uppercase" | "capitalize";
+type FormatRule = "lowercase" | "uppercase" | "capitalize" | "apple";
 
 const FORMAT_LABELS: Record<FormatRule, string> = {
   lowercase: "Minúsculo",
   uppercase: "Maiúsculo",
   capitalize: "Primeira Letra Maiúscula",
+  apple: "Padrão Apple (iPhone, Pro Max…)",
 };
 
 function applyFormatRule(value: string, rule: FormatRule): string {
@@ -23,6 +25,8 @@ function applyFormatRule(value: string, rule: FormatRule): string {
       return value.toLowerCase();
     case "uppercase":
       return value.toUpperCase();
+    case "apple":
+      return applyAppleCasing(value);
     case "capitalize":
       return value
         .split(" ")

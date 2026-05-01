@@ -116,9 +116,11 @@ const renderCta = (cta: HeroCta | undefined, key: string, primary: boolean, prev
 function SlideContent({
   slide,
   previewMode,
+  mobileFit,
 }: {
   slide: HeroSlide;
   previewMode: boolean;
+  mobileFit: MobileFit;
 }) {
   const vAlign = (slide.vAlign || "center") as keyof typeof vAlignClass;
   const hAlign = (slide.hAlign || "center") as keyof typeof hAlignClass;
@@ -135,8 +137,20 @@ function SlideContent({
   const hasAnyCta = !!cta1.text || cta2Enabled;
   const isClickable = !!rawLink && !previewMode && !hasAnyCta;
 
+  // No mobile, se "contain", a imagem aparece inteira (sem corte) e usamos a
+  // cor de fundo para preencher as bandas. No desktop sempre usa cover.
+  const imgFitClass =
+    mobileFit === "contain" ? "object-contain sm:object-cover" : "object-cover";
+
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background">
+    <div
+      className="relative w-full h-full overflow-hidden bg-background"
+      style={
+        slide.bg_color && mobileFit === "contain"
+          ? { backgroundColor: slide.bg_color }
+          : undefined
+      }
+    >
       {isClickable && (
         isExternalLink ? (
           <a
@@ -161,7 +175,7 @@ function SlideContent({
         <img
           src={slide.image_url}
           alt={slide.title || ""}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={cn("absolute inset-0 w-full h-full", imgFitClass)}
           style={{ objectPosition: `${bgPosX}% ${bgPosY}%` }}
           loading="eager"
         />

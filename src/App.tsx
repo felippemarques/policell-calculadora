@@ -12,6 +12,7 @@ import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSections from "./pages/admin/AdminSections";
+import AdminCalculatorHero from "./pages/admin/AdminCalculatorHero";
 import AdminVideos from "./pages/admin/AdminVideos";
 import AdminCatalog from "./pages/admin/AdminCatalog";
 

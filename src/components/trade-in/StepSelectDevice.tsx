@@ -489,6 +489,57 @@ function SelectionCard({
   );
 }
 
+/**
+ * Brand selection card — shows the uploaded logo when available, otherwise
+ * falls back to the brand name as text. The brand name is always shown as a
+ * small caption underneath when a logo is present, for clarity.
+ */
+function BrandCard({
+  label,
+  logoUrl,
+  selected,
+  onClick,
+}: {
+  label: string;
+  logoUrl: string | null;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative rounded-2xl border p-4 text-center transition-all duration-200 min-h-[112px] flex flex-col items-center justify-center gap-2
+        ${
+          selected
+            ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+            : "border-border bg-card hover:border-primary/40 hover:ring-2 hover:ring-primary/15 hover:shadow-sm"
+        }`}
+      aria-label={label}
+    >
+      {logoUrl ? (
+        <>
+          <img
+            src={logoUrl}
+            alt={label}
+            loading="lazy"
+            className="h-12 md:h-14 max-w-[80%] object-contain transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+        </>
+      ) : (
+        <span className="text-base md:text-lg font-semibold text-foreground">{label}</span>
+      )}
+      {selected && (
+        <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+          <Check className="h-3 w-3 text-primary-foreground" />
+        </div>
+      )}
+    </button>
+  );
+}
+
 function Crumb({
   label,
   active,

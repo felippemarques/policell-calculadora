@@ -127,6 +127,7 @@ export type Database = {
           display_order: number
           format_rule: string
           id: string
+          logo_url: string | null
           name: string
         }
         Insert: {
@@ -134,6 +135,7 @@ export type Database = {
           display_order?: number
           format_rule?: string
           id?: string
+          logo_url?: string | null
           name: string
         }
         Update: {
@@ -141,6 +143,7 @@ export type Database = {
           display_order?: number
           format_rule?: string
           id?: string
+          logo_url?: string | null
           name?: string
         }
         Relationships: []

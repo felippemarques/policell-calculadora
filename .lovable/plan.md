@@ -1,130 +1,75 @@
-## Objetivo
+# Correções: Header, Banner Mobile e Padrão Apple
 
-Quatro melhorias visuais e configuráveis:
+## 1) Header do Admin não salva
 
-1. **Marca como logo** no passo "Escolha seu aparelho" do fluxo (upload via Admin → Marcas).
-2. **Banner principal da LP** com até 3 slides em carrossel (auto-rotate, swipe no mobile, setas no desktop), e correção do recorte no mobile.
-3. **Tela de início da calculadora (StepChooseFlow)** totalmente configurável via Admin: banner de fundo, ícones customizados para "Trocar" e "Vender", cores dos cartões, com instruções claras de dimensões.
-4. **Bug do upload da logo da loja** (print 2): investigar e corrigir o fluxo de upload em `AdminHeader`.
+**Diagnóstico:** Verifiquei o banco e nenhuma das chaves do header (`logo_url`, `phone`, `email`, `whatsapp`, `instagram`, `facebook`, `tiktok`, `header_bg_color`, `header_text_color`, `header_fixed`) existe ainda em `lp_settings`. O código usa `UPDATE … WHERE key = …`, que **não falha mas também não cria a linha** — por isso os campos voltam vazios.
 
----
+**Correção em `src/pages/admin/AdminHeader.tsx`:**
+- Trocar a `saveMutation` para usar `supabase.from("lp_settings").upsert({ key, value }, { onConflict: "key" })` em vez de `update`. Isso cria a linha se não existir e atualiza se já existir.
+- Aplicar o mesmo upsert no auto-save da logo (mesma função já no arquivo).
+- Após salvar, mostrar toast de confirmação claro com a contagem de campos persistidos.
 
-## 1. Logos de marca no fluxo
+Sem migração: a tabela já tem `unique(key)` (chaves únicas pelo schema atual de lp_settings).
 
-### Banco
-Migração para adicionar coluna em `brands`:
-```
-ALTER TABLE brands ADD COLUMN logo_url text;
-```
+## 2) Banner principal corta no celular
 
-### Admin (`AuxCrudTab` quando `table='brands'`)
-- Adicionar slot de upload de imagem por linha (idêntico ao `ModelImageUploader`): botão "Logo", preview circular, remover.
-- Upload no bucket `lp-images` em `brands/{id}.{ext}`.
-- Aceita PNG/SVG transparente. Recomendação: 200×200px, fundo transparente, peso < 100KB.
-- Mostrar preview da logo na tabela (ao lado do nome).
+**Diagnóstico:** O hero mobile usa `aspect-[4/5]` + `object-cover`. Quando a imagem original é horizontal (como a do iPhone enviada), o `cover` corta as laterais — exatamente o que aparece no print ("Ganhe um cupom" cortado à esquerda).
 
-> Como `AuxCrudTab` é genérico, vou criar um sub-componente `BrandLogoCell` e ativá-lo só quando `table === "brands"` (prop opcional `enableLogo`), preservando o comportamento de cores/armazenamento.
+**Correção:**
 
-### Fluxo (`StepSelectDevice` — fase brand)
-- `brands` deixa de ser `string[]` e passa a ser `{ name, logo_url }[]` (consultar via `useTradeInData` ou query nova).
-- Em vez do texto puro no `SelectionCard`, renderizar a logo (altura ~48px, `object-contain`) com o nome embaixo como fallback/legenda discreta.
-- Manter `SelectionCard` por texto quando `logo_url` for nulo (graceful fallback).
+a) `src/components/landing/HeroSection.tsx`
+- Ler dois novos campos do `layoutData`: `mobile_fit` (`"cover"` | `"contain"`, default `cover`) e `mobile_aspect` (`"4/5"` | `"1/1"` | `"3/4"` | `"16/10"`, default `"16/10"` para reduzir corte).
+- Trocar `aspect-[4/5]` mobile por classe baseada no `mobile_aspect` escolhido.
+- Aplicar `object-${mobile_fit} sm:object-cover` no `<img>`. Quando `contain`, adicionar fundo (`bg` da slide ou `bg-background`) para preencher as bandas laterais.
+- Manter focal point (`bgPosX/Y`) funcionando em ambos os modos.
 
----
+b) `src/pages/admin/AdminSections.tsx` (editor do hero)
+- Adicionar dois selects "Proporção no celular" e "Ajuste da imagem no celular (Cobrir / Conter sem cortar)" persistidos no JSON `layout`.
+- Texto de ajuda: "Use 'Conter' se a imagem for horizontal e estiver cortando no celular."
 
-## 2. Carrossel de Hero na Landing Page + fix mobile
+## 3) Regra "padrão de escrita Apple" para nomes
 
-### Banco
-Já temos `lp_sections` com `image_url` para a seção `hero`. Para suportar até 3 slides, vamos guardar slides extras no campo `layout` (JSON), sem nova tabela:
-```
-layout.slides = [
-  { image_url, title, content, link_url, cta1?, cta2?, bgPosX, bgPosY, vAlign, hAlign, textAlign },
-  ...
-]
-layout.autoplay_ms = 5000   // 0 = desativado
-```
-O slide 0 continua sendo o "principal" (campos diretos da seção, para retrocompatibilidade). Slides 1 e 2 ficam dentro de `layout.slides`.
+Hoje o catálogo tem nomes como `Iphone 14 Pro Max`, com casing inconsistente. Adicionar uma normalização aplicada automaticamente quando o admin digita ou cola nomes de marca/modelo, e um botão "Corrigir nomes existentes" que roda em massa.
 
-### Componente (`HeroSection.tsx`)
-- Refatorar para receber `slides[]` (montado a partir do slide principal + `layout.slides`).
-- Usar `embla-carousel-react` (já instalado via `components/ui/carousel`).
-- Recursos: autoplay com timer configurável, dots de navegação, setas no desktop (>= md), swipe nativo no mobile.
-- **Fix mobile crop**: hoje o background usa `bg-cover` com `min-h-[500px]`. No celular o banner de design largo (16:9 / 21:9) corta as laterais.  
-  Solução: alterar a estratégia para `<img>` responsivo dentro do slide com `object-contain` opcional via toggle no admin (`fit: "cover" | "contain"`), padrão `cover` mas com `bgPosX/bgPosY` respeitados, e no mobile usar uma altura proporcional (`aspect-[4/5]` no mobile, `aspect-[16/7]` no desktop) em vez de `min-h` fixo. Isso elimina o corte excessivo nas laterais e mantém o foco do banner.
+**Implementação:**
 
-### Admin (`AdminSections` — editor da seção hero)
-- Acordeão "Slides do banner" com lista (drag/up-down) — limite de 3.
-- Cada slide tem os mesmos campos do hero atual + upload próprio.
-- Campo numérico "Tempo de rotação (ms)" com 0 = desativar autoplay.
-- Toggle "Ajuste da imagem no mobile" (cover/contain).
-- Texto curto explicando dimensões recomendadas: **1920×800px (desktop)** e **1080×1350px (mobile)**, < 400KB, JPG.
+a) Novo utilitário `src/lib/apple-naming.ts`
+- Função `applyAppleCasing(input: string): string` que aplica regras:
+  - `iphone` / `ipad` / `ipod` / `imac` / `iwatch` / `airpods` / `macbook` → casing oficial (`iPhone`, `iPad`, `MacBook`, `AirPods`, …).
+  - Palavras como `pro`, `max`, `mini`, `plus`, `air`, `ultra`, `se`, `lite` → **Title Case** (`Pro`, `Max`, `Mini`, `Plus`).
+  - Numerais romanos / números mantidos.
+  - Texto entre parênteses preservado (ex.: `(2nd Gen)` → `(2nd Gen)`).
+  - Espaços extras colapsados.
+- Suite de testes em `src/lib/apple-naming.test.ts` cobrindo os exemplos do usuário (`Iphone` → `iPhone`, `Pro max` → `Pro Max`, etc.).
 
----
+b) Aplicar na entrada do admin
+- `src/components/admin/catalog/ModelsTab.tsx` e `AuxCrudTab.tsx` (marcas): no `onBlur` do input de nome, chamar `applyAppleCasing` e atualizar o valor antes de salvar. Mostrar mini-hint visual quando o valor mudou ("Ajustado para padrão Apple").
+- Toggle por marca: a normalização só roda quando a marca for "Apple" (verificado pelo nome). Para outras marcas, o input permanece livre.
 
-## 3. Tela de início da calculadora estilizável
+c) Botão de correção em massa
+- Em `AdminCatalog` adicionar um botão "Padronizar nomes (padrão Apple)" que:
+  1. Lista todos os modelos da marca Apple com nomes que mudariam.
+  2. Mostra preview "antes → depois" num diálogo.
+  3. Ao confirmar, faz `update` em batch via supabase client (RLS já permite admin).
+- Sem migração SQL — apenas UPDATEs disparados pelo client.
 
-### Banco
-Reaproveitar `lp_settings` com novas chaves:
-```
-calc_hero_bg_image       (url)
-calc_hero_bg_color       (hex)
-calc_hero_text_color     (hex)
-calc_hero_title          (texto)
-calc_hero_subtitle       (texto)
-flow_trade_icon_url      (url)
-flow_trade_card_bg       (hex/gradient)
-flow_sale_icon_url       (url)
-flow_sale_card_bg        (hex/gradient)
-```
-
-### Admin (nova página `/admin/calculator-hero` ou aba dentro de "Fluxos")
-- Painel idêntico ao `AdminHeader` (`SectionCard` com upload, color pickers, preview live).
-- Uploads no bucket `lp-images/calculator/`.
-- Instruções de dimensões:
-  - **Banner de fundo**: 1920×600px (desktop) / 1080×1200px (mobile), JPG/WebP, < 300KB.
-  - **Ícone Trocar/Vender**: 128×128px, PNG transparente, < 50KB.
-- Preview ao vivo do `StepChooseFlow` à direita.
-
-### Componente (`StepChooseFlow` + wrapper no `TradeInWizard`)
-- Ler novas chaves via `useFlowSettings` (estendido) ou hook novo `useCalcHeroSettings`.
-- Aplicar `backgroundImage`/`backgroundColor` no contêiner do passo 1 (hoje texto fixo "Policell - Garantia de entrega e qualidade" na linha 681 do `TradeInWizard`).
-- Substituir os ícones Lucide (`ArrowRightLeft`, `Banknote`) por `<img src={iconUrl}>` quando configurado, mantendo Lucide como fallback.
-- Aplicar `card_bg` em cada cartão via `style={{ background }}`.
-- Garantir responsividade: imagem de fundo com `object-cover` + altura adaptativa.
-
----
-
-## 4. Bug: upload da logo (print 2)
-
-Sintoma do print: header renderiza só o texto "Policell" — logo não aparece após upload.
-
-Investigar:
-- Confirmar que `supabase.storage.from("lp-images").upload(path, file)` está retornando sucesso (logs).
-- O `setForm({ ...form, logo_url: urlData.publicUrl })` salva no estado, mas o usuário **precisa clicar em "Salvar Configurações"** para persistir. Provavelmente usuário fez upload e saiu sem salvar.
-- Fix de UX: após upload, **disparar `saveMutation` automaticamente só com a chave `logo_url`** (auto-save), e mostrar toast "Logo salva e publicada".
-- Adicionar verificação de tamanho/tipo antes do upload (max 2MB, image/*).
-- Mostrar mensagem clara se a URL retornada for inválida.
-
----
+d) Documentar no `mem://` 
+- Criar `mem://design/apple-naming` com a regra para futuras sessões aplicarem automaticamente.
 
 ## Detalhes técnicos
 
-**Arquivos a alterar/criar:**
+- Sem mudança de schema de banco.
+- Sem novas dependências.
+- Tudo continua compatível com mobile/responsivo.
+- A correção do header não toca chaves de outras seções.
 
-- `supabase/migrations/<new>.sql` — `brands.logo_url`, seeds opcionais para chaves `calc_hero_*` e `flow_*_icon_url`/`*_card_bg` em `lp_settings`.
-- `src/components/admin/catalog/AuxCrudTab.tsx` — slot de logo opcional para `brands`.
-- `src/pages/admin/AdminCatalog.tsx` — passar `enableLogo` na aba Marcas.
-- `src/hooks/use-trade-in-data.ts` — incluir `logo_url` na query de marcas.
-- `src/components/trade-in/StepSelectDevice.tsx` — renderização de logo na fase brand.
-- `src/components/landing/HeroSection.tsx` — refator carrossel com Embla, fix responsivo.
-- `src/pages/admin/AdminSections.tsx` — editor de slides extras (até 3) e autoplay.
-- `src/pages/admin/AdminHeader.tsx` — auto-save da logo após upload + validação.
-- `src/pages/admin/AdminCalculatorHero.tsx` (novo) — painel de personalização.
-- `src/components/admin/AdminLayout.tsx` — adicionar item "Tela da Calculadora" no menu.
-- `src/hooks/use-flow-settings.ts` — incluir novas chaves de calc_hero/icons/card_bg.
-- `src/components/trade-in/StepChooseFlow.tsx` — usar imagens e cores configuráveis.
-- `src/components/trade-in/TradeInWizard.tsx` — aplicar background/título configuráveis na tela inicial.
+## Resumo dos arquivos
 
-**Performance:** todos os uploads usarão `lp-images` (bucket público já existente, com cache no Supabase CDN). Ícones e logos pequenos não impactam carregamento.
-
-**Compatibilidade:** todas as mudanças têm fallbacks (sem logo → texto; sem slides extras → comportamento atual; sem icone customizado → Lucide).
+- **edit** `src/pages/admin/AdminHeader.tsx` — upsert
+- **edit** `src/components/landing/HeroSection.tsx` — fit/aspect mobile
+- **edit** `src/pages/admin/AdminSections.tsx` — controles fit/aspect mobile
+- **new**  `src/lib/apple-naming.ts` + teste
+- **edit** `src/components/admin/catalog/ModelsTab.tsx` — auto-aplicar no blur
+- **edit** `src/components/admin/catalog/AuxCrudTab.tsx` — idem para marcas
+- **edit** `src/pages/admin/AdminCatalog.tsx` — diálogo "Padronizar nomes"
+- **new**  `mem://design/apple-naming`

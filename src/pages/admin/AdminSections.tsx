@@ -1981,6 +1981,115 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         </div>
       </SectionCard>
 
+      {/* Slides extras + autoplay */}
+      <SectionCard
+        icon={<Image className="h-4 w-4" />}
+        title="Slides adicionais (carrossel)"
+        description="Adicione até 2 slides extras (total de 3). O banner gira automaticamente, com swipe no mobile e setas no desktop."
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <LabelWithHint
+                label="Tempo entre slides (ms)"
+                hint="Tempo de exibição de cada slide. 0 desativa a rotação automática (mantém swipe e setas)."
+              />
+              <Input
+                type="number"
+                min={0}
+                step={500}
+                value={Number(layoutData.autoplay_ms ?? 5000)}
+                onChange={(e) => setLayoutField("autoplay_ms", Number(e.target.value) || 0)}
+                className="mt-1"
+              />
+              <FieldHint text="Recomendado: 4000–7000ms. 0 = manual." />
+            </div>
+            <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 leading-relaxed">
+              <strong>Dimensões recomendadas:</strong>
+              <br />• Desktop: 1920×800px
+              <br />• Mobile: 1080×1350px
+              <br />JPG/WebP, &lt; 400KB
+            </div>
+          </div>
+
+          {[0, 1].map((idx) => {
+            const slides = Array.isArray(layoutData.slides) ? layoutData.slides : [];
+            const slide = slides[idx] || {};
+            const updateSlide = (patch: Record<string, any>) => {
+              const next = [...slides];
+              while (next.length <= idx) next.push({});
+              next[idx] = { ...next[idx], ...patch };
+              setLayoutField("slides", next as any);
+            };
+            const removeSlide = () => {
+              const next = slides.filter((_: any, i: number) => i !== idx);
+              setLayoutField("slides", next as any);
+            };
+            const isActive = !!slide.image_url || !!slide.title;
+            return (
+              <div key={idx} className="border rounded-lg p-4 space-y-3 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground bg-background px-2 py-0.5 rounded border">
+                    Slide extra {idx + 1}
+                  </span>
+                  {isActive && (
+                    <button
+                      onClick={removeSlide}
+                      className="text-destructive hover:text-destructive/80 text-xs inline-flex items-center gap-1"
+                    >
+                      <Trash2 className="h-3 w-3" /> Remover
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <LabelWithHint label="URL da imagem" hint="Cole o link de uma imagem já hospedada ou faça upload no slide principal e copie a URL." />
+                    <Input
+                      value={slide.image_url || ""}
+                      onChange={(e) => updateSlide({ image_url: e.target.value })}
+                      placeholder="https://..."
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <LabelWithHint label="Link ao clicar (opcional)" hint="Quando preenchido e sem CTA, o slide inteiro vira clicável." />
+                    <Input
+                      value={slide.link_url || ""}
+                      onChange={(e) => updateSlide({ link_url: e.target.value })}
+                      placeholder="/calculadora ou https://..."
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <LabelWithHint label="Título" hint="Opcional. Aparece sobre a imagem." />
+                    <Input
+                      value={slide.title || ""}
+                      onChange={(e) => updateSlide({ title: e.target.value })}
+                      maxLength={60}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <LabelWithHint label="Subtítulo" hint="Opcional. Texto curto de apoio." />
+                    <Input
+                      value={slide.content || ""}
+                      onChange={(e) => updateSlide({ content: e.target.value })}
+                      maxLength={120}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                {slide.image_url && (
+                  <div className="relative w-full aspect-[16/7] overflow-hidden rounded-lg border">
+                    <img src={slide.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
+
       <SectionCard
         icon={<LayoutGrid className="h-4 w-4" />}
         title="Posição do Conteúdo"

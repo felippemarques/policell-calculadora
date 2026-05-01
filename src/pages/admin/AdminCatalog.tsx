@@ -5,12 +5,16 @@ import { AuxCrudTab } from "@/components/admin/catalog/AuxCrudTab";
 import { ModelsTab } from "@/components/admin/catalog/ModelsTab";
 import { ColorsTab } from "@/components/admin/catalog/ColorsTab";
 import { EvaluationGroupsOrder } from "@/components/admin/catalog/EvaluationGroupsOrder";
+import { AppleCasingBatchButton } from "@/components/admin/catalog/AppleCasingBatchButton";
 
 const AdminCatalog = () => (
   <div className="p-6 space-y-6">
-    <div>
-      <h2 className="text-2xl font-bold text-foreground">Produtos e Parâmetros</h2>
-      <p className="text-sm text-muted-foreground">Gerencie o catálogo hierárquico (Marca → Modelo → Capacidade → Cor) e bibliotecas auxiliares</p>
+    <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Produtos e Parâmetros</h2>
+        <p className="text-sm text-muted-foreground">Gerencie o catálogo hierárquico (Marca → Modelo → Capacidade → Cor) e bibliotecas auxiliares</p>
+      </div>
+      <AppleCasingBatchButton />
     </div>
     <Tabs defaultValue="catalog">
       <TabsList className="flex-wrap h-auto gap-1">

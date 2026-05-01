@@ -225,9 +225,10 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
           <PhaseGrid>
             {brands.length === 0 && <EmptyState message="Nenhuma marca disponível" />}
             {brands.map((b) => (
-              <SelectionCard
+              <BrandCard
                 key={b}
                 label={b}
+                logoUrl={brandLogoMap.get(b.trim().toLowerCase()) ?? null}
                 selected={selectedBrand === b}
                 onClick={() => handleBrandPick(b)}
               />

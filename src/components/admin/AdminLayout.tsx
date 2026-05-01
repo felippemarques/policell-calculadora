@@ -22,6 +22,7 @@ const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/admin/header", icon: PanelTop, label: "Header" },
   { to: "/admin/secoes", icon: Layers, label: "Seções LP" },
+  { to: "/admin/calculadora-visual", icon: Layers, label: "Visual da Calculadora" },
   { to: "/admin/catalogo", icon: Smartphone, label: "Produtos e Parâmetros" },
   { to: "/admin/visao-cliente", icon: Users, label: "Visão por Cliente" },
   { to: "/admin/clientes", icon: ClipboardList, label: "Propostas" },

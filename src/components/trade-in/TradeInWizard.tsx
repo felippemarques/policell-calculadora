@@ -128,6 +128,7 @@ export function TradeInWizard() {
 
   const { data: devices, isLoading: loadingDevices } = useDevices();
   const { data: flowSettings, isLoading: loadingFlowSettings } = useFlowSettings();
+  const { data: calcHero } = useCalcHeroSettings();
   const { data: businessSettings } = useBusinessSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
   const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();

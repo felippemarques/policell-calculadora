@@ -12,6 +12,7 @@ import AdminResetPassword from "./pages/admin/AdminResetPassword";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSections from "./pages/admin/AdminSections";
+import AdminCalculatorHero from "./pages/admin/AdminCalculatorHero";
 import AdminVideos from "./pages/admin/AdminVideos";
 import AdminCatalog from "./pages/admin/AdminCatalog";
 
@@ -48,6 +49,7 @@ const App = () => (
             >
               <Route index element={<AdminDashboard />} />
               <Route path="secoes" element={<AdminSections />} />
+              <Route path="calculadora-visual" element={<AdminCalculatorHero />} />
               <Route path="videos" element={<AdminVideos />} />
               <Route path="catalogo" element={<AdminCatalog />} />
               

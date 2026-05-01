@@ -10,6 +10,34 @@ import { toast } from "sonner";
 
 const RECOMMENDED_WIDTH = 300;
 const RECOMMENDED_HEIGHT = 80;
+const HEADER_KEYS = [
+  "logo_url",
+  "header_bg_color",
+  "header_text_color",
+  "phone",
+  "email",
+  "whatsapp",
+  "instagram",
+  "facebook",
+  "tiktok",
+  "header_fixed",
+] as const;
+
+async function saveHeaderSetting(key: string, value: string) {
+  const { data: updated, error: updateError } = await supabase
+    .from("lp_settings")
+    .update({ value, updated_at: new Date().toISOString() })
+    .eq("key", key)
+    .select("id");
+
+  if (updateError) throw updateError;
+  if (updated && updated.length > 0) return;
+
+  const { error: insertError } = await supabase
+    .from("lp_settings")
+    .insert({ key, value });
+  if (insertError) throw insertError;
+}
 
 function maskPhone(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -79,11 +107,9 @@ const AdminHeader = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (entries: { key: string; value: string }[]) => {
-      // upsert garante que chaves novas sejam criadas e existentes atualizadas
-      const { error } = await supabase
-        .from("lp_settings")
-        .upsert(entries, { onConflict: "key" });
-      if (error) throw error;
+      for (const entry of entries) {
+        await saveHeaderSetting(entry.key, entry.value);
+      }
       return entries.length;
     },
     onSuccess: (count) => {
@@ -130,10 +156,7 @@ const AdminHeader = () => {
 
     // Auto-save just the logo so the user doesn't lose it by forgetting "Salvar"
     try {
-      const { error: dbErr } = await supabase
-        .from("lp_settings")
-        .upsert({ key: "logo_url", value: newUrl }, { onConflict: "key" });
-      if (dbErr) throw dbErr;
+      await saveHeaderSetting("logo_url", newUrl);
       queryClient.invalidateQueries({ queryKey: ["lp-settings"] });
       toast.success("Logo enviada e publicada!");
     } catch (err: any) {
@@ -154,8 +177,7 @@ const AdminHeader = () => {
       return;
     }
 
-    const allKeys = ["logo_url", "header_bg_color", "header_text_color", "phone", "email", "whatsapp", "instagram", "facebook", "tiktok", "header_fixed"];
-    const entries = allKeys.map((key) => ({ key, value: form[key] || (key === "header_fixed" ? "false" : "") }));
+    const entries = HEADER_KEYS.map((key) => ({ key, value: form[key] || (key === "header_fixed" ? "false" : "") }));
     saveMutation.mutate(entries);
   };
 

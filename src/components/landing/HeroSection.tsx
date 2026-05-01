@@ -1,4 +1,7 @@
-import { ArrowRight } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -41,6 +44,177 @@ interface HeroCta {
   url?: string;
 }
 
+interface HeroSlide {
+  image_url?: string | null;
+  title?: string;
+  content?: string;
+  link_url?: string;
+  text_color?: string;
+  vAlign?: keyof typeof vAlignClass;
+  hAlign?: keyof typeof hAlignClass;
+  textAlign?: keyof typeof textAlignClass;
+  bgPosX?: number;
+  bgPosY?: number;
+  cta1?: HeroCta;
+  cta2?: HeroCta & { enabled?: boolean };
+}
+
+const buildCtaTarget = (cta: HeroCta): string => {
+  if (cta.url && cta.url.trim()) return cta.url.trim();
+  if (cta.intent === "upgrade") return "/calculadora?mode=upgrade";
+  if (cta.intent === "sell") return "/calculadora?mode=sell";
+  return "/calculadora";
+};
+
+const renderCta = (cta: HeroCta | undefined, key: string, primary: boolean, previewMode: boolean) => {
+  if (!cta?.text) return null;
+  const target = buildCtaTarget(cta);
+  const isExternal = /^https?:\/\//i.test(target);
+  const inner = (
+    <>
+      {cta.text} <ArrowRight className="ml-2 h-4 w-4" />
+    </>
+  );
+  return (
+    <Button
+      key={key}
+      size="lg"
+      className={cn(
+        "rounded-full shadow-sm transition-shadow hover:shadow-md",
+        previewMode ? "h-10 px-5 text-sm" : "h-12 px-8 text-base",
+      )}
+      style={{
+        backgroundColor: cta.bg || undefined,
+        color: cta.color || undefined,
+        borderRadius: typeof cta.radius === "number" ? `${cta.radius}px` : undefined,
+      }}
+      variant={primary ? "default" : "secondary"}
+      asChild
+    >
+      {isExternal ? (
+        <a href={target} target="_blank" rel="noopener noreferrer">
+          {inner}
+        </a>
+      ) : (
+        <Link to={target}>{inner}</Link>
+      )}
+    </Button>
+  );
+};
+
+function SlideContent({
+  slide,
+  previewMode,
+}: {
+  slide: HeroSlide;
+  previewMode: boolean;
+}) {
+  const vAlign = (slide.vAlign || "center") as keyof typeof vAlignClass;
+  const hAlign = (slide.hAlign || "center") as keyof typeof hAlignClass;
+  const textAlign = (slide.textAlign || "center") as keyof typeof textAlignClass;
+  const bgPosX = typeof slide.bgPosX === "number" ? slide.bgPosX : 50;
+  const bgPosY = typeof slide.bgPosY === "number" ? slide.bgPosY : 50;
+
+  const cta1 = slide.cta1 || {};
+  const cta2 = slide.cta2 || {};
+  const cta2Enabled = !!cta2.enabled && !!cta2.text;
+
+  const rawLink = slide.link_url?.trim() || undefined;
+  const isExternalLink = !!rawLink && /^https?:\/\//i.test(rawLink);
+  const hasAnyCta = !!cta1.text || cta2Enabled;
+  const isClickable = !!rawLink && !previewMode && !hasAnyCta;
+
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-background">
+      {isClickable && (
+        isExternalLink ? (
+          <a
+            href={rawLink!}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={slide.title || "Abrir link do banner"}
+            className="absolute inset-0 z-10"
+          />
+        ) : (
+          <Link
+            to={rawLink!}
+            aria-label={slide.title || "Abrir link do banner"}
+            className="absolute inset-0 z-10"
+          />
+        )
+      )}
+
+      {/* Background image — uses <img> to avoid edge-cropping on mobile,
+          while still respecting the focal point via object-position. */}
+      {slide.image_url ? (
+        <img
+          src={slide.image_url}
+          alt={slide.title || ""}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: `${bgPosX}% ${bgPosY}%` }}
+          loading="eager"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
+      )}
+
+      <div
+        className={cn(
+          "relative z-20 flex w-full h-full px-4 md:px-6 pointer-events-none",
+          previewMode ? "py-6 md:py-8" : "py-10 md:py-20",
+          vAlignClass[vAlign],
+          hAlignClass[hAlign],
+        )}
+        style={{ color: slide.text_color || undefined }}
+      >
+        <div
+          className={cn(
+            "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 md:gap-6",
+            textAlignClass[textAlign],
+          )}
+        >
+          {slide.title && (
+            <h1
+              className={cn(
+                "font-semibold leading-[1.1] tracking-tight",
+                previewMode
+                  ? "text-2xl sm:text-3xl md:text-4xl"
+                  : "text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl",
+              )}
+            >
+              {slide.title}
+            </h1>
+          )}
+
+          {slide.content && (
+            <p
+              className={cn(
+                "font-normal leading-relaxed opacity-80",
+                previewMode ? "text-sm md:text-base" : "text-sm md:text-lg lg:text-xl",
+              )}
+            >
+              {slide.content}
+            </p>
+          )}
+
+          {(cta1.text || cta2Enabled) && (
+            <div
+              className={cn(
+                "flex flex-wrap gap-3",
+                previewMode ? "mt-2" : "mt-3 md:mt-4",
+                ctaJustifyClass[textAlign],
+              )}
+            >
+              {renderCta(cta1, "cta1", true, previewMode)}
+              {cta2Enabled && renderCta(cta2, "cta2", false, previewMode)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const layoutData = (() => {
     try {
@@ -50,14 +224,8 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
     }
   })();
 
-  const vAlign = (layoutData.vAlign || "center") as keyof typeof vAlignClass;
-  const hAlign = (layoutData.hAlign || "center") as keyof typeof hAlignClass;
-  const textAlign = (layoutData.textAlign || "center") as keyof typeof textAlignClass;
-  const bgPosX = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
-  const bgPosY = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
-
-  // CTA 1: legacy fields on the section (preserves backward compatibility)
-  const cta1: HeroCta = {
+  // Build slide list: slide 0 is the section itself; extras come from layout.slides
+  const cta1FromSection: HeroCta = {
     text: section.cta_text || undefined,
     bg: section.cta_bg_color || undefined,
     color: section.cta_text_color || undefined,
@@ -65,152 +233,118 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
     intent: (layoutData.cta1_intent as HeroCta["intent"]) || "sell",
     url: layoutData.cta1_url || undefined,
   };
-
-  // CTA 2: stored entirely in layout JSON
-  const cta2Raw = layoutData.cta2 || {};
-  const cta2Enabled = !!layoutData.cta2_enabled && !!cta2Raw.text;
-  const cta2: HeroCta = {
-    text: cta2Raw.text,
-    bg: cta2Raw.bg,
-    color: cta2Raw.color,
-    radius: typeof cta2Raw.radius === "number" ? cta2Raw.radius : 8,
-    intent: (cta2Raw.intent as HeroCta["intent"]) || "upgrade",
-    url: cta2Raw.url || undefined,
+  const cta2FromSection = {
+    enabled: !!layoutData.cta2_enabled,
+    text: layoutData.cta2?.text,
+    bg: layoutData.cta2?.bg,
+    color: layoutData.cta2?.color,
+    radius: typeof layoutData.cta2?.radius === "number" ? layoutData.cta2.radius : 8,
+    intent: (layoutData.cta2?.intent as HeroCta["intent"]) || "upgrade",
+    url: layoutData.cta2?.url || undefined,
   };
 
-  const buildCtaTarget = (cta: HeroCta): string => {
-    if (cta.url && cta.url.trim()) return cta.url.trim();
-    if (cta.intent === "upgrade") return "/calculadora?mode=upgrade";
-    if (cta.intent === "sell") return "/calculadora?mode=sell";
-    return "/calculadora";
+  const baseSlide: HeroSlide = {
+    image_url: section.image_url,
+    title: section.title,
+    content: section.content,
+    link_url: section.link_url,
+    text_color: section.text_color,
+    vAlign: layoutData.vAlign,
+    hAlign: layoutData.hAlign,
+    textAlign: layoutData.textAlign,
+    bgPosX: layoutData.bgPosX,
+    bgPosY: layoutData.bgPosY,
+    cta1: cta1FromSection,
+    cta2: cta2FromSection,
   };
 
-  const renderCta = (cta: HeroCta, key: string, primary: boolean) => {
-    if (!cta.text) return null;
-    const target = buildCtaTarget(cta);
-    const isExternal = /^https?:\/\//i.test(target);
-    const inner = (
-      <>
-        {cta.text} <ArrowRight className="ml-2 h-4 w-4" />
-      </>
-    );
+  const extraSlides: HeroSlide[] = Array.isArray(layoutData.slides) ? layoutData.slides.slice(0, 2) : [];
+  const slides: HeroSlide[] = [baseSlide, ...extraSlides].filter(
+    (s) => s.image_url || s.title || s.content,
+  );
+
+  const autoplayMs = Number(layoutData.autoplay_ms ?? 5000);
+  const isCarousel = slides.length > 1 && !previewMode;
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true, align: "start" },
+    isCarousel && autoplayMs > 0
+      ? [Autoplay({ delay: autoplayMs, stopOnInteraction: false, stopOnMouseEnter: true })]
+      : [],
+  );
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on("select", onSelect);
+    onSelect();
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi]);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((i: number) => emblaApi?.scrollTo(i), [emblaApi]);
+
+  // Wrapper sizing: in preview, fill parent; in production, responsive aspect.
+  const wrapperClass = previewMode
+    ? "relative w-full h-full"
+    : "relative w-full aspect-[4/5] sm:aspect-[16/10] md:aspect-[16/7] lg:aspect-[21/8]";
+
+  if (!isCarousel) {
     return (
-      <Button
-        key={key}
-        size="lg"
-        className={cn(
-          "rounded-full shadow-sm transition-shadow hover:shadow-md",
-          previewMode ? "h-10 px-5 text-sm" : "h-12 px-8 text-base",
-        )}
-        style={{
-          backgroundColor: cta.bg || undefined,
-          color: cta.color || undefined,
-          borderRadius: typeof cta.radius === "number" ? `${cta.radius}px` : undefined,
-        }}
-        variant={primary ? "default" : "secondary"}
-        asChild
-      >
-        {isExternal ? (
-          <a href={target} target="_blank" rel="noopener noreferrer">
-            {inner}
-          </a>
-        ) : (
-          <Link to={target}>{inner}</Link>
-        )}
-      </Button>
+      <section className={wrapperClass}>
+        <SlideContent slide={slides[0] || baseSlide} previewMode={previewMode} />
+      </section>
     );
-  };
-
-  // Outer banner-link is suppressed if any CTA is configured (avoid swallowing button clicks)
-  const rawLink: string | undefined = section.link_url?.trim() || undefined;
-  const isExternalLink = !!rawLink && /^https?:\/\//i.test(rawLink);
-  const hasAnyCta = !!cta1.text || cta2Enabled;
-  const isClickable = !!rawLink && !previewMode && !hasAnyCta;
+  }
 
   return (
-    <section
-      className={cn(
-        "relative flex w-full items-center overflow-hidden bg-background bg-cover bg-no-repeat",
-        previewMode ? "h-full min-h-0" : "min-h-[500px] md:min-h-[600px]",
-      )}
-    >
-      {isClickable && (
-        isExternalLink ? (
-          <a
-            href={rawLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={section.title || "Abrir link do banner"}
-            className="absolute inset-0 z-10"
-          />
-        ) : (
-          <Link
-            to={rawLink!}
-            aria-label={section.title || "Abrir link do banner"}
-            className="absolute inset-0 z-10"
-          />
-        )
-      )}
-      {section.image_url ? (
-        <div
-          className="absolute inset-0 w-full h-full bg-no-repeat bg-cover"
-          style={{
-            backgroundImage: `url(${section.image_url})`,
-            backgroundPosition: `${bgPosX}% ${bgPosY}%`,
-            backgroundSize: "cover",
-          }}
-          aria-hidden
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-      )}
-
-      <div
-        className={cn(
-          "relative z-20 flex w-full px-4 md:px-6 pointer-events-none",
-          previewMode ? "h-full py-6 md:py-8" : "py-16 md:py-40",
-          vAlignClass[vAlign],
-          hAlignClass[hAlign],
-        )}
-        style={{ color: section.text_color || undefined }}
-      >
-        <div
-          className={cn(
-            "pointer-events-auto flex w-full max-w-2xl flex-col gap-4 md:gap-6",
-            textAlignClass[textAlign],
-          )}
-        >
-          {section.title && (
-            <h1 className={cn(
-              "font-semibold leading-[1.1] tracking-tight",
-              previewMode ? "text-2xl sm:text-3xl md:text-4xl" : "text-3xl md:text-5xl lg:text-6xl xl:text-7xl",
-            )}>
-              {section.title}
-            </h1>
-          )}
-
-          {section.content && (
-            <p className={cn(
-              "font-normal leading-relaxed opacity-70",
-              previewMode ? "text-sm md:text-base" : "text-base md:text-xl",
-            )}>
-              {section.content}
-            </p>
-          )}
-
-          {(cta1.text || cta2Enabled) && (
-            <div
-              className={cn(
-                "flex flex-wrap gap-3",
-                previewMode ? "mt-2" : "mt-4",
-                ctaJustifyClass[textAlign],
-              )}
-            >
-              {renderCta(cta1, "cta1", true)}
-              {cta2Enabled && renderCta(cta2, "cta2", false)}
+    <section className={cn(wrapperClass, "group/hero")}>
+      <div className="overflow-hidden h-full" ref={emblaRef}>
+        <div className="flex h-full">
+          {slides.map((slide, i) => (
+            <div key={i} className="relative flex-[0_0_100%] min-w-0 h-full">
+              <SlideContent slide={slide} previewMode={previewMode} />
             </div>
-          )}
+          ))}
         </div>
+      </div>
+
+      {/* Desktop arrows */}
+      <button
+        type="button"
+        onClick={scrollPrev}
+        aria-label="Slide anterior"
+        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 h-10 w-10 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-foreground hover:bg-background opacity-0 group-hover/hero:opacity-100 transition-opacity shadow-md"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <button
+        type="button"
+        onClick={scrollNext}
+        aria-label="Próximo slide"
+        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-30 h-10 w-10 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-foreground hover:bg-background opacity-0 group-hover/hero:opacity-100 transition-opacity shadow-md"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
+
+      {/* Dots */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex gap-1.5">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => scrollTo(i)}
+            aria-label={`Ir ao slide ${i + 1}`}
+            className={cn(
+              "h-2 rounded-full transition-all duration-300 backdrop-blur-sm",
+              selectedIndex === i ? "w-6 bg-foreground" : "w-2 bg-foreground/40 hover:bg-foreground/60",
+            )}
+          />
+        ))}
       </div>
     </section>
   );

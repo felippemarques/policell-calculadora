@@ -60,6 +60,14 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
     return Array.from(set).sort();
   }, [devices]);
 
+  // brand logos (from `brands` table) — keyed lowercased
+  const { data: brandLogos = [] } = useBrandLogos();
+  const brandLogoMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    brandLogos.forEach((b) => m.set(b.name.trim().toLowerCase(), b.logo_url));
+    return m;
+  }, [brandLogos]);
+
   // models for selected brand (with their image, picked from the first variant)
   const models = useMemo(() => {
     if (!selectedBrand) return [] as { name: string; image_url: string | null }[];

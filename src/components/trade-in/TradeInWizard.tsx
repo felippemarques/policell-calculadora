@@ -873,6 +873,7 @@ export function TradeInWizard() {
         {/* Sticky price footer removido — cliente só vê o valor no resultado final.
             (Configurável: se quiser reativar, restaurar o bloco usando businessSettings.showRealtimeDeductions) */}
       </div>
+      </div>
     </div>
   );
 }

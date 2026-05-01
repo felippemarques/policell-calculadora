@@ -55,9 +55,20 @@ interface HeroSlide {
   textAlign?: keyof typeof textAlignClass;
   bgPosX?: number;
   bgPosY?: number;
+  bg_color?: string;
   cta1?: HeroCta;
   cta2?: HeroCta & { enabled?: boolean };
 }
+
+type MobileFit = "cover" | "contain";
+type MobileAspect = "16/10" | "4/5" | "1/1" | "3/4";
+
+const MOBILE_ASPECT_CLASS: Record<MobileAspect, string> = {
+  "16/10": "aspect-[16/10]",
+  "4/5": "aspect-[4/5]",
+  "1/1": "aspect-square",
+  "3/4": "aspect-[3/4]",
+};
 
 const buildCtaTarget = (cta: HeroCta): string => {
   if (cta.url && cta.url.trim()) return cta.url.trim();

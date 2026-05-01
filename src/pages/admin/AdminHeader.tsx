@@ -96,7 +96,16 @@ const AdminHeader = () => {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo deve ser uma imagem");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 2MB)");
+      return;
+    }
     const objectUrl = URL.createObjectURL(file);
     const img = new window.Image();
     img.onload = () => {
@@ -108,12 +117,31 @@ const AdminHeader = () => {
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `header/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("lp-images").upload(path, file);
-    if (error) { toast.error("Erro no upload: " + error.message); setUploading(false); return; }
+    const { error } = await supabase.storage
+      .from("lp-images")
+      .upload(path, file, { cacheControl: "3600" });
+    if (error) {
+      toast.error("Erro no upload: " + error.message);
+      setUploading(false);
+      return;
+    }
     const { data: urlData } = supabase.storage.from("lp-images").getPublicUrl(path);
-    setForm({ ...form, logo_url: urlData.publicUrl });
+    const newUrl = urlData.publicUrl;
+    setForm((prev) => ({ ...prev, logo_url: newUrl }));
+
+    // Auto-save just the logo so the user doesn't lose it by forgetting "Salvar"
+    try {
+      const { error: dbErr } = await supabase
+        .from("lp_settings")
+        .update({ value: newUrl })
+        .eq("key", "logo_url");
+      if (dbErr) throw dbErr;
+      queryClient.invalidateQueries({ queryKey: ["lp-settings"] });
+      toast.success("Logo enviada e publicada!");
+    } catch (err: any) {
+      toast.error("Logo enviada mas não foi salva: " + (err.message || ""));
+    }
     setUploading(false);
-    toast.success("Logo enviada!");
   };
 
   const handleSave = () => {

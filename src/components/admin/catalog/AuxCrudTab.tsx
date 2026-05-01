@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Upload, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrderArrows } from "./OrderArrows";
@@ -177,6 +177,7 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
             <TableHeader>
               <TableRow>
                 <TableHead className="w-24">Ordem</TableHead>
+                {table === "brands" && <TableHead className="w-28">Logo</TableHead>}
                 <TableHead>{fieldLabel}</TableHead>
                 <TableHead>Regra de Formatação</TableHead>
                 <TableHead className="w-24 text-right">Ações</TableHead>
@@ -190,6 +191,15 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
                     <TableCell>
                       <OrderArrows table={table} rows={rows} currentId={row.id} queryKey={qk} />
                     </TableCell>
+                    {table === "brands" && (
+                      <TableCell>
+                        <BrandLogoCell
+                          brandId={row.id}
+                          logoUrl={(row as any).logo_url ?? null}
+                          onChanged={invalidate}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       {isEditing ? (
                         <Input
@@ -248,7 +258,113 @@ export function AuxCrudTab({ table, label, fieldName, fieldLabel, defaultFormatR
               })}
             </TableBody>
           </Table>
+          {table === "brands" && (
+            <div className="px-4 py-2.5 text-[11px] text-muted-foreground border-t bg-muted/20">
+              Logo recomendada: <strong>200×200px</strong>, PNG/SVG transparente, &lt; 100KB.
+              Aparece no fluxo da calculadora ao escolher a marca.
+            </div>
+          )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Upload + preview of a brand logo, persisted directly in `brands.logo_url`. */
+function BrandLogoCell({
+  brandId,
+  logoUrl,
+  onChanged,
+}: {
+  brandId: string;
+  logoUrl: string | null;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo deve ser uma imagem");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 1MB)");
+      return;
+    }
+    setBusy(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `brands/${brandId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("lp-images")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("lp-images").getPublicUrl(path);
+      const { error: dbErr } = await supabase
+        .from("brands")
+        .update({ logo_url: pub.publicUrl } as any)
+        .eq("id", brandId);
+      if (dbErr) throw dbErr;
+      toast.success("Logo atualizada");
+      onChanged();
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar logo");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!confirm("Remover a logo desta marca?")) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("brands")
+        .update({ logo_url: null } as any)
+        .eq("id", brandId);
+      if (error) throw error;
+      toast.success("Logo removida");
+      onChanged();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-10 w-10 rounded-md border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+        {logoUrl ? (
+          <img src={logoUrl} alt="logo" className="h-full w-full object-contain" />
+        ) : (
+          <ImageOff className="h-4 w-4 text-muted-foreground/60" />
+        )}
+      </div>
+      <label className="cursor-pointer">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleUpload}
+          disabled={busy}
+        />
+        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border hover:bg-accent/40 transition-colors">
+          <Upload className="h-3 w-3" />
+          {busy ? "..." : logoUrl ? "Trocar" : "Enviar"}
+        </span>
+      </label>
+      {logoUrl && !busy && (
+        <button
+          onClick={handleRemove}
+          className="text-destructive hover:text-destructive/80 text-xs"
+          title="Remover"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
       )}
     </div>
   );

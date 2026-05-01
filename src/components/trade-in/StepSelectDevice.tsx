@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Smartphone, Check, ArrowLeft, ArrowRight, ChevronRight, Palette, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useColorsByDevice } from "@/hooks/use-trade-in-data";
+import { useColorsByDevice, useBrandLogos } from "@/hooks/use-trade-in-data";
 import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { hasAnyAnswers } from "@/lib/trade-in-sanity";
 import { emptyAnswers } from "@/lib/trade-in-pricing";
@@ -59,6 +59,14 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
     devices.forEach((d) => set.add(d.brand));
     return Array.from(set).sort();
   }, [devices]);
+
+  // brand logos (from `brands` table) — keyed lowercased
+  const { data: brandLogos = [] } = useBrandLogos();
+  const brandLogoMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    brandLogos.forEach((b) => m.set(b.name.trim().toLowerCase(), b.logo_url));
+    return m;
+  }, [brandLogos]);
 
   // models for selected brand (with their image, picked from the first variant)
   const models = useMemo(() => {
@@ -217,9 +225,10 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
           <PhaseGrid>
             {brands.length === 0 && <EmptyState message="Nenhuma marca disponível" />}
             {brands.map((b) => (
-              <SelectionCard
+              <BrandCard
                 key={b}
                 label={b}
+                logoUrl={brandLogoMap.get(b.trim().toLowerCase()) ?? null}
                 selected={selectedBrand === b}
                 onClick={() => handleBrandPick(b)}
               />
@@ -471,6 +480,57 @@ function SelectionCard({
         }`}
     >
       <span className="text-sm md:text-base font-semibold text-foreground">{label}</span>
+      {selected && (
+        <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+          <Check className="h-3 w-3 text-primary-foreground" />
+        </div>
+      )}
+    </button>
+  );
+}
+
+/**
+ * Brand selection card — shows the uploaded logo when available, otherwise
+ * falls back to the brand name as text. The brand name is always shown as a
+ * small caption underneath when a logo is present, for clarity.
+ */
+function BrandCard({
+  label,
+  logoUrl,
+  selected,
+  onClick,
+}: {
+  label: string;
+  logoUrl: string | null;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative rounded-2xl border p-4 text-center transition-all duration-200 min-h-[112px] flex flex-col items-center justify-center gap-2
+        ${
+          selected
+            ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+            : "border-border bg-card hover:border-primary/40 hover:ring-2 hover:ring-primary/15 hover:shadow-sm"
+        }`}
+      aria-label={label}
+    >
+      {logoUrl ? (
+        <>
+          <img
+            src={logoUrl}
+            alt={label}
+            loading="lazy"
+            className="h-12 md:h-14 max-w-[80%] object-contain transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+        </>
+      ) : (
+        <span className="text-base md:text-lg font-semibold text-foreground">{label}</span>
+      )}
       {selected && (
         <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
           <Check className="h-3 w-3 text-primary-foreground" />

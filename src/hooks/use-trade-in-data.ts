@@ -16,6 +16,28 @@ export interface DeviceWithImage {
   image_url: string | null;
 }
 
+export interface BrandLogo {
+  name: string;
+  logo_url: string | null;
+}
+
+export function useBrandLogos() {
+  return useQuery({
+    queryKey: ["brand-logos"],
+    queryFn: async (): Promise<BrandLogo[]> => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("name, logo_url, display_order")
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((b: any) => ({
+        name: b.name,
+        logo_url: b.logo_url ?? null,
+      }));
+    },
+  });
+}
+
 export function useDevices() {
   return useQuery({
     queryKey: ["devices"],

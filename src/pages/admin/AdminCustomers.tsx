@@ -766,19 +766,19 @@ const AdminCustomers = () => {
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                         Condições identificadas
                       </p>
-                      <ul className="text-xs space-y-1">
+                      <ul className="text-xs space-y-1.5">
                         {selectedParsed.slice(0, 4).map((p, i) => (
                           <li
                             key={i}
                             className={cn(
-                              "flex justify-between gap-2",
+                              "flex justify-between gap-3 min-w-0",
                               p.isCritical && "text-destructive",
                             )}
                           >
-                            <span className="text-muted-foreground truncate">
+                            <span className="text-muted-foreground truncate flex-1 min-w-0">
                               {p.question}
                             </span>
-                            <span className="font-medium text-right truncate">
+                            <span className="font-medium text-right truncate flex-1 min-w-0">
                               {p.answer}
                             </span>
                           </li>

@@ -138,6 +138,16 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const { data: targetIsAdmin } = await userClient.rpc("has_role", {
+        _user_id: body.user_id,
+        _role: "admin",
+      });
+      if (!targetIsAdmin) {
+        return new Response(JSON.stringify({ error: "Só é possível remover administradores" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { error: delErr } = await admin.auth.admin.deleteUser(body.user_id);
       if (delErr) throw delErr;
       return new Response(JSON.stringify({ ok: true }), {

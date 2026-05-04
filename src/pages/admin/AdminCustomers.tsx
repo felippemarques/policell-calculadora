@@ -690,7 +690,7 @@ const AdminCustomers = () => {
 
       {/* Detail — Full screen modal */}
       <Dialog
-        open={!!selectedLead}
+        open={!!selectedLead && !proposalDialogOpen}
         onOpenChange={(o) => !o && setSelectedLead(null)}
       >
         <DialogContent

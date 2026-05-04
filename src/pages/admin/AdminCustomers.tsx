@@ -714,7 +714,7 @@ const AdminCustomers = () => {
 
       {/* Proposal Confirmation Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-md min-w-0 overflow-hidden">
+        <DialogContent className="z-[70] w-[calc(100vw-2rem)] max-w-md min-w-0 overflow-hidden">
           <DialogHeader>
             <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-2">
               <MessageCircle className="h-6 w-6 text-emerald-700" />

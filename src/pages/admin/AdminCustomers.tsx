@@ -714,7 +714,7 @@ const AdminCustomers = () => {
 
       {/* Proposal Confirmation Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md min-w-0 overflow-hidden">
           <DialogHeader>
             <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-2">
               <MessageCircle className="h-6 w-6 text-emerald-700" />
@@ -729,8 +729,8 @@ const AdminCustomers = () => {
           </DialogHeader>
 
           {selectedLead && (
-            <div className="space-y-4 py-2">
-              <Card className="p-4 bg-muted/30 space-y-3">
+            <div className="min-w-0 space-y-4 py-2">
+              <Card className="min-w-0 overflow-hidden p-4 bg-muted/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -739,21 +739,21 @@ const AdminCustomers = () => {
                 </div>
                 <Separator />
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
                     <span className="text-muted-foreground">Cliente</span>
-                    <span className="font-medium">
+                    <span className="min-w-0 truncate text-right font-medium">
                       {selectedLead.customer_name}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
                     <span className="text-muted-foreground">Telefone</span>
-                    <span className="font-medium">
+                    <span className="min-w-0 truncate text-right font-medium">
                       {selectedLead.customer_phone}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
                     <span className="text-muted-foreground">Aparelho</span>
-                    <span className="font-medium text-right max-w-[60%] truncate">
+                    <span className="min-w-0 truncate text-right font-medium">
                       {selectedDeviceLabel}
                     </span>
                   </div>
@@ -806,7 +806,7 @@ const AdminCustomers = () => {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="min-w-0 gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setProposalDialogOpen(false)}

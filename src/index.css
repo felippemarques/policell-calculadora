@@ -154,13 +154,13 @@
 @layer utilities {
   @keyframes cta-trade-glow {
     0%, 100% {
-      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45), 0 8px 20px -6px hsl(var(--primary) / 0.45);
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.55), 0 8px 24px -6px hsl(var(--primary) / 0.55);
     }
     50% {
-      box-shadow: 0 0 0 6px hsl(var(--primary) / 0), 0 12px 28px -4px hsl(var(--primary) / 0.6);
+      box-shadow: 0 0 0 8px hsl(var(--primary) / 0), 0 16px 36px -4px hsl(var(--primary) / 0.7);
     }
   }
   .cta-trade-glow {
-    animation: cta-trade-glow 2.4s ease-in-out infinite;
+    animation: cta-trade-glow 2s ease-in-out infinite;
   }
 }

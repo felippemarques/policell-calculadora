@@ -64,6 +64,7 @@ export function ColorsTab() {
   const qk = ["admin", "colors"];
 
   const [showForm, setShowForm] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState({
     name: "",
     hex_code: DEFAULT_HEX,
@@ -171,6 +172,33 @@ export function ColorsTab() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const uploadColorImage = async (file: File, onUrl: (url: string) => void) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo deve ser uma imagem");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 1MB)");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `colors/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("lp-images")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("lp-images").getPublicUrl(path);
+      onUrl(pub.publicUrl);
+      toast.success("Imagem enviada");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar imagem");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   return (
     <div className="space-y-4">

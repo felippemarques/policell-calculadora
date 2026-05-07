@@ -385,6 +385,13 @@ export function ColorsTab() {
                               setEditForm({ ...editForm, brand_ids: ids })
                             }
                           />
+                          <ColorImageField
+                            imageUrl={editForm.image_url}
+                            uploading={uploadingImage}
+                            onUpload={(file) => uploadColorImage(file, (url) => setEditForm({ ...editForm, image_url: url }))}
+                            onUrlChange={(url) => setEditForm({ ...editForm, image_url: url })}
+                            onRemove={() => setEditForm({ ...editForm, image_url: "" })}
+                          />
                           <div className="flex gap-2 justify-end">
                             <Button
                               size="sm"
@@ -409,7 +416,11 @@ export function ColorsTab() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {row.hex_code && (
+                        {row.image_url ? (
+                          <span className="h-9 w-9 rounded-md border border-border flex-shrink-0 overflow-hidden bg-muted/30">
+                            <img src={row.image_url} alt={row.name} className="h-full w-full object-cover" loading="lazy" />
+                          </span>
+                        ) : row.hex_code && (
                           <span
                             className="inline-block h-4 w-4 rounded-full border border-border flex-shrink-0"
                             style={{ backgroundColor: row.hex_code }}

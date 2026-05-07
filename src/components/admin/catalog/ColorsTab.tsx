@@ -107,7 +107,23 @@ export function ColorsTab() {
     },
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: qk });
+    qc.invalidateQueries({ queryKey: ["all-colors"] });
+    qc.invalidateQueries({ queryKey: ["catalog-tree"] });
+    qc.invalidateQueries({ queryKey: ["colors-by-brand"] });
+    qc.invalidateQueries({ queryKey: ["colors-by-device"] });
+    qc.invalidateQueries({ queryKey: ["devices"] });
+  };
+
+  const persistColorImage = async (id: string, imageUrl: string | null) => {
+    const { error } = await supabase
+      .from("colors")
+      .update({ image_url: imageUrl } as any)
+      .eq("id", id);
+    if (error) throw error;
+    invalidate();
+  };
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -173,7 +189,7 @@ export function ColorsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const uploadColorImage = async (file: File, onUrl: (url: string) => void) => {
+  const uploadColorImage = async (file: File, onUrl: (url: string) => void, colorId?: string) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Arquivo deve ser uma imagem");
       return;
@@ -192,7 +208,12 @@ export function ColorsTab() {
       if (error) throw error;
       const { data: pub } = supabase.storage.from("lp-images").getPublicUrl(path);
       onUrl(pub.publicUrl);
-      toast.success("Imagem enviada");
+      if (colorId) {
+        await persistColorImage(colorId, pub.publicUrl);
+        toast.success("Imagem enviada e salva");
+      } else {
+        toast.success("Imagem enviada");
+      }
     } catch (err: any) {
       toast.error(err.message || "Falha ao enviar imagem");
     } finally {

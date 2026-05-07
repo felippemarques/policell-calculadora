@@ -242,6 +242,22 @@ export default function AdminCalculatorHero() {
             onChange={(e) => set("calc_hero_title", e.target.value)}
             placeholder="Ex.: Pollicell"
           />
+          <p className="text-xs text-muted-foreground">Renderizado em uma única linha, separado do slogan.</p>
+          <div className="pt-1">
+            <Label className="text-xs">Alinhamento do nome</Label>
+            <Select
+              value={form.calc_hero_title_align || "inherit"}
+              onValueChange={(v) => set("calc_hero_title_align", v === "inherit" ? "" : v)}
+            >
+              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Usar alinhamento geral</SelectItem>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -252,11 +268,27 @@ export default function AdminCalculatorHero() {
             onChange={(e) => set("calc_hero_subtitle", e.target.value)}
             placeholder="Ex.: Garantia de entrega e qualidade."
           />
+          <p className="text-xs text-muted-foreground">Aparece em uma linha separada abaixo do nome.</p>
+          <div className="pt-1">
+            <Label className="text-xs">Alinhamento do slogan</Label>
+            <Select
+              value={form.calc_hero_subtitle_align || "inherit"}
+              onValueChange={(v) => set("calc_hero_subtitle_align", v === "inherit" ? "" : v)}
+            >
+              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Usar alinhamento geral</SelectItem>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Alinhamento do texto</Label>
+            <Label>Alinhamento geral (padrão)</Label>
             <Select value={form.calc_hero_align || "center"} onValueChange={(v) => set("calc_hero_align", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -277,17 +309,6 @@ export default function AdminCalculatorHero() {
               placeholder="5000"
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Encaixe da imagem no celular</Label>
-          <Select value={form.calc_hero_bg_fit || "cover"} onValueChange={(v) => set("calc_hero_bg_fit", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cover">Preencher banner</SelectItem>
-              <SelectItem value="contain">Mostrar imagem inteira</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {img("calc_hero_bg_image", "Imagem de fundo 1")}

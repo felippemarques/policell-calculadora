@@ -306,7 +306,11 @@ export default function AdminCalculatorHero() {
           <ArrowRightLeft className="h-5 w-5 text-primary" /> Card "Trocar por outro aparelho"
         </h2>
         <ImageField keyName="flow_trade_icon_url" label="Ícone do card" />
-        <ColorField keyName="flow_trade_card_bg" label="Cor de fundo do card" />
+        <div className="grid md:grid-cols-3 gap-4">
+          <ColorField keyName="flow_trade_card_bg" label="Cor de fundo do card" />
+          <ColorField keyName="flow_trade_cta_bg" label="Cor do botão" />
+          <ColorField keyName="flow_trade_cta_text" label="Cor do texto" />
+        </div>
       </Card>
 
       <Card className="p-5 space-y-5">
@@ -314,7 +318,22 @@ export default function AdminCalculatorHero() {
           <Banknote className="h-5 w-5 text-primary" /> Card "Vender por dinheiro"
         </h2>
         <ImageField keyName="flow_sale_icon_url" label="Ícone do card" />
-        <ColorField keyName="flow_sale_card_bg" label="Cor de fundo do card" />
+        <div className="grid md:grid-cols-3 gap-4">
+          <ColorField keyName="flow_sale_card_bg" label="Cor de fundo do card" />
+          <ColorField keyName="flow_sale_cta_bg" label="Cor do botão" />
+          <ColorField keyName="flow_sale_cta_text" label="Cor do texto" />
+        </div>
+        <div className="space-y-2">
+          <Label>Ofuscamento do card vender (%)</Label>
+          <Input
+            type="number"
+            min={35}
+            max={100}
+            value={form.flow_sale_card_opacity}
+            onChange={(e) => set("flow_sale_card_opacity", e.target.value)}
+            placeholder="70"
+          />
+        </div>
       </Card>
 
       <div className="sticky bottom-4 flex justify-end">

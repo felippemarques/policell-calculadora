@@ -38,6 +38,8 @@ export const CALC_HERO_DEFAULTS: Record<CalcHeroKey, string> = {
   calc_hero_text_color: "",
   calc_hero_logo_url: "",
   calc_hero_align: "center",
+  calc_hero_title_align: "",
+  calc_hero_subtitle_align: "",
   calc_hero_title: "Policell",
   calc_hero_subtitle: "Garantia de entrega e qualidade.",
   flow_trade_icon_url: "",

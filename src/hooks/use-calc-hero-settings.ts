@@ -11,6 +11,8 @@ export const CALC_HERO_KEYS = [
   "calc_hero_text_color",
   "calc_hero_logo_url",
   "calc_hero_align",
+  "calc_hero_title_align",
+  "calc_hero_subtitle_align",
   "calc_hero_title",
   "calc_hero_subtitle",
   "flow_trade_icon_url",

@@ -693,33 +693,6 @@ export function TradeInWizard() {
     const cep = a.zip ? `CEP ${a.zip.replace(/(\d{5})(\d{3})/, "$1-$2")}` : "";
     return [line1, line2, line3, cep].filter(Boolean).join(" · ");
   })();
-
-
-
-  const heroBgImage = calcHero?.calc_hero_bg_image || "";
-  const heroBgImages = [
-    calcHero?.calc_hero_bg_image,
-    calcHero?.calc_hero_bg_image_2,
-    calcHero?.calc_hero_bg_image_3,
-  ].filter(Boolean) as string[];
-  const heroBgColor = calcHero?.calc_hero_bg_color || "";
-  const heroTextColor = calcHero?.calc_hero_text_color || "";
-  const heroTitle = calcHero?.calc_hero_title || "Policell";
-  const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
-  const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
-  const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
-  const heroBgFit = calcHero?.calc_hero_bg_fit === "contain" ? "contain" : "cover";
-  const heroInterval = Math.max(2000, Number(calcHero?.calc_hero_bg_interval) || 5000);
-  const [heroSlide, setHeroSlide] = useState(0);
-
-  useEffect(() => {
-    if (heroBgImages.length <= 1) return;
-    const timer = window.setInterval(() => {
-      setHeroSlide((current) => (current + 1) % heroBgImages.length);
-    }, heroInterval);
-    return () => window.clearInterval(timer);
-  }, [heroBgImages.length, heroInterval]);
-
   const wrapperStyle: React.CSSProperties = {};
   if (heroBgImages.length > 0) {
     wrapperStyle.backgroundImage = `url(${heroBgImages[heroSlide % heroBgImages.length]})`;

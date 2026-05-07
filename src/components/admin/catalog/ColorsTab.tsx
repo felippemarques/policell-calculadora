@@ -115,6 +115,7 @@ export function ColorsTab() {
       const { error } = await supabase.from("colors").insert({
         name: formatted,
         hex_code: form.hex_code || null,
+        image_url: form.image_url || null,
         brand_ids: form.brand_ids,
         format_rule: form.format_rule,
         display_order: maxOrder + 1,
@@ -126,6 +127,7 @@ export function ColorsTab() {
       setForm({
         name: "",
         hex_code: DEFAULT_HEX,
+        image_url: "",
         brand_ids: [],
         format_rule: "capitalize",
       });
@@ -143,6 +145,7 @@ export function ColorsTab() {
         .update({
           name: formatted,
           hex_code: editForm.hex_code || null,
+          image_url: editForm.image_url || null,
           brand_ids: editForm.brand_ids,
           format_rule: editForm.format_rule,
         })

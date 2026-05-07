@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Upload, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,7 @@ interface ColorRow {
   id: string;
   name: string;
   hex_code: string | null;
+  image_url: string | null;
   brand_ids: string[];
   display_order: number;
   format_rule: FormatRule;
@@ -66,6 +67,7 @@ export function ColorsTab() {
   const [form, setForm] = useState({
     name: "",
     hex_code: DEFAULT_HEX,
+    image_url: "",
     brand_ids: [] as string[],
     format_rule: "capitalize" as FormatRule,
   });
@@ -74,6 +76,7 @@ export function ColorsTab() {
   const [editForm, setEditForm] = useState({
     name: "",
     hex_code: DEFAULT_HEX,
+    image_url: "",
     brand_ids: [] as string[],
     format_rule: "capitalize" as FormatRule,
   });

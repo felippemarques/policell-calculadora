@@ -141,6 +141,7 @@ export function TradeInWizard() {
     flowLabel: string;
     acceptedAt: Date;
   } | null>(null);
+  const [heroSlide, setHeroSlide] = useState(0);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {
@@ -619,6 +620,28 @@ export function TradeInWizard() {
     setSubScreen("condition");
     setStep(goToFlowChoice ? 0 : 2);
   };
+
+  const heroBgImages = [
+    calcHero?.calc_hero_bg_image,
+    calcHero?.calc_hero_bg_image_2,
+    calcHero?.calc_hero_bg_image_3,
+  ].filter(Boolean) as string[];
+  const heroBgColor = calcHero?.calc_hero_bg_color || "";
+  const heroTextColor = calcHero?.calc_hero_text_color || "";
+  const heroTitle = calcHero?.calc_hero_title || "Policell";
+  const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
+  const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
+  const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
+  const heroBgFit = calcHero?.calc_hero_bg_fit === "contain" ? "contain" : "cover";
+  const heroInterval = Math.max(2000, Number(calcHero?.calc_hero_bg_interval) || 5000);
+
+  useEffect(() => {
+    if (heroBgImages.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % heroBgImages.length);
+    }, heroInterval);
+    return () => window.clearInterval(timer);
+  }, [heroBgImages.length, heroInterval]);
 
   if (isLoading) {
     return (

@@ -221,7 +221,7 @@ export function ColorsTab() {
                 autoFocus
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label className="text-sm">Cor (hex)</Label>
               <div className="flex items-center gap-2">
                 <input
@@ -239,6 +239,14 @@ export function ColorsTab() {
               </div>
             </div>
           </div>
+
+          <ColorImageField
+            imageUrl={form.image_url}
+            uploading={uploadingImage}
+            onUpload={(file) => uploadColorImage(file, (url) => setForm({ ...form, image_url: url }))}
+            onUrlChange={(url) => setForm({ ...form, image_url: url })}
+            onRemove={() => setForm({ ...form, image_url: "" })}
+          />
 
           <div>
             <Label className="text-sm">Regra de Formatação</Label>

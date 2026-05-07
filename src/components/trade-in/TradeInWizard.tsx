@@ -713,22 +713,22 @@ export function TradeInWizard() {
       className={`w-full transition-[background-image] duration-700 ${heroBgImages.length || heroBgColor ? "py-10 md:py-16 px-4" : ""}`}
     >
       <div className="max-w-2xl mx-auto px-4 md:px-0">
-      <div className={`${heroAlign === "left" ? "text-left" : heroAlign === "right" ? "text-right" : "text-center"} mb-6 md:mb-8`}>
-        <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-3xl bg-primary/10 mb-4 md:mb-5 shadow-sm">
+      <div className={`${alignClass(heroAlign)} mb-6 md:mb-8`}>
+        <div className={`${heroAlign === "left" ? "" : heroAlign === "right" ? "ml-auto" : "mx-auto"} inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-primary/10 mb-4 md:mb-5 shadow-sm`}>
           {heroLogoUrl ? (
             <img src={heroLogoUrl} alt={heroTitle} className="h-full w-full object-contain p-2" />
           ) : (
-            <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-primary" />
+            <Smartphone className="h-9 w-9 md:h-11 md:w-11 text-primary" />
           )}
         </div>
         <h2
-          className="text-2xl md:text-4xl font-semibold tracking-tight"
+          className={`text-2xl md:text-4xl font-semibold tracking-tight ${alignClass(heroTitleAlign)}`}
           style={{ color: heroTextColor || undefined }}
         >
           {heroTitle}
         </h2>
         <p
-          className="text-sm md:text-base mt-2"
+          className={`text-sm md:text-base mt-2 ${alignClass(heroSubtitleAlign)}`}
           style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.85 : undefined }}
         >
           {heroSubtitle}

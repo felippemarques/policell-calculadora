@@ -134,8 +134,10 @@ export function StepChooseFlow({ onChoose }: Props) {
                       ...(c.ctaBg ? { backgroundColor: c.ctaBg } : {}),
                       ...(c.ctaColor ? { color: c.ctaColor } : {}),
                     }}
-                    className={`inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-primary/15 transition-all group-hover:shadow-md ${
-                      c.ctaBg ? "" : c.type === "trade" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    className={`inline-flex items-center gap-1.5 mt-4 rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+                      c.type === "trade"
+                        ? `shadow-lg shadow-primary/40 ring-2 ring-primary/40 group-hover:shadow-xl group-hover:shadow-primary/50 group-hover:scale-[1.04] cta-trade-glow ${c.ctaBg ? "" : "bg-primary text-primary-foreground"}`
+                        : `shadow-sm ring-1 ring-border/40 group-hover:shadow-md ${c.ctaBg ? "" : "bg-muted text-muted-foreground"}`
                     }`}
                   >
                     {c.ctaText}

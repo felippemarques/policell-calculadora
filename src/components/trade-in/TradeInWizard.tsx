@@ -632,6 +632,10 @@ export function TradeInWizard() {
   const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
   const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
   const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
+  const heroTitleAlign = (calcHero?.calc_hero_title_align || heroAlign) as "left" | "center" | "right";
+  const heroSubtitleAlign = (calcHero?.calc_hero_subtitle_align || heroAlign) as "left" | "center" | "right";
+  const alignClass = (a: string) =>
+    a === "left" ? "text-left" : a === "right" ? "text-right" : "text-center";
   const heroBgFit = calcHero?.calc_hero_bg_fit === "contain" ? "contain" : "cover";
   const heroInterval = Math.max(2000, Number(calcHero?.calc_hero_bg_interval) || 5000);
 

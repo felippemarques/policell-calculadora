@@ -416,6 +416,7 @@ export function ColorsTab() {
                             setEditForm({
                               name: row.name,
                               hex_code: row.hex_code || DEFAULT_HEX,
+                              image_url: row.image_url || "",
                               brand_ids: row.brand_ids ?? [],
                               format_rule: row.format_rule,
                             });

@@ -409,9 +409,23 @@ export function ColorsTab() {
                           <ColorImageField
                             imageUrl={editForm.image_url}
                             uploading={uploadingImage}
-                            onUpload={(file) => uploadColorImage(file, (url) => setEditForm({ ...editForm, image_url: url }))}
+                            onUpload={(file) =>
+                              uploadColorImage(
+                                file,
+                                (url) => setEditForm((current) => ({ ...current, image_url: url })),
+                                row.id,
+                              )
+                            }
                             onUrlChange={(url) => setEditForm({ ...editForm, image_url: url })}
-                            onRemove={() => setEditForm({ ...editForm, image_url: "" })}
+                            onRemove={async () => {
+                              setEditForm({ ...editForm, image_url: "" });
+                              try {
+                                await persistColorImage(row.id, null);
+                                toast.success("Imagem removida");
+                              } catch (err: any) {
+                                toast.error(err.message || "Falha ao remover imagem");
+                              }
+                            }}
                           />
                           <div className="flex gap-2 justify-end">
                             <Button

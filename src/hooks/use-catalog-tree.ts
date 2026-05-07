@@ -6,6 +6,7 @@ export interface CatalogColor {
   color_id: string;
   name: string;
   hex_code: string | null;
+  image_url: string | null;
   display_order: number;
   is_visible: boolean;
 }
@@ -49,7 +50,7 @@ export function useCatalogTree() {
         supabase.from("brands").select("id, name, display_order").order("display_order").order("name"),
         supabase.from("device_models").select("id, name, brand_id, display_order, image_url").order("display_order").order("name"),
         supabase.from("storages").select("id, capacity, display_order").order("display_order").order("capacity"),
-        supabase.from("colors").select("id, name, hex_code, brand_ids, display_order").order("display_order").order("name"),
+        supabase.from("colors").select("id, name, hex_code, image_url, brand_ids, display_order").order("display_order").order("name"),
         supabase.from("model_storages").select("id, model_id, storage_id, base_price, trade_price, sale_price, display_order, is_visible"),
         supabase.from("variant_colors").select("id, model_storage_id, color_id, display_order, is_visible"),
       ]);
@@ -71,6 +72,7 @@ export function useCatalogTree() {
           color_id: vc.color_id,
           name: c.name,
           hex_code: c.hex_code,
+          image_url: (c as any).image_url ?? null,
           display_order: vc.display_order,
           is_visible: (vc as any).is_visible ?? true,
         });
@@ -154,7 +156,7 @@ export function useAllColors() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("colors")
-        .select("id, name, hex_code, brand_ids, display_order")
+        .select("id, name, hex_code, image_url, brand_ids, display_order")
         .order("display_order")
         .order("name");
       if (error) throw error;

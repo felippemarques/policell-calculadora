@@ -141,6 +141,7 @@ export function TradeInWizard() {
     flowLabel: string;
     acceptedAt: Date;
   } | null>(null);
+  const [heroSlide, setHeroSlide] = useState(0);
 
   // Restore the saved leadId into the useLead hook on first mount
   useEffect(() => {
@@ -620,6 +621,28 @@ export function TradeInWizard() {
     setStep(goToFlowChoice ? 0 : 2);
   };
 
+  const heroBgImages = [
+    calcHero?.calc_hero_bg_image,
+    calcHero?.calc_hero_bg_image_2,
+    calcHero?.calc_hero_bg_image_3,
+  ].filter(Boolean) as string[];
+  const heroBgColor = calcHero?.calc_hero_bg_color || "";
+  const heroTextColor = calcHero?.calc_hero_text_color || "";
+  const heroTitle = calcHero?.calc_hero_title || "Policell";
+  const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
+  const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
+  const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
+  const heroBgFit = calcHero?.calc_hero_bg_fit === "contain" ? "contain" : "cover";
+  const heroInterval = Math.max(2000, Number(calcHero?.calc_hero_bg_interval) || 5000);
+
+  useEffect(() => {
+    if (heroBgImages.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % heroBgImages.length);
+    }, heroInterval);
+    return () => window.clearInterval(timer);
+  }, [heroBgImages.length, heroInterval]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -670,19 +693,10 @@ export function TradeInWizard() {
     const cep = a.zip ? `CEP ${a.zip.replace(/(\d{5})(\d{3})/, "$1-$2")}` : "";
     return [line1, line2, line3, cep].filter(Boolean).join(" · ");
   })();
-
-
-
-  const heroBgImage = calcHero?.calc_hero_bg_image || "";
-  const heroBgColor = calcHero?.calc_hero_bg_color || "";
-  const heroTextColor = calcHero?.calc_hero_text_color || "";
-  const heroTitle = calcHero?.calc_hero_title || "Policell - Garantia de entrega e qualidade";
-  const heroSubtitle = calcHero?.calc_hero_subtitle || "Seu aparelho vale mais do que você imagina.";
-
   const wrapperStyle: React.CSSProperties = {};
-  if (heroBgImage) {
-    wrapperStyle.backgroundImage = `url(${heroBgImage})`;
-    wrapperStyle.backgroundSize = "cover";
+  if (heroBgImages.length > 0) {
+    wrapperStyle.backgroundImage = `url(${heroBgImages[heroSlide % heroBgImages.length]})`;
+    wrapperStyle.backgroundSize = heroBgFit;
     wrapperStyle.backgroundPosition = "center";
     wrapperStyle.backgroundRepeat = "no-repeat";
   }
@@ -692,12 +706,16 @@ export function TradeInWizard() {
     <div
       id="calculadora"
       style={wrapperStyle}
-      className={`w-full ${heroBgImage || heroBgColor ? "py-10 md:py-16 px-4" : ""}`}
+      className={`w-full transition-[background-image] duration-700 ${heroBgImages.length || heroBgColor ? "py-10 md:py-16 px-4" : ""}`}
     >
       <div className="max-w-2xl mx-auto px-4 md:px-0">
-      <div className="text-center mb-6 md:mb-8">
+      <div className={`${heroAlign === "left" ? "text-left" : heroAlign === "right" ? "text-right" : "text-center"} mb-6 md:mb-8`}>
         <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-3xl bg-primary/10 mb-4 md:mb-5 shadow-sm">
-          <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-primary" />
+          {heroLogoUrl ? (
+            <img src={heroLogoUrl} alt={heroTitle} className="h-full w-full object-contain p-2" />
+          ) : (
+            <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-primary" />
+          )}
         </div>
         <h2
           className="text-2xl md:text-4xl font-semibold tracking-tight"

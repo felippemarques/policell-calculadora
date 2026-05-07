@@ -112,6 +112,7 @@ export interface ColorRow {
   id: string;
   name: string;
   hex_code: string | null;
+  image_url: string | null;
   brand_ids: string[];
   display_order: number;
 }
@@ -128,7 +129,7 @@ export function useColorsByBrand(brandId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("colors")
-        .select("id, name, hex_code, brand_ids, display_order")
+        .select("id, name, hex_code, image_url, brand_ids, display_order")
         .order("display_order")
         .order("name");
       if (error) throw error;
@@ -163,7 +164,7 @@ export function useColorsByDevice(
       const { data: variants, error: vErr } = await supabase
         .from("variant_colors")
         .select(
-          "display_order, is_visible, colors:color_id (id, name, hex_code, brand_ids, display_order)",
+          "display_order, is_visible, colors:color_id (id, name, hex_code, image_url, brand_ids, display_order)",
         )
         .eq("model_storage_id", deviceId!)
         .eq("is_visible", true)
@@ -182,7 +183,7 @@ export function useColorsByDevice(
       if (!brandId) return [];
       const { data, error } = await supabase
         .from("colors")
-        .select("id, name, hex_code, brand_ids, display_order")
+        .select("id, name, hex_code, image_url, brand_ids, display_order")
         .order("display_order")
         .order("name");
       if (error) throw error;

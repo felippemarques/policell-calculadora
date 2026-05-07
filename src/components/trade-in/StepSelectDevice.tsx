@@ -356,11 +356,17 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                         }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span
-                          className="inline-block h-6 w-6 rounded-full border border-border/80 flex-shrink-0 shadow-inner"
-                          style={{ backgroundColor: c.hex_code || "transparent" }}
-                          aria-hidden
-                        />
+                        {c.image_url ? (
+                          <span className="h-10 w-10 rounded-xl border border-border/80 flex-shrink-0 overflow-hidden bg-muted/30 shadow-inner" aria-hidden>
+                            <img src={c.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-block h-6 w-6 rounded-full border border-border/80 flex-shrink-0 shadow-inner"
+                            style={{ backgroundColor: c.hex_code || "transparent" }}
+                            aria-hidden
+                          />
+                        )}
                         <span className="text-sm font-medium text-foreground truncate">
                           {c.name}
                         </span>

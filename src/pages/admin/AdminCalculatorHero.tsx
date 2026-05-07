@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,7 +21,13 @@ type Form = Record<CalcHeroKey, string>;
 
 const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
   calc_hero_bg_image:
-    "Imagem em tela cheia atrás da calculadora. Recomendado: 1920×1080 (paisagem), JPG/PNG até 2MB. Em telas pequenas ela é centralizada e cortada para preencher.",
+    "Imagem principal do banner. Recomendado: 1920×1080, JPG/PNG até 2MB.",
+  calc_hero_bg_image_2:
+    "Slide extra opcional. Quando preenchido, alterna automaticamente com a imagem principal.",
+  calc_hero_bg_image_3:
+    "Segundo slide extra opcional para o banner da calculadora.",
+  calc_hero_logo_url:
+    "Logo exibida acima do nome da loja. Se vazio, usa o ícone padrão da calculadora.",
   calc_hero_bg_color:
     "Cor de fundo (hex, ex.: #0F172A) usada quando não houver imagem ou em áreas transparentes. Deixe em branco para usar o padrão do site.",
   calc_hero_text_color:
@@ -33,6 +40,14 @@ const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
     "Cor de fundo do card 'Trocar' (hex). Deixe em branco para usar o tema padrão.",
   flow_sale_card_bg:
     "Cor de fundo do card 'Vender' (hex). Deixe em branco para usar o tema padrão.",
+  flow_trade_cta_bg:
+    "Cor do botão 'Quero trocar'. Deixe em branco para usar o destaque padrão.",
+  flow_trade_cta_text_color:
+    "Cor do texto do botão 'Quero trocar'. Deixe em branco para usar o contraste padrão.",
+  flow_sale_cta_bg:
+    "Cor do botão 'Quero vender'. Deixe em branco para usar o padrão ofuscado.",
+  flow_sale_cta_text_color:
+    "Cor do texto do botão 'Quero vender'. Deixe em branco para usar o contraste padrão.",
 };
 
 export default function AdminCalculatorHero() {
@@ -219,26 +234,66 @@ export default function AdminCalculatorHero() {
       <Card className="p-5 space-y-5">
         <h2 className="font-semibold text-lg">Banner / Topo</h2>
 
+        <ImageField keyName="calc_hero_logo_url" label="Logo da loja" />
+
         <div className="space-y-2">
-          <Label>Título principal</Label>
+          <Label>Nome da loja</Label>
           <Input
             value={form.calc_hero_title}
             onChange={(e) => set("calc_hero_title", e.target.value)}
-            placeholder="Ex.: Sua loja - Garantia de qualidade"
+            placeholder="Ex.: Pollicell"
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Subtítulo</Label>
+          <Label>Slogan / frase de conversão</Label>
           <Textarea
             rows={2}
             value={form.calc_hero_subtitle}
             onChange={(e) => set("calc_hero_subtitle", e.target.value)}
-            placeholder="Ex.: Seu aparelho vale mais do que você imagina."
+            placeholder="Ex.: Garantia de entrega e qualidade."
           />
         </div>
 
-        <ImageField keyName="calc_hero_bg_image" label="Imagem de fundo (tela inteira)" />
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Alinhamento do texto</Label>
+            <Select value={form.calc_hero_align || "center"} onValueChange={(v) => set("calc_hero_align", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Tempo entre imagens (ms)</Label>
+            <Input
+              type="number"
+              min={2000}
+              step={500}
+              value={form.calc_hero_bg_interval}
+              onChange={(e) => set("calc_hero_bg_interval", e.target.value)}
+              placeholder="5000"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Encaixe da imagem no celular</Label>
+          <Select value={form.calc_hero_bg_fit || "cover"} onValueChange={(v) => set("calc_hero_bg_fit", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cover">Preencher banner</SelectItem>
+              <SelectItem value="contain">Mostrar imagem inteira</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <ImageField keyName="calc_hero_bg_image" label="Imagem de fundo 1" />
+        <ImageField keyName="calc_hero_bg_image_2" label="Imagem de fundo 2 (opcional)" />
+        <ImageField keyName="calc_hero_bg_image_3" label="Imagem de fundo 3 (opcional)" />
 
         <div className="grid md:grid-cols-2 gap-4">
           <ColorField keyName="calc_hero_bg_color" label="Cor de fundo (fallback)" />
@@ -251,7 +306,11 @@ export default function AdminCalculatorHero() {
           <ArrowRightLeft className="h-5 w-5 text-primary" /> Card "Trocar por outro aparelho"
         </h2>
         <ImageField keyName="flow_trade_icon_url" label="Ícone do card" />
-        <ColorField keyName="flow_trade_card_bg" label="Cor de fundo do card" />
+        <div className="grid md:grid-cols-3 gap-4">
+          <ColorField keyName="flow_trade_card_bg" label="Cor de fundo do card" />
+          <ColorField keyName="flow_trade_cta_bg" label="Cor do botão" />
+          <ColorField keyName="flow_trade_cta_text_color" label="Cor do texto" />
+        </div>
       </Card>
 
       <Card className="p-5 space-y-5">
@@ -259,7 +318,22 @@ export default function AdminCalculatorHero() {
           <Banknote className="h-5 w-5 text-primary" /> Card "Vender por dinheiro"
         </h2>
         <ImageField keyName="flow_sale_icon_url" label="Ícone do card" />
-        <ColorField keyName="flow_sale_card_bg" label="Cor de fundo do card" />
+        <div className="grid md:grid-cols-3 gap-4">
+          <ColorField keyName="flow_sale_card_bg" label="Cor de fundo do card" />
+          <ColorField keyName="flow_sale_cta_bg" label="Cor do botão" />
+          <ColorField keyName="flow_sale_cta_text_color" label="Cor do texto" />
+        </div>
+        <div className="space-y-2">
+          <Label>Ofuscamento do card vender (%)</Label>
+          <Input
+            type="number"
+            min={35}
+            max={100}
+            value={form.flow_sale_card_opacity}
+            onChange={(e) => set("flow_sale_card_opacity", e.target.value)}
+            placeholder="70"
+          />
+        </div>
       </Card>
 
       <div className="sticky bottom-4 flex justify-end">

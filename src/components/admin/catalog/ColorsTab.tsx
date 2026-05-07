@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Upload, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,7 @@ interface ColorRow {
   id: string;
   name: string;
   hex_code: string | null;
+  image_url: string | null;
   brand_ids: string[];
   display_order: number;
   format_rule: FormatRule;
@@ -63,9 +64,11 @@ export function ColorsTab() {
   const qk = ["admin", "colors"];
 
   const [showForm, setShowForm] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState({
     name: "",
     hex_code: DEFAULT_HEX,
+    image_url: "",
     brand_ids: [] as string[],
     format_rule: "capitalize" as FormatRule,
   });
@@ -74,6 +77,7 @@ export function ColorsTab() {
   const [editForm, setEditForm] = useState({
     name: "",
     hex_code: DEFAULT_HEX,
+    image_url: "",
     brand_ids: [] as string[],
     format_rule: "capitalize" as FormatRule,
   });
@@ -112,10 +116,11 @@ export function ColorsTab() {
       const { error } = await supabase.from("colors").insert({
         name: formatted,
         hex_code: form.hex_code || null,
+        image_url: form.image_url || null,
         brand_ids: form.brand_ids,
         format_rule: form.format_rule,
         display_order: maxOrder + 1,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -123,6 +128,7 @@ export function ColorsTab() {
       setForm({
         name: "",
         hex_code: DEFAULT_HEX,
+        image_url: "",
         brand_ids: [],
         format_rule: "capitalize",
       });
@@ -140,9 +146,10 @@ export function ColorsTab() {
         .update({
           name: formatted,
           hex_code: editForm.hex_code || null,
+          image_url: editForm.image_url || null,
           brand_ids: editForm.brand_ids,
           format_rule: editForm.format_rule,
-        })
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -166,6 +173,33 @@ export function ColorsTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const uploadColorImage = async (file: File, onUrl: (url: string) => void) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo deve ser uma imagem");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 1MB)");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `colors/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("lp-images")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("lp-images").getPublicUrl(path);
+      onUrl(pub.publicUrl);
+      toast.success("Imagem enviada");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao enviar imagem");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -187,7 +221,7 @@ export function ColorsTab() {
                 autoFocus
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label className="text-sm">Cor (hex)</Label>
               <div className="flex items-center gap-2">
                 <input
@@ -205,6 +239,14 @@ export function ColorsTab() {
               </div>
             </div>
           </div>
+
+          <ColorImageField
+            imageUrl={form.image_url}
+            uploading={uploadingImage}
+            onUpload={(file) => uploadColorImage(file, (url) => setForm({ ...form, image_url: url }))}
+            onUrlChange={(url) => setForm({ ...form, image_url: url })}
+            onRemove={() => setForm({ ...form, image_url: "" })}
+          />
 
           <div>
             <Label className="text-sm">Regra de Formatação</Label>
@@ -343,6 +385,13 @@ export function ColorsTab() {
                               setEditForm({ ...editForm, brand_ids: ids })
                             }
                           />
+                          <ColorImageField
+                            imageUrl={editForm.image_url}
+                            uploading={uploadingImage}
+                            onUpload={(file) => uploadColorImage(file, (url) => setEditForm({ ...editForm, image_url: url }))}
+                            onUrlChange={(url) => setEditForm({ ...editForm, image_url: url })}
+                            onRemove={() => setEditForm({ ...editForm, image_url: "" })}
+                          />
                           <div className="flex gap-2 justify-end">
                             <Button
                               size="sm"
@@ -367,7 +416,11 @@ export function ColorsTab() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {row.hex_code && (
+                        {row.image_url ? (
+                          <span className="h-9 w-9 rounded-md border border-border flex-shrink-0 overflow-hidden bg-muted/30">
+                            <img src={row.image_url} alt={row.name} className="h-full w-full object-cover" loading="lazy" />
+                          </span>
+                        ) : row.hex_code && (
                           <span
                             className="inline-block h-4 w-4 rounded-full border border-border flex-shrink-0"
                             style={{ backgroundColor: row.hex_code }}
@@ -410,6 +463,7 @@ export function ColorsTab() {
                             setEditForm({
                               name: row.name,
                               hex_code: row.hex_code || DEFAULT_HEX,
+                              image_url: row.image_url || "",
                               brand_ids: row.brand_ids ?? [],
                               format_rule: row.format_rule,
                             });
@@ -506,6 +560,66 @@ function BrandsMultiSelect({
       <p className="text-[11px] text-muted-foreground">
         Se nenhuma marca for selecionada, a cor aparece para qualquer aparelho.
       </p>
+    </div>
+  );
+}
+
+function ColorImageField({
+  imageUrl,
+  uploading,
+  onUpload,
+  onUrlChange,
+  onRemove,
+}: {
+  imageUrl: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onUrlChange: (url: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-3">
+      <Label className="text-sm">Imagem real da cor (opcional)</Label>
+      <div className="flex items-start gap-3">
+        <div className="h-16 w-16 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {imageUrl ? (
+            <img src={imageUrl} alt="Miniatura da cor" className="h-full w-full object-cover" />
+          ) : (
+            <ImageOff className="h-5 w-5 text-muted-foreground/60" />
+          )}
+        </div>
+        <div className="flex-1 space-y-2">
+          <Input
+            value={imageUrl}
+            onChange={(e) => onUrlChange(e.target.value)}
+            placeholder="https://… ou envie uma imagem"
+            className="text-xs"
+          />
+          <div className="flex flex-wrap gap-2">
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) onUpload(file);
+                }}
+              />
+              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border hover:bg-accent/40 transition-colors">
+                <Upload className="h-3 w-3" /> {uploading ? "Enviando…" : "Enviar imagem"}
+              </span>
+            </label>
+            {imageUrl && (
+              <button type="button" onClick={onRemove} className="text-xs text-muted-foreground hover:text-foreground">
+                Remover
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

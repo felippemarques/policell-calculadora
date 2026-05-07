@@ -120,7 +120,7 @@ export function ColorsTab() {
         brand_ids: form.brand_ids,
         format_rule: form.format_rule,
         display_order: maxOrder + 1,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -149,7 +149,7 @@ export function ColorsTab() {
           image_url: editForm.image_url || null,
           brand_ids: editForm.brand_ids,
           format_rule: editForm.format_rule,
-        })
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },

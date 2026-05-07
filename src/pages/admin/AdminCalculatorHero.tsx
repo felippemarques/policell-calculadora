@@ -42,11 +42,11 @@ const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
     "Cor de fundo do card 'Vender' (hex). Deixe em branco para usar o tema padrão.",
   flow_trade_cta_bg:
     "Cor do botão 'Quero trocar'. Deixe em branco para usar o destaque padrão.",
-  flow_trade_cta_text:
+  flow_trade_cta_text_color:
     "Cor do texto do botão 'Quero trocar'. Deixe em branco para usar o contraste padrão.",
   flow_sale_cta_bg:
     "Cor do botão 'Quero vender'. Deixe em branco para usar o padrão ofuscado.",
-  flow_sale_cta_text:
+  flow_sale_cta_text_color:
     "Cor do texto do botão 'Quero vender'. Deixe em branco para usar o contraste padrão.",
 };
 
@@ -309,7 +309,7 @@ export default function AdminCalculatorHero() {
         <div className="grid md:grid-cols-3 gap-4">
           <ColorField keyName="flow_trade_card_bg" label="Cor de fundo do card" />
           <ColorField keyName="flow_trade_cta_bg" label="Cor do botão" />
-          <ColorField keyName="flow_trade_cta_text" label="Cor do texto" />
+          <ColorField keyName="flow_trade_cta_text_color" label="Cor do texto" />
         </div>
       </Card>
 
@@ -321,7 +321,7 @@ export default function AdminCalculatorHero() {
         <div className="grid md:grid-cols-3 gap-4">
           <ColorField keyName="flow_sale_card_bg" label="Cor de fundo do card" />
           <ColorField keyName="flow_sale_cta_bg" label="Cor do botão" />
-          <ColorField keyName="flow_sale_cta_text" label="Cor do texto" />
+          <ColorField keyName="flow_sale_cta_text_color" label="Cor do texto" />
         </div>
         <div className="space-y-2">
           <Label>Ofuscamento do card vender (%)</Label>

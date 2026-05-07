@@ -563,3 +563,63 @@ function BrandsMultiSelect({
     </div>
   );
 }
+
+function ColorImageField({
+  imageUrl,
+  uploading,
+  onUpload,
+  onUrlChange,
+  onRemove,
+}: {
+  imageUrl: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onUrlChange: (url: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-3">
+      <Label className="text-sm">Imagem real da cor (opcional)</Label>
+      <div className="flex items-start gap-3">
+        <div className="h-16 w-16 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {imageUrl ? (
+            <img src={imageUrl} alt="Miniatura da cor" className="h-full w-full object-cover" />
+          ) : (
+            <ImageOff className="h-5 w-5 text-muted-foreground/60" />
+          )}
+        </div>
+        <div className="flex-1 space-y-2">
+          <Input
+            value={imageUrl}
+            onChange={(e) => onUrlChange(e.target.value)}
+            placeholder="https://… ou envie uma imagem"
+            className="text-xs"
+          />
+          <div className="flex flex-wrap gap-2">
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) onUpload(file);
+                }}
+              />
+              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border hover:bg-accent/40 transition-colors">
+                <Upload className="h-3 w-3" /> {uploading ? "Enviando…" : "Enviar imagem"}
+              </span>
+            </label>
+            {imageUrl && (
+              <button type="button" onClick={onRemove} className="text-xs text-muted-foreground hover:text-foreground">
+                Remover
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -16,11 +16,11 @@ export const CALC_HERO_KEYS = [
   "flow_trade_icon_url",
   "flow_trade_card_bg",
   "flow_trade_cta_bg",
-  "flow_trade_cta_text",
+  "flow_trade_cta_text_color",
   "flow_sale_icon_url",
   "flow_sale_card_bg",
   "flow_sale_cta_bg",
-  "flow_sale_cta_text",
+  "flow_sale_cta_text_color",
   "flow_sale_card_opacity",
 ] as const;
 
@@ -41,11 +41,11 @@ export const CALC_HERO_DEFAULTS: Record<CalcHeroKey, string> = {
   flow_trade_icon_url: "",
   flow_trade_card_bg: "",
   flow_trade_cta_bg: "",
-  flow_trade_cta_text: "",
+  flow_trade_cta_text_color: "",
   flow_sale_icon_url: "",
   flow_sale_card_bg: "",
   flow_sale_cta_bg: "",
-  flow_sale_cta_text: "",
+  flow_sale_cta_text_color: "",
   flow_sale_card_opacity: "70",
 };
 

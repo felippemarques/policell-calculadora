@@ -156,6 +156,7 @@ export type Database = {
           format_rule: string
           hex_code: string | null
           id: string
+          image_url: string | null
           name: string
         }
         Insert: {
@@ -165,6 +166,7 @@ export type Database = {
           format_rule?: string
           hex_code?: string | null
           id?: string
+          image_url?: string | null
           name: string
         }
         Update: {
@@ -174,6 +176,7 @@ export type Database = {
           format_rule?: string
           hex_code?: string | null
           id?: string
+          image_url?: string | null
           name?: string
         }
         Relationships: []

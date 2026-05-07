@@ -123,108 +123,27 @@ export default function AdminCalculatorHero() {
     );
   }
 
-  function ImageField({
-    keyName,
-    label,
-  }: {
-    keyName: CalcHeroKey;
-    label: string;
-  }) {
-    return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
-      <p className="text-xs text-muted-foreground">{FIELD_HELP[keyName]}</p>
-      <div className="flex items-start gap-3">
-        <div className="h-20 w-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-          {form[keyName] ? (
-            <img
-              src={form[keyName]}
-              alt={label}
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <ImageOff className="h-6 w-6 text-muted-foreground" />
-          )}
-        </div>
-        <div className="flex-1 space-y-2">
-          <Input
-            placeholder="https://… ou faça upload"
-            value={form[keyName]}
-            onChange={(e) => set(keyName, e.target.value)}
-          />
-          <div className="flex gap-2">
-            <label className="inline-flex">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUpload(keyName, f);
-                  e.target.value = "";
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                asChild
-                disabled={uploadingKey === keyName}
-              >
-                <span className="cursor-pointer">
-                  {uploadingKey === keyName ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <Upload className="h-3.5 w-3.5 mr-1.5" />
-                  )}
-                  Enviar imagem
-                </span>
-              </Button>
-            </label>
-            {form[keyName] && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => set(keyName, "")}
-              >
-                Remover
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-    );
-  }
+  const renderImageField = (keyName: CalcHeroKey, label: string) => (
+    <ImageField
+      keyName={keyName}
+      label={label}
+      value={form[keyName]}
+      help={FIELD_HELP[keyName]}
+      uploading={uploadingKey === keyName}
+      onChange={(v) => set(keyName, v)}
+      onUpload={(f) => handleUpload(keyName, f)}
+    />
+  );
 
-  function ColorField({
-    keyName,
-    label,
-  }: {
-    keyName: CalcHeroKey;
-    label: string;
-  }) {
-    return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
-      <p className="text-xs text-muted-foreground">{FIELD_HELP[keyName]}</p>
-      <div className="flex items-center gap-2">
-        <Input
-          type="color"
-          className="h-10 w-14 p-1"
-          value={form[keyName] || "#ffffff"}
-          onChange={(e) => set(keyName, e.target.value)}
-        />
-        <Input
-          placeholder="#0F172A ou vazio"
-          value={form[keyName]}
-          onChange={(e) => set(keyName, e.target.value)}
-        />
-      </div>
-    </div>
-    );
-  }
+  const renderColorField = (keyName: CalcHeroKey, label: string) => (
+    <ColorField
+      keyName={keyName}
+      label={label}
+      value={form[keyName]}
+      help={FIELD_HELP[keyName]}
+      onChange={(v) => set(keyName, v)}
+    />
+  );
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">

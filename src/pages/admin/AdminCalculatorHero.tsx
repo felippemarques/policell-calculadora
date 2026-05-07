@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,7 +21,13 @@ type Form = Record<CalcHeroKey, string>;
 
 const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
   calc_hero_bg_image:
-    "Imagem em tela cheia atrás da calculadora. Recomendado: 1920×1080 (paisagem), JPG/PNG até 2MB. Em telas pequenas ela é centralizada e cortada para preencher.",
+    "Imagem principal do banner. Recomendado: 1920×1080, JPG/PNG até 2MB.",
+  calc_hero_bg_image_2:
+    "Slide extra opcional. Quando preenchido, alterna automaticamente com a imagem principal.",
+  calc_hero_bg_image_3:
+    "Segundo slide extra opcional para o banner da calculadora.",
+  calc_hero_logo_url:
+    "Logo exibida acima do nome da loja. Se vazio, usa o ícone padrão da calculadora.",
   calc_hero_bg_color:
     "Cor de fundo (hex, ex.: #0F172A) usada quando não houver imagem ou em áreas transparentes. Deixe em branco para usar o padrão do site.",
   calc_hero_text_color:
@@ -33,6 +40,14 @@ const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
     "Cor de fundo do card 'Trocar' (hex). Deixe em branco para usar o tema padrão.",
   flow_sale_card_bg:
     "Cor de fundo do card 'Vender' (hex). Deixe em branco para usar o tema padrão.",
+  flow_trade_cta_bg:
+    "Cor do botão 'Quero trocar'. Deixe em branco para usar o destaque padrão.",
+  flow_trade_cta_text:
+    "Cor do texto do botão 'Quero trocar'. Deixe em branco para usar o contraste padrão.",
+  flow_sale_cta_bg:
+    "Cor do botão 'Quero vender'. Deixe em branco para usar o padrão ofuscado.",
+  flow_sale_cta_text:
+    "Cor do texto do botão 'Quero vender'. Deixe em branco para usar o contraste padrão.",
 };
 
 export default function AdminCalculatorHero() {

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { OrderArrows } from "./OrderArrows";
+import type { Database } from "@/integrations/supabase/types";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ import {
 import { toast } from "sonner";
 
 type FormatRule = "lowercase" | "uppercase" | "capitalize";
+type ColorInsert = Database["public"]["Tables"]["colors"]["Insert"];
+type ColorUpdate = Database["public"]["Tables"]["colors"]["Update"];
 
 const FORMAT_LABELS: Record<FormatRule, string> = {
   lowercase: "Minúsculo",
@@ -119,7 +122,7 @@ export function ColorsTab() {
   const persistColorImage = async (id: string, imageUrl: string | null) => {
     const { error } = await supabase
       .from("colors")
-      .update({ image_url: imageUrl } as any)
+      .update({ image_url: imageUrl } satisfies ColorUpdate)
       .eq("id", id);
     if (error) throw error;
     invalidate();
@@ -136,7 +139,7 @@ export function ColorsTab() {
         brand_ids: form.brand_ids,
         format_rule: form.format_rule,
         display_order: maxOrder + 1,
-      } as any);
+      } satisfies ColorInsert);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -151,7 +154,7 @@ export function ColorsTab() {
       setShowForm(false);
       toast.success("Cor criada!");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const updateMutation = useMutation({
@@ -165,7 +168,7 @@ export function ColorsTab() {
           image_url: editForm.image_url || null,
           brand_ids: editForm.brand_ids,
           format_rule: editForm.format_rule,
-        } as any)
+        } satisfies ColorUpdate)
         .eq("id", id);
       if (error) throw error;
     },
@@ -174,7 +177,7 @@ export function ColorsTab() {
       setEditId(null);
       toast.success("Atualizado!");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteMutation = useMutation({
@@ -186,7 +189,7 @@ export function ColorsTab() {
       invalidate();
       toast.success("Removido!");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const uploadColorImage = async (file: File, onUrl: (url: string) => void, colorId?: string) => {
@@ -214,8 +217,8 @@ export function ColorsTab() {
       } else {
         toast.success("Imagem enviada");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Falha ao enviar imagem");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar imagem");
     } finally {
       setUploadingImage(false);
     }

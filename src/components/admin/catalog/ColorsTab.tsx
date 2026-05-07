@@ -425,8 +425,8 @@ export function ColorsTab() {
                               try {
                                 await persistColorImage(row.id, null);
                                 toast.success("Imagem removida");
-                              } catch (err: any) {
-                                toast.error(err.message || "Falha ao remover imagem");
+                              } catch (err: unknown) {
+                                toast.error(err instanceof Error ? err.message : "Falha ao remover imagem");
                               }
                             }}
                           />

@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Banknote, ArrowRight } from "lucide-react";
+import { ArrowRightLeft, Banknote, ArrowRight, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFlowSettings } from "@/hooks/use-flow-settings";
 import { useCalcHeroSettings } from "@/hooks/use-calc-hero-settings";
@@ -93,7 +93,7 @@ export function StepChooseFlow({ onChoose }: Props) {
           const hasCustomBg = !!c.customBg;
           const cardOpacity = c.type === "sale" ? Math.min(100, Math.max(35, Number(c.opacity) || 70)) / 100 : 1;
           return (
-            <button
+          <button
               key={c.type}
               type="button"
               onClick={() => onChoose(c.type)}
@@ -101,10 +101,18 @@ export function StepChooseFlow({ onChoose }: Props) {
                 ...(hasCustomBg ? { backgroundColor: c.customBg, backgroundImage: "none" } : {}),
                 opacity: cardOpacity,
               }}
-              className={`group relative text-left w-full rounded-2xl border-2 border-border p-5 md:p-6 transition-all hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                hasCustomBg ? "" : `bg-gradient-to-br ${c.accent}`
-              }`}
+              className={`group relative text-left w-full rounded-2xl border-2 p-5 md:p-6 transition-all hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                c.type === "trade"
+                  ? "border-primary/50 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 hover:border-primary/70"
+                  : "border-border hover:shadow-md"
+              } ${hasCustomBg ? "" : `bg-gradient-to-br ${c.accent}`}`}
             >
+              {c.type === "trade" && (
+                <span className="absolute -top-2.5 right-4 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/30">
+                  <Sparkles className="h-3 w-3" />
+                  Recomendado
+                </span>
+              )}
               <div className="flex items-start gap-4">
                 <div
                   className={`flex-shrink-0 h-12 w-12 md:h-14 md:w-14 rounded-2xl flex items-center justify-center overflow-hidden ${
@@ -136,7 +144,7 @@ export function StepChooseFlow({ onChoose }: Props) {
                     }}
                     className={`inline-flex items-center gap-1.5 mt-4 rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
                       c.type === "trade"
-                        ? `shadow-lg shadow-primary/40 ring-2 ring-primary/40 group-hover:shadow-xl group-hover:shadow-primary/50 group-hover:scale-[1.04] cta-trade-glow ${c.ctaBg ? "" : "bg-primary text-primary-foreground"}`
+                        ? `shadow-xl shadow-primary/50 ring-2 ring-primary/50 group-hover:shadow-2xl group-hover:shadow-primary/60 group-hover:scale-[1.06] cta-trade-glow ${c.ctaBg ? "" : "bg-primary text-primary-foreground"}`
                         : `shadow-sm ring-1 ring-border/40 group-hover:shadow-md ${c.ctaBg ? "" : "bg-muted text-muted-foreground"}`
                     }`}
                   >

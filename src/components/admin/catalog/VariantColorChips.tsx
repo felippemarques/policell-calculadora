@@ -89,7 +89,11 @@ export function VariantColorChips({ modelStorageId, brandId, colors }: Props) {
           variant="secondary"
           className={`gap-1.5 pr-1 ${c.is_visible ? "" : "opacity-50 line-through"}`}
         >
-          {c.hex_code && (
+          {c.image_url ? (
+            <span className="inline-flex h-5 w-5 overflow-hidden rounded border border-border bg-muted/30">
+              <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" loading="lazy" />
+            </span>
+          ) : c.hex_code && (
             <span
               className="inline-block h-3 w-3 rounded-full border border-border"
               style={{ backgroundColor: c.hex_code }}
@@ -133,7 +137,11 @@ export function VariantColorChips({ modelStorageId, brandId, colors }: Props) {
           ) : (
             available.map((c) => (
               <DropdownMenuItem key={c.id} onSelect={() => addColor.mutate(c.id)}>
-                {c.hex_code && (
+                {(c as any).image_url ? (
+                  <span className="mr-2 inline-flex h-5 w-5 overflow-hidden rounded border border-border bg-muted/30">
+                    <img src={(c as any).image_url} alt={c.name} className="h-full w-full object-cover" loading="lazy" />
+                  </span>
+                ) : c.hex_code && (
                   <span
                     className="mr-2 inline-block h-3 w-3 rounded-full border border-border"
                     style={{ backgroundColor: c.hex_code }}

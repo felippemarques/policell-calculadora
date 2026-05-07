@@ -33,6 +33,9 @@ export function StepChooseFlow({ onChoose }: Props) {
     accent: string;
     iconBg: string;
     customBg: string;
+    ctaBg: string;
+    ctaColor: string;
+    opacity?: string;
   }> = [
     {
       type: "trade" as FlowType,
@@ -45,6 +48,8 @@ export function StepChooseFlow({ onChoose }: Props) {
       accent: "from-primary/10 to-primary/0 hover:border-primary/40",
       iconBg: "bg-primary/10 text-primary",
       customBg: hero?.flow_trade_card_bg || "",
+      ctaBg: hero?.flow_trade_cta_bg || "",
+      ctaColor: hero?.flow_trade_cta_text || "",
     },
     {
       type: "sale" as FlowType,
@@ -57,6 +62,9 @@ export function StepChooseFlow({ onChoose }: Props) {
       accent: "from-accent/15 to-accent/0 hover:border-accent/50",
       iconBg: "bg-accent/15 text-accent-foreground",
       customBg: hero?.flow_sale_card_bg || "",
+      ctaBg: hero?.flow_sale_cta_bg || "",
+      ctaColor: hero?.flow_sale_cta_text || "",
+      opacity: hero?.flow_sale_card_opacity || "70",
     },
   ].filter((c) => c.show);
 
@@ -83,12 +91,16 @@ export function StepChooseFlow({ onChoose }: Props) {
         {cards.map((c) => {
           const Icon = c.icon;
           const hasCustomBg = !!c.customBg;
+          const cardOpacity = c.type === "sale" ? Math.min(100, Math.max(35, Number(c.opacity) || 70)) / 100 : 1;
           return (
             <button
               key={c.type}
               type="button"
               onClick={() => onChoose(c.type)}
-              style={hasCustomBg ? { backgroundColor: c.customBg, backgroundImage: "none" } : undefined}
+              style={{
+                ...(hasCustomBg ? { backgroundColor: c.customBg, backgroundImage: "none" } : {}),
+                opacity: cardOpacity,
+              }}
               className={`group relative text-left w-full rounded-2xl border-2 border-border p-5 md:p-6 transition-all hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                 hasCustomBg ? "" : `bg-gradient-to-br ${c.accent}`
               }`}
@@ -117,7 +129,15 @@ export function StepChooseFlow({ onChoose }: Props) {
                   <p className="text-sm text-muted-foreground mt-1 leading-snug">
                     {c.description}
                   </p>
-                  <span className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-primary">
+                  <span
+                    style={{
+                      ...(c.ctaBg ? { backgroundColor: c.ctaBg } : {}),
+                      ...(c.ctaColor ? { color: c.ctaColor } : {}),
+                    }}
+                    className={`inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-primary/15 transition-all group-hover:shadow-md ${
+                      c.ctaBg ? "" : c.type === "trade" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
                     {c.ctaText}
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>

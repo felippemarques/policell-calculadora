@@ -298,6 +298,18 @@ export default function AdminCalculatorHero() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Tempo entre imagens (ms)</Label>
+            <Input
+              type="number"
+              min={2000}
+              step={500}
+              value={form.calc_hero_bg_interval}
+              onChange={(e) => set("calc_hero_bg_interval", e.target.value)}
+              placeholder="5000"
+            />
+          </div>
+        </div>
 
         {img("calc_hero_bg_image", "Imagem de fundo 1")}
         {img("calc_hero_bg_image_2", "Imagem de fundo 2 (opcional)")}

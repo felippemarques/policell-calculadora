@@ -49,7 +49,7 @@ export function StepChooseFlow({ onChoose }: Props) {
       iconBg: "bg-primary/10 text-primary",
       customBg: hero?.flow_trade_card_bg || "",
       ctaBg: hero?.flow_trade_cta_bg || "",
-      ctaColor: hero?.flow_trade_cta_text || "",
+      ctaColor: hero?.flow_trade_cta_text_color || "",
     },
     {
       type: "sale" as FlowType,
@@ -63,7 +63,7 @@ export function StepChooseFlow({ onChoose }: Props) {
       iconBg: "bg-accent/15 text-accent-foreground",
       customBg: hero?.flow_sale_card_bg || "",
       ctaBg: hero?.flow_sale_cta_bg || "",
-      ctaColor: hero?.flow_sale_cta_text || "",
+      ctaColor: hero?.flow_sale_cta_text_color || "",
       opacity: hero?.flow_sale_card_opacity || "70",
     },
   ].filter((c) => c.show);

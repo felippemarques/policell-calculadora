@@ -150,3 +150,17 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer utilities {
+  @keyframes cta-trade-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45), 0 8px 20px -6px hsl(var(--primary) / 0.45);
+    }
+    50% {
+      box-shadow: 0 0 0 6px hsl(var(--primary) / 0), 0 12px 28px -4px hsl(var(--primary) / 0.6);
+    }
+  }
+  .cta-trade-glow {
+    animation: cta-trade-glow 2.4s ease-in-out infinite;
+  }
+}

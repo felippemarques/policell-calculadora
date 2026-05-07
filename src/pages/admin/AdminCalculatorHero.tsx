@@ -123,13 +123,14 @@ export default function AdminCalculatorHero() {
     );
   }
 
-  const ImageField = ({
+  function ImageField({
     keyName,
     label,
   }: {
     keyName: CalcHeroKey;
     label: string;
-  }) => (
+  }) {
+    return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">{label}</Label>
       <p className="text-xs text-muted-foreground">{FIELD_HELP[keyName]}</p>

@@ -137,9 +137,9 @@ export function VariantColorChips({ modelStorageId, brandId, colors }: Props) {
           ) : (
             available.map((c) => (
               <DropdownMenuItem key={c.id} onSelect={() => addColor.mutate(c.id)}>
-                {(c as any).image_url ? (
+                {c.image_url ? (
                   <span className="mr-2 inline-flex h-5 w-5 overflow-hidden rounded border border-border bg-muted/30">
-                    <img src={(c as any).image_url} alt={c.name} className="h-full w-full object-cover" loading="lazy" />
+                    <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" loading="lazy" />
                   </span>
                 ) : c.hex_code && (
                   <span

@@ -195,15 +195,17 @@ export default function AdminCalculatorHero() {
         </div>
       </div>
     </div>
-  );
+    );
+  }
 
-  const ColorField = ({
+  function ColorField({
     keyName,
     label,
   }: {
     keyName: CalcHeroKey;
     label: string;
-  }) => (
+  }) {
+    return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">{label}</Label>
       <p className="text-xs text-muted-foreground">{FIELD_HELP[keyName]}</p>
@@ -221,7 +223,8 @@ export default function AdminCalculatorHero() {
         />
       </div>
     </div>
-  );
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">

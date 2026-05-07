@@ -234,26 +234,66 @@ export default function AdminCalculatorHero() {
       <Card className="p-5 space-y-5">
         <h2 className="font-semibold text-lg">Banner / Topo</h2>
 
+        <ImageField keyName="calc_hero_logo_url" label="Logo da loja" />
+
         <div className="space-y-2">
-          <Label>Título principal</Label>
+          <Label>Nome da loja</Label>
           <Input
             value={form.calc_hero_title}
             onChange={(e) => set("calc_hero_title", e.target.value)}
-            placeholder="Ex.: Sua loja - Garantia de qualidade"
+            placeholder="Ex.: Pollicell"
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Subtítulo</Label>
+          <Label>Slogan / frase de conversão</Label>
           <Textarea
             rows={2}
             value={form.calc_hero_subtitle}
             onChange={(e) => set("calc_hero_subtitle", e.target.value)}
-            placeholder="Ex.: Seu aparelho vale mais do que você imagina."
+            placeholder="Ex.: Garantia de entrega e qualidade."
           />
         </div>
 
-        <ImageField keyName="calc_hero_bg_image" label="Imagem de fundo (tela inteira)" />
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Alinhamento do texto</Label>
+            <Select value={form.calc_hero_align || "center"} onValueChange={(v) => set("calc_hero_align", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Tempo entre imagens (ms)</Label>
+            <Input
+              type="number"
+              min={2000}
+              step={500}
+              value={form.calc_hero_bg_interval}
+              onChange={(e) => set("calc_hero_bg_interval", e.target.value)}
+              placeholder="5000"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Encaixe da imagem no celular</Label>
+          <Select value={form.calc_hero_bg_fit || "cover"} onValueChange={(v) => set("calc_hero_bg_fit", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cover">Preencher banner</SelectItem>
+              <SelectItem value="contain">Mostrar imagem inteira</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <ImageField keyName="calc_hero_bg_image" label="Imagem de fundo 1" />
+        <ImageField keyName="calc_hero_bg_image_2" label="Imagem de fundo 2 (opcional)" />
+        <ImageField keyName="calc_hero_bg_image_3" label="Imagem de fundo 3 (opcional)" />
 
         <div className="grid md:grid-cols-2 gap-4">
           <ColorField keyName="calc_hero_bg_color" label="Cor de fundo (fallback)" />

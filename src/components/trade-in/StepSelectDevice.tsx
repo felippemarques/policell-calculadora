@@ -356,34 +356,30 @@ export function StepSelectDevice({ data, devices, onChange, onNext, onBack }: Pr
                             : "border-border bg-card hover:border-primary/40 hover:ring-2 hover:ring-primary/15"
                         }`}
                     >
-                      {hasImage ? (
-                        <>
-                          <div className="aspect-square w-full bg-muted/30 overflow-hidden">
+                      <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                        {hasImage ? (
+                          <span
+                            className="inline-block h-14 w-14 rounded-full border border-border/80 shadow-inner overflow-hidden bg-muted/30"
+                            aria-hidden
+                          >
                             <img
                               src={c.image_url!}
                               alt={c.name}
                               className="h-full w-full object-cover"
                               loading="lazy"
                             />
-                          </div>
-                          <div className="px-2 py-1.5 text-center">
-                            <span className="text-xs font-medium text-foreground line-clamp-1">
-                              {c.name}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                          </span>
+                        ) : (
                           <span
-                            className="inline-block h-8 w-8 rounded-full border border-border/80 shadow-inner"
+                            className="inline-block h-14 w-14 rounded-full border border-border/80 shadow-inner"
                             style={{ backgroundColor: c.hex_code || "transparent" }}
                             aria-hidden
                           />
-                          <span className="text-xs font-medium text-foreground line-clamp-1 text-center">
-                            {c.name}
-                          </span>
-                        </div>
-                      )}
+                        )}
+                        <span className="text-xs font-medium text-foreground line-clamp-1 text-center">
+                          {c.name}
+                        </span>
+                      </div>
                       {isSel && (
                         <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center shadow">
                           <Check className="h-3 w-3 text-primary-foreground" />

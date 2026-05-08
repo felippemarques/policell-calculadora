@@ -45,21 +45,14 @@ interface ImageFieldProps {
   onUpload: (f: File) => void;
   previewSize?: "sm" | "lg";
 }
-  label: string;
-  help?: string;
-  value: string;
-  uploading: boolean;
-  onChange: (v: string) => void;
-  onUpload: (f: File) => void;
-}
-
-function ImageField({ label, help, value, uploading, onChange, onUpload }: ImageFieldProps) {
+function ImageField({ label, help, value, uploading, onChange, onUpload, previewSize = "sm" }: ImageFieldProps) {
+  const previewClass = previewSize === "lg" ? "h-40 w-40" : "h-20 w-20";
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">{label}</Label>
       {help && <p className="text-xs text-muted-foreground">{help}</p>}
       <div className="flex items-start gap-3">
-        <div className="h-20 w-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className={`${previewClass} rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0`}>
           {value ? (
             <img src={value} alt={label} className="h-full w-full object-contain" />
           ) : (

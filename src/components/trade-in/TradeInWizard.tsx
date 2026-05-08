@@ -735,6 +735,14 @@ export function TradeInWizard() {
         >
           {heroSubtitle}
         </p>
+        {heroTagline && (
+          <p
+            className={`text-sm md:text-base mt-1 ${alignClass(heroTaglineAlign)}`}
+            style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.75 : 0.8 }}
+          >
+            {heroTagline}
+          </p>
+        )}
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">

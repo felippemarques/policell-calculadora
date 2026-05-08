@@ -714,9 +714,9 @@ export function TradeInWizard() {
     >
       <div className="max-w-2xl mx-auto px-4 md:px-0">
       <div className={`${alignClass(heroAlign)} mb-6 md:mb-8`}>
-        <div className={`${heroAlign === "left" ? "" : heroAlign === "right" ? "ml-auto" : "mx-auto"} inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-primary/10 mb-4 md:mb-5 shadow-sm`}>
+        <div className={`${heroAlign === "left" ? "" : heroAlign === "right" ? "ml-auto" : "mx-auto"} inline-flex items-center justify-center ${heroLogoUrl ? "w-60 h-60 md:w-72 md:h-72" : "w-20 h-20 md:w-24 md:h-24"} rounded-3xl ${heroLogoUrl ? "" : "bg-primary/10 shadow-sm"} mb-4 md:mb-5`}>
           {heroLogoUrl ? (
-            <img src={heroLogoUrl} alt={heroTitle} className="h-full w-full object-contain p-2" />
+            <img src={heroLogoUrl} alt={heroTitle} className="h-full w-full object-contain" />
           ) : (
             <Smartphone className="h-9 w-9 md:h-11 md:w-11 text-primary" />
           )}

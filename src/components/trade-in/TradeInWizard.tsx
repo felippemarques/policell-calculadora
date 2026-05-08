@@ -630,10 +630,12 @@ export function TradeInWizard() {
   const heroTextColor = calcHero?.calc_hero_text_color || "";
   const heroTitle = calcHero?.calc_hero_title || "Policell";
   const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
+  const heroTagline = calcHero?.calc_hero_tagline || "";
   const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
   const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
   const heroTitleAlign = (calcHero?.calc_hero_title_align || heroAlign) as "left" | "center" | "right";
   const heroSubtitleAlign = (calcHero?.calc_hero_subtitle_align || heroAlign) as "left" | "center" | "right";
+  const heroTaglineAlign = (calcHero?.calc_hero_tagline_align || heroAlign) as "left" | "center" | "right";
   const alignClass = (a: string) =>
     a === "left" ? "text-left" : a === "right" ? "text-right" : "text-center";
   const heroBgFit = calcHero?.calc_hero_bg_fit === "contain" ? "contain" : "cover";
@@ -733,6 +735,14 @@ export function TradeInWizard() {
         >
           {heroSubtitle}
         </p>
+        {heroTagline && (
+          <p
+            className={`text-sm md:text-base mt-1 ${alignClass(heroTaglineAlign)}`}
+            style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.75 : 0.8 }}
+          >
+            {heroTagline}
+          </p>
+        )}
       </div>
 
       <div className="relative rounded-2xl md:rounded-3xl bg-card shadow-lg border border-black/5 overflow-hidden">

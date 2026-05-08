@@ -288,6 +288,32 @@ export default function AdminCalculatorHero() {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label>Linha extra (opcional)</Label>
+          <Textarea
+            rows={2}
+            value={form.calc_hero_tagline}
+            onChange={(e) => set("calc_hero_tagline", e.target.value)}
+            placeholder="Ex.: Avaliação rápida em 2 minutos."
+          />
+          <p className="text-xs text-muted-foreground">Terceira linha, exibida abaixo do slogan. Deixe vazio para ocultar.</p>
+          <div className="pt-1">
+            <Label className="text-xs">Alinhamento da linha extra</Label>
+            <Select
+              value={form.calc_hero_tagline_align || "inherit"}
+              onValueChange={(v) => set("calc_hero_tagline_align", v === "inherit" ? "" : v)}
+            >
+              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Usar alinhamento geral</SelectItem>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centro</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Alinhamento geral (padrão)</Label>

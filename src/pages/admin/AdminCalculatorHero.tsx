@@ -16,6 +16,7 @@ import {
   type CalcHeroKey,
   useCalcHeroSettings,
 } from "@/hooks/use-calc-hero-settings";
+import { HERO_FONT_OPTIONS, HERO_SIZE_OPTIONS } from "@/lib/hero-typography";
 
 type Form = Record<CalcHeroKey, string>;
 
@@ -260,6 +261,26 @@ export default function AdminCalculatorHero() {
               </SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <Label className="text-xs">Fonte</Label>
+              <Select value={form.calc_hero_title_font || "sans"} onValueChange={(v) => set("calc_hero_title_font", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_FONT_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Tamanho</Label>
+              <Select value={form.calc_hero_title_size || "h1"} onValueChange={(v) => set("calc_hero_title_size", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_SIZE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -286,6 +307,26 @@ export default function AdminCalculatorHero() {
               </SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <Label className="text-xs">Fonte</Label>
+              <Select value={form.calc_hero_subtitle_font || "sans"} onValueChange={(v) => set("calc_hero_subtitle_font", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_FONT_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Tamanho</Label>
+              <Select value={form.calc_hero_subtitle_size || "body"} onValueChange={(v) => set("calc_hero_subtitle_size", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_SIZE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -311,6 +352,26 @@ export default function AdminCalculatorHero() {
                 <SelectItem value="right">Direita</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <Label className="text-xs">Fonte</Label>
+              <Select value={form.calc_hero_tagline_font || "sans"} onValueChange={(v) => set("calc_hero_tagline_font", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_FONT_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Tamanho</Label>
+              <Select value={form.calc_hero_tagline_size || "small"} onValueChange={(v) => set("calc_hero_tagline_size", v)}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HERO_SIZE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

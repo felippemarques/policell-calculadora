@@ -629,9 +629,9 @@ export function TradeInWizard() {
   ].filter(Boolean) as string[];
   const heroBgColor = calcHero?.calc_hero_bg_color || "";
   const heroTextColor = calcHero?.calc_hero_text_color || "";
-  const heroTitle = calcHero?.calc_hero_title || "Policell";
-  const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
-  const heroTagline = calcHero?.calc_hero_tagline || "";
+  const heroTitle = (calcHero?.calc_hero_title ?? "Policell").trim();
+  const heroSubtitle = (calcHero?.calc_hero_subtitle ?? "Garantia de entrega e qualidade.").trim();
+  const heroTagline = (calcHero?.calc_hero_tagline ?? "").trim();
   const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
   const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
   const heroTitleAlign = (calcHero?.calc_hero_title_align || heroAlign) as "left" | "center" | "right";
@@ -724,21 +724,25 @@ export function TradeInWizard() {
             <Smartphone className="h-9 w-9 md:h-11 md:w-11 text-primary" />
           )}
         </div>
-        <h2
-          className={`${heroSizeClass(calcHero?.calc_hero_title_size)} ${heroFontClass(calcHero?.calc_hero_title_font)} ${alignClass(heroTitleAlign)}`}
-          style={{ color: heroTextColor || undefined }}
-        >
-          {heroTitle}
-        </h2>
-        <p
-          className={`${heroSizeClass(calcHero?.calc_hero_subtitle_size)} ${heroFontClass(calcHero?.calc_hero_subtitle_font)} mt-2 ${alignClass(heroSubtitleAlign)}`}
-          style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.85 : undefined }}
-        >
-          {heroSubtitle}
-        </p>
+        {heroTitle && (
+          <h2
+            className={`${heroSizeClass(calcHero?.calc_hero_title_size)} ${heroFontClass(calcHero?.calc_hero_title_font)} ${alignClass(heroTitleAlign)}`}
+            style={{ color: heroTextColor || undefined }}
+          >
+            {heroTitle}
+          </h2>
+        )}
+        {heroSubtitle && (
+          <p
+            className={`${heroSizeClass(calcHero?.calc_hero_subtitle_size)} ${heroFontClass(calcHero?.calc_hero_subtitle_font)} ${heroTitle ? "mt-2" : ""} ${alignClass(heroSubtitleAlign)}`}
+            style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.85 : undefined }}
+          >
+            {heroSubtitle}
+          </p>
+        )}
         {heroTagline && (
           <p
-            className={`${heroSizeClass(calcHero?.calc_hero_tagline_size)} ${heroFontClass(calcHero?.calc_hero_tagline_font)} mt-1 ${alignClass(heroTaglineAlign)}`}
+            className={`${heroSizeClass(calcHero?.calc_hero_tagline_size)} ${heroFontClass(calcHero?.calc_hero_tagline_font)} ${(heroTitle || heroSubtitle) ? "mt-1" : ""} ${alignClass(heroTaglineAlign)}`}
             style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.75 : 0.8 }}
           >
             {heroTagline}

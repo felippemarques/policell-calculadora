@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { applyAppleCasingForBrand } from "@/lib/apple-naming";
 
 export interface DeviceWithImage {
   id: string;
@@ -64,6 +65,7 @@ export function useDevices() {
 
       const merged: DeviceWithImage[] = (devicesRes.data || []).map((d: any) => ({
         ...d,
+        model: applyAppleCasingForBrand(String(d.model ?? ""), d.brand),
         image_url:
           imageMap.get(`${d.brand_id}::${String(d.model).trim().toLowerCase()}`) ?? null,
       }));

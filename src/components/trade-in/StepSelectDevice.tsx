@@ -647,10 +647,12 @@ function ModelCard({
         )}
       </div>
 
-      {/* Name */}
-      <p className="mt-2 px-1 text-center text-sm md:text-[15px] font-semibold leading-tight text-foreground">
-        {name}
-      </p>
+      {/* Name — altura fixa (2 linhas) para não deslocar a foto entre cards */}
+      <div className="mt-2 h-9 px-1 flex items-start justify-center">
+        <p className="text-center text-sm md:text-[15px] font-semibold leading-tight text-foreground line-clamp-2">
+          {name}
+        </p>
+      </div>
 
       {selected && (
         <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow-md">

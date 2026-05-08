@@ -16,6 +16,7 @@ import {
   type CalcHeroKey,
   useCalcHeroSettings,
 } from "@/hooks/use-calc-hero-settings";
+import { HERO_FONT_OPTIONS, HERO_SIZE_OPTIONS } from "@/lib/hero-typography";
 
 type Form = Record<CalcHeroKey, string>;
 

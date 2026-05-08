@@ -620,37 +620,37 @@ function ModelCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group relative aspect-square w-full overflow-hidden rounded-2xl border bg-card transition-all duration-300
+      className={`group relative flex aspect-square w-full flex-col overflow-hidden rounded-2xl border-2 bg-card p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40
         ${
           selected
-            ? "border-primary ring-2 ring-primary/40 shadow-lg"
-            : "border-border hover:border-primary/50 hover:shadow-md hover:ring-2 hover:ring-primary/15"
+            ? "border-primary shadow-md ring-1 ring-primary/30"
+            : "border-border hover:border-primary/50"
         }`}
       aria-pressed={selected}
     >
       {/* Image (or placeholder) */}
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={name}
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted/60 to-muted/20">
-          <Smartphone
-            className="h-10 w-10 text-muted-foreground/60 transition-transform duration-500 group-hover:scale-110"
-            aria-hidden
+      <div className="relative flex-1 w-full overflow-hidden rounded-xl bg-muted/20">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
           />
-        </div>
-      )}
-
-      {/* Bottom gradient + name (centered) */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 pt-8 pb-3 text-center">
-        <p className="text-sm md:text-[15px] font-semibold leading-tight text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.04] group-hover:translate-y-[-1px]">
-          {name}
-        </p>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Smartphone
+              className="h-10 w-10 text-muted-foreground/50 transition-transform duration-500 group-hover:scale-110"
+              aria-hidden
+            />
+          </div>
+        )}
       </div>
+
+      {/* Name */}
+      <p className="mt-2 px-1 text-center text-sm md:text-[15px] font-semibold leading-tight text-foreground">
+        {name}
+      </p>
 
       {selected && (
         <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center shadow-md">

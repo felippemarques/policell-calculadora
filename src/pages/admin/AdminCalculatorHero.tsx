@@ -43,6 +43,14 @@ interface ImageFieldProps {
   uploading: boolean;
   onChange: (v: string) => void;
   onUpload: (f: File) => void;
+  previewSize?: "sm" | "lg";
+}
+  label: string;
+  help?: string;
+  value: string;
+  uploading: boolean;
+  onChange: (v: string) => void;
+  onUpload: (f: File) => void;
 }
 
 function ImageField({ label, help, value, uploading, onChange, onUpload }: ImageFieldProps) {

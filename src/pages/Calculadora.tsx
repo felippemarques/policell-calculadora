@@ -15,7 +15,7 @@ const Calculadora = () => {
           </Button>
         </div>
       </header>
-      <main className="w-full max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-20">
+      <main className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
         <TradeInWizard />
       </main>
     </div>

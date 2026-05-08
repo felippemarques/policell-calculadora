@@ -713,11 +713,11 @@ export function TradeInWizard() {
     <div
       id="calculadora"
       style={wrapperStyle}
-      className={`w-full transition-[background-image] duration-700 ${heroBgImages.length || heroBgColor ? "py-10 md:py-16 px-4" : ""}`}
+      className={`w-full transition-[background-image] duration-700 ${heroBgImages.length || heroBgColor ? "py-4 md:py-6 px-4" : ""}`}
     >
       <div className="max-w-2xl mx-auto px-4 md:px-0">
-      <div className={`${alignClass(heroAlign)} mb-4 md:mb-5`}>
-        <div className={`${heroAlign === "left" ? "" : heroAlign === "right" ? "ml-auto" : "mx-auto"} inline-flex items-center justify-center ${heroLogoUrl ? "w-60 h-60 md:w-72 md:h-72" : "w-20 h-20 md:w-24 md:h-24"} rounded-3xl ${heroLogoUrl ? "" : "bg-primary/10 shadow-sm"} mb-1 md:mb-2`}>
+      <div className={`${alignClass(heroAlign)} mb-2 md:mb-3`}>
+        <div className={`${heroAlign === "left" ? "" : heroAlign === "right" ? "ml-auto" : "mx-auto"} inline-flex items-center justify-center ${heroLogoUrl ? "w-40 h-40 md:w-48 md:h-48" : "w-16 h-16 md:w-20 md:h-20"} rounded-3xl ${heroLogoUrl ? "" : "bg-primary/10 shadow-sm"} mb-0 md:mb-1`}>
           {heroLogoUrl ? (
             <img src={heroLogoUrl} alt={heroTitle} className="h-full w-full object-contain" />
           ) : (

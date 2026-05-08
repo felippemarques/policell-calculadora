@@ -235,7 +235,7 @@ export default function AdminCalculatorHero() {
       <Card className="p-5 space-y-5">
         <h2 className="font-semibold text-lg">Banner / Topo</h2>
 
-        {img("calc_hero_logo_url", "Logo da loja")}
+        {img("calc_hero_logo_url", "Logo da loja", "lg")}
 
         <div className="space-y-2">
           <Label>Nome da loja</Label>

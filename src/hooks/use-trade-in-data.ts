@@ -65,6 +65,7 @@ export function useDevices() {
 
       const merged: DeviceWithImage[] = (devicesRes.data || []).map((d: any) => ({
         ...d,
+        model: applyAppleCasingForBrand(String(d.model ?? ""), d.brand),
         image_url:
           imageMap.get(`${d.brand_id}::${String(d.model).trim().toLowerCase()}`) ?? null,
       }));

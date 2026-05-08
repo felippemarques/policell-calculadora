@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { applyAppleCasingForBrand } from "@/lib/apple-naming";
 
 export interface DeviceWithImage {
   id: string;

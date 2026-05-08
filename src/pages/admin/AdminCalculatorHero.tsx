@@ -202,7 +202,7 @@ export default function AdminCalculatorHero() {
     );
   }
 
-  const img = (k: CalcHeroKey, label: string) => (
+  const img = (k: CalcHeroKey, label: string, previewSize: "sm" | "lg" = "sm") => (
     <ImageField
       label={label}
       help={FIELD_HELP[k]}
@@ -210,6 +210,7 @@ export default function AdminCalculatorHero() {
       uploading={uploadingKey === k}
       onChange={(v) => set(k, v)}
       onUpload={(f) => handleUpload(k, f)}
+      previewSize={previewSize}
     />
   );
 

@@ -629,9 +629,9 @@ export function TradeInWizard() {
   ].filter(Boolean) as string[];
   const heroBgColor = calcHero?.calc_hero_bg_color || "";
   const heroTextColor = calcHero?.calc_hero_text_color || "";
-  const heroTitle = calcHero?.calc_hero_title || "Policell";
-  const heroSubtitle = calcHero?.calc_hero_subtitle || "Garantia de entrega e qualidade.";
-  const heroTagline = calcHero?.calc_hero_tagline || "";
+  const heroTitle = (calcHero?.calc_hero_title ?? "Policell").trim();
+  const heroSubtitle = (calcHero?.calc_hero_subtitle ?? "Garantia de entrega e qualidade.").trim();
+  const heroTagline = (calcHero?.calc_hero_tagline ?? "").trim();
   const heroLogoUrl = calcHero?.calc_hero_logo_url || "";
   const heroAlign = (calcHero?.calc_hero_align || "center") as "left" | "center" | "right";
   const heroTitleAlign = (calcHero?.calc_hero_title_align || heroAlign) as "left" | "center" | "right";

@@ -725,20 +725,20 @@ export function TradeInWizard() {
           )}
         </div>
         <h2
-          className={`text-2xl md:text-4xl font-semibold tracking-tight ${alignClass(heroTitleAlign)}`}
+          className={`${heroSizeClass(calcHero?.calc_hero_title_size)} ${heroFontClass(calcHero?.calc_hero_title_font)} ${alignClass(heroTitleAlign)}`}
           style={{ color: heroTextColor || undefined }}
         >
           {heroTitle}
         </h2>
         <p
-          className={`text-sm md:text-base mt-2 ${alignClass(heroSubtitleAlign)}`}
+          className={`${heroSizeClass(calcHero?.calc_hero_subtitle_size)} ${heroFontClass(calcHero?.calc_hero_subtitle_font)} mt-2 ${alignClass(heroSubtitleAlign)}`}
           style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.85 : undefined }}
         >
           {heroSubtitle}
         </p>
         {heroTagline && (
           <p
-            className={`text-sm md:text-base mt-1 ${alignClass(heroTaglineAlign)}`}
+            className={`${heroSizeClass(calcHero?.calc_hero_tagline_size)} ${heroFontClass(calcHero?.calc_hero_tagline_font)} mt-1 ${alignClass(heroTaglineAlign)}`}
             style={{ color: heroTextColor || undefined, opacity: heroTextColor ? 0.75 : 0.8 }}
           >
             {heroTagline}

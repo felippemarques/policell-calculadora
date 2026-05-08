@@ -23,7 +23,7 @@ const FIELD_HELP: Partial<Record<CalcHeroKey, string>> = {
   calc_hero_bg_image: "Imagem principal do banner. Recomendado: 1920×1080, JPG/PNG até 2MB.",
   calc_hero_bg_image_2: "Slide extra opcional. Quando preenchido, alterna automaticamente com a imagem principal.",
   calc_hero_bg_image_3: "Segundo slide extra opcional para o banner da calculadora.",
-  calc_hero_logo_url: "Logo exibida acima do nome da loja. Se vazio, usa o ícone padrão da calculadora.",
+  calc_hero_logo_url: "Logo exibida em destaque acima do nome da loja (renderizada em ~240×240px no desktop e ~288×288px em telas maiores). Recomendado: PNG transparente quadrado de 512×512px ou 1024×1024px, até 1MB. Se vazio, usa o ícone padrão da calculadora.",
   calc_hero_bg_color: "Cor de fundo (hex, ex.: #0F172A) usada quando não houver imagem ou em áreas transparentes. Deixe em branco para usar o padrão do site.",
   calc_hero_text_color: "Cor do título e subtítulo (hex). Use branco/cor clara se a imagem de fundo for escura.",
   flow_trade_icon_url: "Ícone do card 'Trocar'. PNG transparente recomendado, 256×256, até 1MB. Se vazio, usa o ícone padrão.",

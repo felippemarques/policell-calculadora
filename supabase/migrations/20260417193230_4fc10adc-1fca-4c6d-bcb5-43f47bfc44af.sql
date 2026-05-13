@@ -32,8 +32,8 @@ GRANT EXECUTE ON FUNCTION public.update_lead_progress(uuid, uuid, jsonb, text, t
   TO anon, authenticated;
 
 -- 2. Bloquear escrita em user_roles (RESTRICTIVE = sempre aplica)
-CREATE POLICY "Block all writes to user_roles"
-  ON public.user_roles
+DROP POLICY IF EXISTS "Block all writes to user_roles" ON public.user_roles;
+CREATE POLICY "Block all writes to user_roles" ON public.user_roles
   AS RESTRICTIVE
   FOR ALL
   TO public

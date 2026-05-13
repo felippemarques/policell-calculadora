@@ -1,9 +1,12 @@
 
 -- Enum for roles
-CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+DO $mig$ BEGIN
+  CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $mig$;
 
 -- User roles table
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   role app_role NOT NULL,
@@ -26,12 +29,12 @@ AS $$
 $$;
 
 -- RLS for user_roles: admins can read all
-CREATE POLICY "Admins can read roles"
-  ON public.user_roles FOR SELECT TO authenticated
+DROP POLICY IF EXISTS "Admins can read roles" ON public.user_roles;
+CREATE POLICY "Admins can read roles" ON public.user_roles FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
 -- Profiles table
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   display_name TEXT,
@@ -41,15 +44,15 @@ CREATE TABLE public.profiles (
 );
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Profiles viewable by everyone"
-  ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Profiles viewable by everyone" ON public.profiles;
+CREATE POLICY "Profiles viewable by everyone" ON public.profiles FOR SELECT USING (true);
 
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE TO authenticated
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own profile"
-  ON public.profiles FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
 -- Auto-create profile on signup
@@ -66,12 +69,13 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- LP Sections table
-CREATE TABLE public.lp_sections (
+CREATE TABLE IF NOT EXISTS public.lp_sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT,
@@ -85,23 +89,23 @@ CREATE TABLE public.lp_sections (
 );
 ALTER TABLE public.lp_sections ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can read active sections"
-  ON public.lp_sections FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can read active sections" ON public.lp_sections;
+CREATE POLICY "Anyone can read active sections" ON public.lp_sections FOR SELECT USING (true);
 
-CREATE POLICY "Admins can insert sections"
-  ON public.lp_sections FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert sections" ON public.lp_sections;
+CREATE POLICY "Admins can insert sections" ON public.lp_sections FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update sections"
-  ON public.lp_sections FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update sections" ON public.lp_sections;
+CREATE POLICY "Admins can update sections" ON public.lp_sections FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete sections"
-  ON public.lp_sections FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete sections" ON public.lp_sections;
+CREATE POLICY "Admins can delete sections" ON public.lp_sections FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
 -- LP Videos table
-CREATE TABLE public.lp_videos (
+CREATE TABLE IF NOT EXISTS public.lp_videos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   embed_url TEXT NOT NULL,
@@ -113,19 +117,19 @@ CREATE TABLE public.lp_videos (
 );
 ALTER TABLE public.lp_videos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can read active videos"
-  ON public.lp_videos FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can read active videos" ON public.lp_videos;
+CREATE POLICY "Anyone can read active videos" ON public.lp_videos FOR SELECT USING (true);
 
-CREATE POLICY "Admins can insert videos"
-  ON public.lp_videos FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert videos" ON public.lp_videos;
+CREATE POLICY "Admins can insert videos" ON public.lp_videos FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update videos"
-  ON public.lp_videos FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update videos" ON public.lp_videos;
+CREATE POLICY "Admins can update videos" ON public.lp_videos FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete videos"
-  ON public.lp_videos FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete videos" ON public.lp_videos;
+CREATE POLICY "Admins can delete videos" ON public.lp_videos FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
 -- Updated_at trigger function
@@ -137,72 +141,75 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_lp_sections_updated_at ON public.lp_sections;
 CREATE TRIGGER update_lp_sections_updated_at
   BEFORE UPDATE ON public.lp_sections
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_lp_videos_updated_at ON public.lp_videos;
 CREATE TRIGGER update_lp_videos_updated_at
   BEFORE UPDATE ON public.lp_videos
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Also update devices and evaluations to be admin-writable
-CREATE POLICY "Admins can insert devices"
-  ON public.devices FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert devices" ON public.devices;
+CREATE POLICY "Admins can insert devices" ON public.devices FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update devices"
-  ON public.devices FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update devices" ON public.devices;
+CREATE POLICY "Admins can update devices" ON public.devices FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete devices"
-  ON public.devices FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete devices" ON public.devices;
+CREATE POLICY "Admins can delete devices" ON public.devices FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update evaluations"
-  ON public.evaluations FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update evaluations" ON public.evaluations;
+CREATE POLICY "Admins can update evaluations" ON public.evaluations FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete evaluations"
-  ON public.evaluations FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete evaluations" ON public.evaluations;
+CREATE POLICY "Admins can delete evaluations" ON public.evaluations FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
 -- Admin CRUD for damage tables
-CREATE POLICY "Admins can insert damage_categories"
-  ON public.damage_categories FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert damage_categories" ON public.damage_categories;
+CREATE POLICY "Admins can insert damage_categories" ON public.damage_categories FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update damage_categories"
-  ON public.damage_categories FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update damage_categories" ON public.damage_categories;
+CREATE POLICY "Admins can update damage_categories" ON public.damage_categories FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete damage_categories"
-  ON public.damage_categories FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete damage_categories" ON public.damage_categories;
+CREATE POLICY "Admins can delete damage_categories" ON public.damage_categories FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can insert damage_deductions"
-  ON public.damage_deductions FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert damage_deductions" ON public.damage_deductions;
+CREATE POLICY "Admins can insert damage_deductions" ON public.damage_deductions FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update damage_deductions"
-  ON public.damage_deductions FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update damage_deductions" ON public.damage_deductions;
+CREATE POLICY "Admins can update damage_deductions" ON public.damage_deductions FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete damage_deductions"
-  ON public.damage_deductions FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete damage_deductions" ON public.damage_deductions;
+CREATE POLICY "Admins can delete damage_deductions" ON public.damage_deductions FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can insert condition_discounts"
-  ON public.condition_discounts FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Admins can insert condition_discounts" ON public.condition_discounts;
+CREATE POLICY "Admins can insert condition_discounts" ON public.condition_discounts FOR INSERT TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update condition_discounts"
-  ON public.condition_discounts FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update condition_discounts" ON public.condition_discounts;
+CREATE POLICY "Admins can update condition_discounts" ON public.condition_discounts FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete condition_discounts"
-  ON public.condition_discounts FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete condition_discounts" ON public.condition_discounts;
+CREATE POLICY "Admins can delete condition_discounts" ON public.condition_discounts FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));

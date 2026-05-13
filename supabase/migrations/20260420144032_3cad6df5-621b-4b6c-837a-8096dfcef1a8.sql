@@ -65,6 +65,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_validate_evaluation_imei ON public.evaluations;
+DROP TRIGGER IF EXISTS trg_validate_evaluation_imei ON public.evaluations;
 CREATE TRIGGER trg_validate_evaluation_imei
 BEFORE INSERT OR UPDATE OF imei ON public.evaluations
 FOR EACH ROW

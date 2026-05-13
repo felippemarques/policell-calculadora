@@ -3,7 +3,7 @@
 -- 1. NEW TABLES
 -- ============================================================
 
-CREATE TABLE public.model_storages (
+CREATE TABLE IF NOT EXISTS public.model_storages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   model_id uuid NOT NULL REFERENCES public.device_models(id) ON DELETE CASCADE,
   storage_id uuid NOT NULL REFERENCES public.storages(id) ON DELETE RESTRICT,
@@ -13,7 +13,7 @@ CREATE TABLE public.model_storages (
   UNIQUE (model_id, storage_id)
 );
 
-CREATE TABLE public.variant_colors (
+CREATE TABLE IF NOT EXISTS public.variant_colors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   model_storage_id uuid NOT NULL REFERENCES public.model_storages(id) ON DELETE CASCADE,
   color_id uuid NOT NULL REFERENCES public.colors(id) ON DELETE RESTRICT,
@@ -22,8 +22,8 @@ CREATE TABLE public.variant_colors (
   UNIQUE (model_storage_id, color_id)
 );
 
-CREATE INDEX idx_model_storages_model ON public.model_storages(model_id);
-CREATE INDEX idx_variant_colors_ms ON public.variant_colors(model_storage_id);
+CREATE INDEX IF NOT EXISTS idx_model_storages_model ON public.model_storages(model_id);
+CREATE INDEX IF NOT EXISTS idx_variant_colors_ms ON public.variant_colors(model_storage_id);
 
 -- ============================================================
 -- 2. RLS
@@ -32,28 +32,28 @@ CREATE INDEX idx_variant_colors_ms ON public.variant_colors(model_storage_id);
 ALTER TABLE public.model_storages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.variant_colors ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can read model_storages"
-  ON public.model_storages FOR SELECT USING (true);
-CREATE POLICY "Admins can insert model_storages"
-  ON public.model_storages FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Anyone can read model_storages" ON public.model_storages;
+CREATE POLICY "Anyone can read model_storages" ON public.model_storages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can insert model_storages" ON public.model_storages;
+CREATE POLICY "Admins can insert model_storages" ON public.model_storages FOR INSERT TO authenticated
   WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admins can update model_storages"
-  ON public.model_storages FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update model_storages" ON public.model_storages;
+CREATE POLICY "Admins can update model_storages" ON public.model_storages FOR UPDATE TO authenticated
   USING (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admins can delete model_storages"
-  ON public.model_storages FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete model_storages" ON public.model_storages;
+CREATE POLICY "Admins can delete model_storages" ON public.model_storages FOR DELETE TO authenticated
   USING (has_role(auth.uid(), 'admin'::app_role));
 
-CREATE POLICY "Anyone can read variant_colors"
-  ON public.variant_colors FOR SELECT USING (true);
-CREATE POLICY "Admins can insert variant_colors"
-  ON public.variant_colors FOR INSERT TO authenticated
+DROP POLICY IF EXISTS "Anyone can read variant_colors" ON public.variant_colors;
+CREATE POLICY "Anyone can read variant_colors" ON public.variant_colors FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins can insert variant_colors" ON public.variant_colors;
+CREATE POLICY "Admins can insert variant_colors" ON public.variant_colors FOR INSERT TO authenticated
   WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admins can update variant_colors"
-  ON public.variant_colors FOR UPDATE TO authenticated
+DROP POLICY IF EXISTS "Admins can update variant_colors" ON public.variant_colors;
+CREATE POLICY "Admins can update variant_colors" ON public.variant_colors FOR UPDATE TO authenticated
   USING (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admins can delete variant_colors"
-  ON public.variant_colors FOR DELETE TO authenticated
+DROP POLICY IF EXISTS "Admins can delete variant_colors" ON public.variant_colors;
+CREATE POLICY "Admins can delete variant_colors" ON public.variant_colors FOR DELETE TO authenticated
   USING (has_role(auth.uid(), 'admin'::app_role));
 
 -- ============================================================
@@ -145,10 +145,12 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS sync_devices_ms_aiud ON public.model_storages;
 CREATE TRIGGER sync_devices_ms_aiud
 AFTER INSERT OR UPDATE OR DELETE ON public.model_storages
 FOR EACH ROW EXECUTE FUNCTION public.trg_sync_devices_from_ms();
 
+DROP TRIGGER IF EXISTS sync_devices_vc_aiud ON public.variant_colors;
 CREATE TRIGGER sync_devices_vc_aiud
 AFTER INSERT OR UPDATE OR DELETE ON public.variant_colors
 FOR EACH ROW EXECUTE FUNCTION public.trg_sync_devices_from_vc();

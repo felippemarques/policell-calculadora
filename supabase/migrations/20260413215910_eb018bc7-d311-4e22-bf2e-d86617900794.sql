@@ -1,7 +1,7 @@
 
 ALTER TABLE public.lp_sections
-  ADD COLUMN layout TEXT NOT NULL DEFAULT 'text-image',
-  ADD COLUMN section_type TEXT NOT NULL DEFAULT 'section';
+  ADD COLUMN IF NOT EXISTS layout TEXT NOT NULL DEFAULT 'text-image',
+  ADD COLUMN IF NOT EXISTS section_type TEXT NOT NULL DEFAULT 'section';
 
 -- Seed the hero section
 INSERT INTO public.lp_sections (title, content, bg_color, text_color, display_order, is_active, layout, section_type)

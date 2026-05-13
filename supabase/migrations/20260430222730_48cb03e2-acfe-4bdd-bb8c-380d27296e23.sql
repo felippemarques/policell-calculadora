@@ -48,6 +48,7 @@ $$;
 
 -- 3) Trigger BEFORE INSERT
 DROP TRIGGER IF EXISTS trg_check_imei_duplicate ON public.evaluations;
+DROP TRIGGER IF EXISTS trg_check_imei_duplicate ON public.evaluations;
 CREATE TRIGGER trg_check_imei_duplicate
 BEFORE INSERT ON public.evaluations
 FOR EACH ROW

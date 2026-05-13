@@ -17,24 +17,24 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 5) RLS policies do bucket
 DROP POLICY IF EXISTS "Public can read device images" ON storage.objects;
-CREATE POLICY "Public can read device images"
-  ON storage.objects FOR SELECT
+DROP POLICY IF EXISTS "Public can read device images" ON storage.objects;
+CREATE POLICY "Public can read device images" ON storage.objects FOR SELECT
   USING (bucket_id = 'device-images');
 
 DROP POLICY IF EXISTS "Admins can upload device images" ON storage.objects;
-CREATE POLICY "Admins can upload device images"
-  ON storage.objects FOR INSERT
+DROP POLICY IF EXISTS "Admins can upload device images" ON storage.objects;
+CREATE POLICY "Admins can upload device images" ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'device-images' AND public.has_role(auth.uid(), 'admin'::public.app_role));
 
 DROP POLICY IF EXISTS "Admins can update device images" ON storage.objects;
-CREATE POLICY "Admins can update device images"
-  ON storage.objects FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update device images" ON storage.objects;
+CREATE POLICY "Admins can update device images" ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'device-images' AND public.has_role(auth.uid(), 'admin'::public.app_role));
 
 DROP POLICY IF EXISTS "Admins can delete device images" ON storage.objects;
-CREATE POLICY "Admins can delete device images"
-  ON storage.objects FOR DELETE
+DROP POLICY IF EXISTS "Admins can delete device images" ON storage.objects;
+CREATE POLICY "Admins can delete device images" ON storage.objects FOR DELETE
   TO authenticated
   USING (bucket_id = 'device-images' AND public.has_role(auth.uid(), 'admin'::public.app_role));

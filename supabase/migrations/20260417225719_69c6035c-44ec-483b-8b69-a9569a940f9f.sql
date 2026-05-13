@@ -24,6 +24,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_sync_device_brand_id ON public.devices;
+DROP TRIGGER IF EXISTS trg_sync_device_brand_id ON public.devices;
 CREATE TRIGGER trg_sync_device_brand_id
 BEFORE INSERT OR UPDATE ON public.devices
 FOR EACH ROW EXECUTE FUNCTION public.sync_device_brand_id();

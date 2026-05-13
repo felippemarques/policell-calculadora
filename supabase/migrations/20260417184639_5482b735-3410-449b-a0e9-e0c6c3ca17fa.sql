@@ -11,8 +11,8 @@ DROP POLICY IF EXISTS "Lead owner can read by id" ON public.leads;
 DROP POLICY IF EXISTS "Anyone can read evaluations" ON public.evaluations;
 -- "Anyone can create evaluations" continua (gravação do resultado)
 -- Admins já tinham UPDATE/DELETE; adicionamos SELECT explícito:
-CREATE POLICY "Admins can read evaluations"
-  ON public.evaluations FOR SELECT
+DROP POLICY IF EXISTS "Admins can read evaluations" ON public.evaluations;
+CREATE POLICY "Admins can read evaluations" ON public.evaluations FOR SELECT
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -21,13 +21,13 @@ CREATE POLICY "Admins can read evaluations"
 -- ============================================================
 DROP POLICY IF EXISTS "Profiles viewable by everyone" ON public.profiles;
 
-CREATE POLICY "Users can view own profile"
-  ON public.profiles FOR SELECT
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Admins can view all profiles"
-  ON public.profiles FOR SELECT
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -36,23 +36,23 @@ CREATE POLICY "Admins can view all profiles"
 -- ============================================================
 DROP POLICY IF EXISTS "Allow ALL on brands" ON public.brands;
 
-CREATE POLICY "Anyone can read brands"
-  ON public.brands FOR SELECT
+DROP POLICY IF EXISTS "Anyone can read brands" ON public.brands;
+CREATE POLICY "Anyone can read brands" ON public.brands FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Admins can insert brands"
-  ON public.brands FOR INSERT
+DROP POLICY IF EXISTS "Admins can insert brands" ON public.brands;
+CREATE POLICY "Admins can insert brands" ON public.brands FOR INSERT
   TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update brands"
-  ON public.brands FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update brands" ON public.brands;
+CREATE POLICY "Admins can update brands" ON public.brands FOR UPDATE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete brands"
-  ON public.brands FOR DELETE
+DROP POLICY IF EXISTS "Admins can delete brands" ON public.brands;
+CREATE POLICY "Admins can delete brands" ON public.brands FOR DELETE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -61,23 +61,23 @@ CREATE POLICY "Admins can delete brands"
 -- ============================================================
 DROP POLICY IF EXISTS "Allow ALL on colors" ON public.colors;
 
-CREATE POLICY "Anyone can read colors"
-  ON public.colors FOR SELECT
+DROP POLICY IF EXISTS "Anyone can read colors" ON public.colors;
+CREATE POLICY "Anyone can read colors" ON public.colors FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Admins can insert colors"
-  ON public.colors FOR INSERT
+DROP POLICY IF EXISTS "Admins can insert colors" ON public.colors;
+CREATE POLICY "Admins can insert colors" ON public.colors FOR INSERT
   TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update colors"
-  ON public.colors FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update colors" ON public.colors;
+CREATE POLICY "Admins can update colors" ON public.colors FOR UPDATE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete colors"
-  ON public.colors FOR DELETE
+DROP POLICY IF EXISTS "Admins can delete colors" ON public.colors;
+CREATE POLICY "Admins can delete colors" ON public.colors FOR DELETE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -86,23 +86,23 @@ CREATE POLICY "Admins can delete colors"
 -- ============================================================
 DROP POLICY IF EXISTS "Allow ALL on storages" ON public.storages;
 
-CREATE POLICY "Anyone can read storages"
-  ON public.storages FOR SELECT
+DROP POLICY IF EXISTS "Anyone can read storages" ON public.storages;
+CREATE POLICY "Anyone can read storages" ON public.storages FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Admins can insert storages"
-  ON public.storages FOR INSERT
+DROP POLICY IF EXISTS "Admins can insert storages" ON public.storages;
+CREATE POLICY "Admins can insert storages" ON public.storages FOR INSERT
   TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update storages"
-  ON public.storages FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update storages" ON public.storages;
+CREATE POLICY "Admins can update storages" ON public.storages FOR UPDATE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete storages"
-  ON public.storages FOR DELETE
+DROP POLICY IF EXISTS "Admins can delete storages" ON public.storages;
+CREATE POLICY "Admins can delete storages" ON public.storages FOR DELETE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -111,23 +111,23 @@ CREATE POLICY "Admins can delete storages"
 -- ============================================================
 DROP POLICY IF EXISTS "Allow ALL on device_models" ON public.device_models;
 
-CREATE POLICY "Anyone can read device_models"
-  ON public.device_models FOR SELECT
+DROP POLICY IF EXISTS "Anyone can read device_models" ON public.device_models;
+CREATE POLICY "Anyone can read device_models" ON public.device_models FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Admins can insert device_models"
-  ON public.device_models FOR INSERT
+DROP POLICY IF EXISTS "Admins can insert device_models" ON public.device_models;
+CREATE POLICY "Admins can insert device_models" ON public.device_models FOR INSERT
   TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update device_models"
-  ON public.device_models FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update device_models" ON public.device_models;
+CREATE POLICY "Admins can update device_models" ON public.device_models FOR UPDATE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can delete device_models"
-  ON public.device_models FOR DELETE
+DROP POLICY IF EXISTS "Admins can delete device_models" ON public.device_models;
+CREATE POLICY "Admins can delete device_models" ON public.device_models FOR DELETE
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
@@ -150,28 +150,28 @@ DROP POLICY IF EXISTS "Admins list lp-images" ON storage.objects;
 
 -- Leitura pública de objetos individuais do bucket lp-images
 -- (acesso direto via URL — listagem pelo cliente fica restrita a admins)
-CREATE POLICY "lp-images: public read object"
-  ON storage.objects FOR SELECT
+DROP POLICY IF EXISTS "lp-images: public read object" ON storage.objects;
+CREATE POLICY "lp-images: public read object" ON storage.objects FOR SELECT
   TO public
   USING (bucket_id = 'lp-images');
 
 -- Escrita restrita a administradores autenticados
-CREATE POLICY "lp-images: admin insert"
-  ON storage.objects FOR INSERT
+DROP POLICY IF EXISTS "lp-images: admin insert" ON storage.objects;
+CREATE POLICY "lp-images: admin insert" ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
     bucket_id = 'lp-images' AND public.has_role(auth.uid(), 'admin')
   );
 
-CREATE POLICY "lp-images: admin update"
-  ON storage.objects FOR UPDATE
+DROP POLICY IF EXISTS "lp-images: admin update" ON storage.objects;
+CREATE POLICY "lp-images: admin update" ON storage.objects FOR UPDATE
   TO authenticated
   USING (
     bucket_id = 'lp-images' AND public.has_role(auth.uid(), 'admin')
   );
 
-CREATE POLICY "lp-images: admin delete"
-  ON storage.objects FOR DELETE
+DROP POLICY IF EXISTS "lp-images: admin delete" ON storage.objects;
+CREATE POLICY "lp-images: admin delete" ON storage.objects FOR DELETE
   TO authenticated
   USING (
     bucket_id = 'lp-images' AND public.has_role(auth.uid(), 'admin')

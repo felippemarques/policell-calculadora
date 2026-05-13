@@ -1,4 +1,4 @@
-CREATE TABLE public.admin_onboarding (
+CREATE TABLE IF NOT EXISTS public.admin_onboarding (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL UNIQUE,
   current_step INTEGER NOT NULL DEFAULT 1,
@@ -11,21 +11,22 @@ CREATE TABLE public.admin_onboarding (
 
 ALTER TABLE public.admin_onboarding ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Admins can view own onboarding"
-  ON public.admin_onboarding FOR SELECT
+DROP POLICY IF EXISTS "Admins can view own onboarding" ON public.admin_onboarding;
+CREATE POLICY "Admins can view own onboarding" ON public.admin_onboarding FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id AND public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can insert own onboarding"
-  ON public.admin_onboarding FOR INSERT
+DROP POLICY IF EXISTS "Admins can insert own onboarding" ON public.admin_onboarding;
+CREATE POLICY "Admins can insert own onboarding" ON public.admin_onboarding FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id AND public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Admins can update own onboarding"
-  ON public.admin_onboarding FOR UPDATE
+DROP POLICY IF EXISTS "Admins can update own onboarding" ON public.admin_onboarding;
+CREATE POLICY "Admins can update own onboarding" ON public.admin_onboarding FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id AND public.has_role(auth.uid(), 'admin'));
 
+DROP TRIGGER IF EXISTS update_admin_onboarding_updated_at ON public.admin_onboarding;
 CREATE TRIGGER update_admin_onboarding_updated_at
   BEFORE UPDATE ON public.admin_onboarding
   FOR EACH ROW

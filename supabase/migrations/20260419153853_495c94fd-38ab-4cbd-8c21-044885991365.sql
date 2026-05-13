@@ -8,6 +8,8 @@ ALTER TABLE public.condition_discounts
 ALTER TABLE public.condition_discounts
   DROP CONSTRAINT IF EXISTS condition_discounts_discount_mode_check;
 ALTER TABLE public.condition_discounts
+  DROP CONSTRAINT IF EXISTS condition_discounts_discount_mode_check;
+ALTER TABLE public.condition_discounts
   ADD CONSTRAINT condition_discounts_discount_mode_check
   CHECK (discount_mode IN ('percent','fixed'));
 
@@ -21,6 +23,8 @@ ALTER TABLE public.damage_deductions
   ADD COLUMN IF NOT EXISTS deduction_percent numeric NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS deduction_mode text NOT NULL DEFAULT 'fixed';
 
+ALTER TABLE public.damage_deductions
+  DROP CONSTRAINT IF EXISTS damage_deductions_deduction_mode_check;
 ALTER TABLE public.damage_deductions
   DROP CONSTRAINT IF EXISTS damage_deductions_deduction_mode_check;
 ALTER TABLE public.damage_deductions

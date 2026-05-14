@@ -28,9 +28,9 @@ export function StepPersonalInfo({
   onCreateLead,
   onSocialAutofill,
 }: Props) {
-  const { signInWithGoogle, signInWithApple, user } = useAuth();
+  const { signInWithGoogle, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<"google" | "apple" | null>(null);
+  const [socialLoading, setSocialLoading] = useState<"google" | null>(null);
   const [autofilling, setAutofilling] = useState(false);
   const isValid = data.name.trim() && data.email.trim() && data.phone.trim();
 
@@ -90,10 +90,9 @@ export function StepPersonalInfo({
     onNext();
   };
 
-  const handleSocial = async (provider: "google" | "apple") => {
-    setSocialLoading(provider);
-    const fn = provider === "google" ? signInWithGoogle : signInWithApple;
-    const { error } = await fn(window.location.href);
+  const handleSocial = async () => {
+    setSocialLoading("google");
+    const { error } = await signInWithGoogle(window.location.href);
     if (error) {
       toast.error(error.message || "Não foi possível autenticar.");
       setSocialLoading(null);
@@ -117,13 +116,13 @@ export function StepPersonalInfo({
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground text-center">
           Identificação rápida
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <Button
             type="button"
             variant="outline"
             className="h-12 rounded-2xl"
             disabled={socialLoading !== null || autofilling}
-            onClick={() => handleSocial("google")}
+            onClick={() => handleSocial()}
           >
             {socialLoading === "google" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -136,27 +135,6 @@ export function StepPersonalInfo({
               </svg>
             )}
             Usar conta Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 rounded-2xl"
-            disabled={socialLoading !== null || autofilling}
-            onClick={() => handleSocial("apple")}
-          >
-            {socialLoading === "apple" ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <svg
-                className="mr-2 h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M16.365 1.43c0 1.14-.42 2.21-1.18 3.02-.85.94-2.21 1.66-3.34 1.57-.14-1.13.42-2.31 1.16-3.07.83-.86 2.27-1.5 3.36-1.52zM20.5 17.32c-.55 1.27-.81 1.84-1.52 2.96-.99 1.56-2.39 3.5-4.12 3.51-1.55.02-1.95-1.01-4.05-1-2.1.01-2.54 1.02-4.09 1-1.74-.01-3.06-1.76-4.05-3.32-2.78-4.36-3.07-9.48-1.36-12.2 1.22-1.95 3.15-3.09 4.96-3.09 1.85 0 3.01 1.01 4.54 1.01 1.49 0 2.4-1.02 4.54-1.02 1.62 0 3.34.88 4.56 2.4-4.01 2.2-3.36 7.94.59 9.75z" />
-              </svg>
-            )}
-            Usar conta Apple
           </Button>
         </div>
         <div className="relative">

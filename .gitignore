@@ -25,3 +25,13 @@ dist-ssr
 *.sw?
 .claude/settings.local.json
 CLAUDE.md
+
+# Credenciais locais — nunca commitar
+.env
+.env.local
+.env.*.local
+
+# Scripts temporários de migração
+*.sql
+migracao-supabase/
+scripts/

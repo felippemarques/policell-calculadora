@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -75,25 +74,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async (redirectTo?: string) => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: redirectTo ?? window.location.href,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: redirectTo ?? window.location.href },
     });
-    if (result.error) {
-      const err = result.error;
-      return { error: err instanceof Error ? err : new Error(String(err)) };
-    }
-    return { error: null, redirected: result.redirected };
+    return { error: error ? new Error(error.message) : null, redirected: !error };
   };
 
   const signInWithApple = async (redirectTo?: string) => {
-    const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: redirectTo ?? window.location.href,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: { redirectTo: redirectTo ?? window.location.href },
     });
-    if (result.error) {
-      const err = result.error;
-      return { error: err instanceof Error ? err : new Error(String(err)) };
-    }
-    return { error: null, redirected: result.redirected };
+    return { error: error ? new Error(error.message) : null, redirected: !error };
   };
 
   const signOut = async () => {

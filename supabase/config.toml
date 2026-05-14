@@ -1,1 +1,7 @@
 project_id = "jesinpajvqhlowlgmbhv"
+
+[functions.get-evaluations]
+verify_jwt = false
+
+[functions.get-dashboard-metrics]
+verify_jwt = false

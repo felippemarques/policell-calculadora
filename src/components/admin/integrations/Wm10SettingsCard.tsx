@@ -50,13 +50,27 @@ export function Wm10SettingsCard() {
       const { data, error } = await supabase.functions.invoke("wm10-proxy", {
         body: { action: "test" },
       });
-      if (error || data?.error) {
+      if (error) {
+        // O SDK retorna "Edge Function returned a non-2xx status code" como mensagem
+        // genérica. Extraímos o JSON real da resposta da edge function.
+        let errorMessage = "Erro ao testar conexão";
+        try {
+          const body = await (error as any).context?.json?.();
+          errorMessage = body?.error ?? error.message;
+        } catch {
+          errorMessage = error.message;
+        }
         setTestStatus("error");
-        setTestMessage(data?.error ?? error?.message ?? "Erro desconhecido");
-      } else {
-        setTestStatus("ok");
-        setTestMessage("Conexão bem-sucedida!");
+        setTestMessage(errorMessage);
+        return;
       }
+      if (data?.error) {
+        setTestStatus("error");
+        setTestMessage(data.error);
+        return;
+      }
+      setTestStatus("ok");
+      setTestMessage("Conexão bem-sucedida!");
     } catch (e: unknown) {
       setTestStatus("error");
       setTestMessage(e instanceof Error ? e.message : "Erro desconhecido");
@@ -97,21 +111,22 @@ export function Wm10SettingsCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="store_url">URL da Loja</Label>
-              <Input
-                id="store_url"
-                placeholder="minha-loja"
-                {...form.register("store_url")}
-              />
-              <p className="text-xs text-muted-foreground">
-                Parte da URL: app.wm10.com.br/<strong>minha-loja</strong>/sistema/api
-              </p>
-              {form.formState.errors.store_url && (
-                <p className="text-xs text-destructive">{form.formState.errors.store_url.message}</p>
-              )}
-            </div>
+          <div className="space-y-1">
+            <Label htmlFor="store_url">URL da Loja</Label>
+            <Input
+              id="store_url"
+              placeholder="minha-loja"
+              {...form.register("store_url")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Apenas o identificador da loja: app.wm10.com.br/<strong>minha-loja</strong>/sistema/api
+            </p>
+            {form.formState.errors.store_url && (
+              <p className="text-xs text-destructive">{form.formState.errors.store_url.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="cnpj">CNPJ (só números)</Label>
               <Input

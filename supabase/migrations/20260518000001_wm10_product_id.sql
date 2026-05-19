@@ -18,12 +18,14 @@ ON CONFLICT (key) DO NOTHING;
 -- RLS evaluates all applicable policies with OR logic (permissive), so we replace
 -- the broad policy with two targeted ones: public keys open, wm10_ keys admin-only.
 DROP POLICY IF EXISTS "Anyone can read settings" ON public.lp_settings;
-CREATE POLICY IF NOT EXISTS "Public can read non-secret settings"
+DROP POLICY IF EXISTS "Public can read non-secret settings" ON public.lp_settings;
+CREATE POLICY "Public can read non-secret settings"
   ON public.lp_settings
   FOR SELECT
   USING (key NOT LIKE 'wm10_%');
 
-CREATE POLICY IF NOT EXISTS "wm10_secrets_admin_only"
+DROP POLICY IF EXISTS "wm10_secrets_admin_only" ON public.lp_settings;
+CREATE POLICY "wm10_secrets_admin_only"
   ON public.lp_settings
   FOR SELECT
   TO authenticated

@@ -49,7 +49,9 @@ Deno.serve(async (req) => {
   const { action, page, limit, cod_produto } = body;
   const safePage = Math.max(1, Math.floor(Number(page) || 1));
   const safeLimit = Math.min(200, Math.max(1, Math.floor(Number(limit) || 50)));
-  const safeCodProduto = cod_produto != null ? Math.abs(Math.floor(Number(cod_produto))) : undefined;
+  const safeCodProduto = cod_produto != null && !isNaN(Number(cod_produto))
+    ? Math.abs(Math.floor(Number(cod_produto)))
+    : undefined;
   if (!action) return json({ error: "Campo 'action' obrigatório" }, 400);
 
   // ── CREDENCIAIS DO BANCO ─────────────────────────────────────────
@@ -78,7 +80,7 @@ Deno.serve(async (req) => {
   }
 
   const BASE = `https://app.wm10.com.br/${cfg.wm10_store_url}/sistema/api`;
-  const AUTH = `CNPJ=${cfg.wm10_cnpj}&TOKEN=${cfg.wm10_token}`;
+  const AUTH = `CNPJ=${encodeURIComponent(cfg.wm10_cnpj)}&TOKEN=${encodeURIComponent(cfg.wm10_token)}`;
 
   // ── AÇÕES ────────────────────────────────────────────────────────
   if (action === "test") {

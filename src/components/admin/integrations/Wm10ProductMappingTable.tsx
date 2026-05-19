@@ -152,7 +152,6 @@ export function Wm10ProductMappingTable() {
                     <th className="px-3 py-2 text-left font-medium">Cód WM10</th>
                     <th className="px-3 py-2 text-left font-medium">Nome</th>
                     <th className="px-3 py-2 text-right font-medium">Preço Venda</th>
-                    <th className="px-3 py-2 text-right font-medium">Estoque</th>
                     <th className="px-3 py-2 text-left font-medium">Vínculo no Sistema</th>
                     <th className="px-3 py-2 text-center font-medium">Status</th>
                   </tr>
@@ -174,9 +173,6 @@ export function Wm10ProductMappingTable() {
                                 currency: "BRL",
                               })
                             : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
-                          {product.estoque ?? "—"}
                         </td>
                         <td className="px-3 py-2 min-w-[220px]">
                           <Select

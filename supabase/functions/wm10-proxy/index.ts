@@ -133,7 +133,17 @@ Deno.serve(async (req) => {
       return json({ error: "Resposta inesperada da API WM10", detail: parsed }, 502);
     }
 
-    return json({ data: parsed });
+    const normalized = (parsed as any[]).map((p: any) => ({
+      cod_produto: p.cod_produto ?? p.Cod_produto ?? p.COD_PRODUTO,
+      cod_barra: p.cod_barra ?? p.Cod_barra ?? p.COD_BARRA,
+      nome: p.nome ?? p.Nome ?? p.NOME,
+      preco_compra: p.preco_compra ?? p.Preco_compra ?? p.PRECO_COMPRA,
+      preco_venda: p.preco_venda ?? p.Preco_venda ?? p.PRECO_VENDA,
+      unidade: p.unidade ?? p.Unidade ?? p.UNIDADE,
+      estoque: p.estoque ?? p.Estoque ?? p.ESTOQUE,
+    }));
+
+    return json({ data: normalized });
   }
 
   return json({ error: `Ação desconhecida: ${action}` }, 400);

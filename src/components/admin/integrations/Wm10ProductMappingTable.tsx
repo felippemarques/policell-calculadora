@@ -24,7 +24,7 @@ interface Device {
   id: string;
   brand: string;
   model: string;
-  storage: string | null;
+  storage: string;
   wm10_product_id: number | null;
 }
 

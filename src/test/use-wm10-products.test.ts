@@ -33,10 +33,10 @@ describe("useWm10Products", () => {
     expect(result.current.products[0].cod_produto).toBe(88);
   });
 
-  it("expõe erro quando a edge function falha", async () => {
+  it("expõe erro quando a edge function retorna erro no body", async () => {
     mockInvoke.mockResolvedValue({
-      data: null,
-      error: { message: "Unauthorized" },
+      data: { error: "WM10 não configurado." },
+      error: null,
     });
 
     const { result } = renderHook(() => useWm10Products({ page: 1, limit: 50 }), { wrapper });

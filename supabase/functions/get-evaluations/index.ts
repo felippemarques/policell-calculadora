@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
   const deviceIds = [...new Set(evals.map((e: any) => e.device_id).filter(Boolean))];
   const { data: devices } = await db
     .from("devices")
-    .select("id, model, brand")
+    .select("id, model, brand, wm10_product_id")
     .in("id", deviceIds);
 
   const deviceById = new Map((devices ?? []).map((d: any) => [d.id, d]));
@@ -104,7 +104,12 @@ Deno.serve(async (req) => {
       customer_email: e.customer_email,
       customer_phone: e.customer_phone,
       device: device
-        ? { id: device.id, model: device.model, brand: device.brand }
+        ? {
+            id: device.id,
+            model: device.model,
+            brand: device.brand,
+            wm10_product_id: device.wm10_product_id ?? null,
+          }
         : null,
       device_condition: e.device_condition,
       final_value: e.final_value,

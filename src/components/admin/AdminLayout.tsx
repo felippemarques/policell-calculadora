@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Briefcase,
   Menu,
+  Plug,
 } from "lucide-react";
 import { AdminTour } from "@/components/admin/AdminTour";
 import { useAdminOnboarding } from "@/hooks/use-admin-onboarding";
@@ -54,6 +55,7 @@ const AdminLayout = () => {
     { to: "/admin/cupom", icon: Ticket, label: "Configurações de Cupom" },
     { to: "/admin/negocio", icon: Briefcase, label: "Configurações de Negócio" },
     { to: "/admin/administradores", icon: ShieldCheck, label: "Administradores" },
+    { to: "/admin/integracoes", icon: Plug, label: "Integrações" },
     { href: "/", icon: ExternalLink, label: "Ver Landing Page", variant: "primary", external: true },
     { to: "/", icon: ChevronLeft, label: "Voltar ao Site" },
     { onClick: () => restart(), icon: HelpCircle, label: "Refazer tour" },

@@ -23,6 +23,7 @@ import AdminCouponSettings from "./pages/admin/AdminCouponSettings";
 import AdminBusinessSettings from "./pages/admin/AdminBusinessSettings";
 import AdminHeader from "./pages/admin/AdminHeader";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import { RequireAdmin } from "./components/admin/RequireAdmin";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="negocio" element={<AdminBusinessSettings />} />
               <Route path="header" element={<AdminHeader />} />
               <Route path="administradores" element={<AdminUsers />} />
+              <Route path="integracoes" element={<AdminIntegrations />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

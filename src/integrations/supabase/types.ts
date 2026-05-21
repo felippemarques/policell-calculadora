@@ -384,7 +384,6 @@ export type Database = {
           sale_price: number
           storage: string
           trade_price: number
-          wm10_product_id: number | null
         }
         Insert: {
           base_price: number
@@ -398,7 +397,6 @@ export type Database = {
           sale_price?: number
           storage: string
           trade_price?: number
-          wm10_product_id?: number | null
         }
         Update: {
           base_price?: number
@@ -412,7 +410,6 @@ export type Database = {
           sale_price?: number
           storage?: string
           trade_price?: number
-          wm10_product_id?: number | null
         }
         Relationships: [
           {

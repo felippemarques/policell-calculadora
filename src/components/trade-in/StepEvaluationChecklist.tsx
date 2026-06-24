@@ -443,7 +443,12 @@ export function StepEvaluationChecklist({
 
   const handlePickCondition = (id: string) => {
     onAnswersChange({ ...answers, conditionId: id });
-    scheduleAdvance();
+    const cond = conditions.find((c) => c.id === id);
+    if (cond?.closes_checklist) {
+      scheduleAdvance(true);
+    } else {
+      scheduleAdvance();
+    }
   };
 
   const handlePickDamage = (catId: string, optId: string) => {
@@ -479,6 +484,10 @@ export function StepEvaluationChecklist({
       const reason = `${cat?.name ?? "Defeito"}: ${opt.option_name}`;
       onReject(reason);
       setRejectionModal({ open: true, title: cat?.name ?? "Defeito", label: opt.option_name });
+      return;
+    }
+    if (opt?.closes_checklist) {
+      scheduleAdvance(true);
       return;
     }
     scheduleAdvance();

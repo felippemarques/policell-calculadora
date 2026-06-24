@@ -18,6 +18,7 @@ import { ModelMultiSelect } from "@/components/admin/catalog/ModelMultiSelect";
 import { YouTubeUrlInput } from "@/components/admin/catalog/YouTubeUrlInput";
 import { DiscountImpactSimulator } from "@/components/admin/catalog/DiscountImpactSimulator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { DiscountMode } from "@/lib/trade-in-pricing";
 import { toast } from "sonner";
 
@@ -29,8 +30,24 @@ type DamageOption = {
   deduction_percent: number;
   deduction_mode: DiscountMode;
   is_rejected: boolean;
+  closes_checklist: boolean;
   display_order: number;
 };
+
+type DamageAction = "none" | "reject" | "close";
+
+function deriveDamageAction(is_rejected: boolean, closes_checklist: boolean): DamageAction {
+  if (is_rejected) return "reject";
+  if (closes_checklist) return "close";
+  return "none";
+}
+
+function applyDamageAction(action: DamageAction) {
+  return {
+    is_rejected: action === "reject",
+    closes_checklist: action === "close",
+  };
+}
 
 type DamageCategory = {
   id: string;
@@ -84,7 +101,7 @@ export function DefectsTab() {
 
   // ── Damage option state (per-category) ──
   const [newOptionByCat, setNewOptionByCat] = useState<
-    Record<string, { option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean }>
+    Record<string, { option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean; closes_checklist: boolean }>
   >({});
   const [editingOptId, setEditingOptId] = useState<string | null>(null);
   const [editOptForm, setEditOptForm] = useState({
@@ -93,6 +110,7 @@ export function DefectsTab() {
     deduction_percent: 0,
     deduction_mode: "fixed" as DiscountMode,
     is_rejected: false,
+    closes_checklist: false,
   });
 
   // ── Condition (normal) state ──
@@ -106,6 +124,7 @@ export function DefectsTab() {
     is_required: true,
     model_ids: [] as string[],
     youtube_url: "",
+    closes_checklist: false,
   });
   const [editingCondId, setEditingCondId] = useState<string | null>(null);
   const [editCondForm, setEditCondForm] = useState({
@@ -117,6 +136,7 @@ export function DefectsTab() {
     is_required: true,
     model_ids: [] as string[],
     youtube_url: "",
+    closes_checklist: false,
   });
 
   // ── Rejection reason state ──
@@ -354,6 +374,7 @@ export function DefectsTab() {
       deduction_percent: number;
       deduction_mode: DiscountMode;
       is_rejected: boolean;
+      closes_checklist: boolean;
     }) => {
       const payload: any = {
         option_name: data.option_name,
@@ -361,6 +382,7 @@ export function DefectsTab() {
         deduction_percent: data.deduction_mode === "percent" ? data.deduction_percent : 0,
         deduction_mode: data.deduction_mode,
         is_rejected: data.is_rejected,
+        closes_checklist: data.closes_checklist,
       };
       if (data.id) {
         const { error } = await supabase
@@ -385,7 +407,7 @@ export function DefectsTab() {
       setEditingOptId(null);
       setNewOptionByCat((prev) => ({
         ...prev,
-        [vars.damage_category_id]: { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed", is_rejected: false },
+        [vars.damage_category_id]: { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed", is_rejected: false, closes_checklist: false },
       }));
       toast.success("Opção salva!");
     },
@@ -416,6 +438,7 @@ export function DefectsTab() {
       is_required: boolean;
       model_ids: string[];
       youtube_url: string;
+      closes_checklist: boolean;
     }) => {
       const payload: any = {
         condition_name: data.condition_name,
@@ -423,6 +446,7 @@ export function DefectsTab() {
         discount_fixed: data.discount_mode === "fixed" ? data.discount_fixed : 0,
         discount_mode: data.discount_mode,
         is_rejected: false,
+        closes_checklist: data.closes_checklist,
         help_text: data.help_text?.trim() || null,
         is_required: data.is_required,
         model_ids: data.model_ids ?? [],
@@ -447,7 +471,7 @@ export function DefectsTab() {
       invalidateAll();
       setShowNewCondition(false);
       setEditingCondId(null);
-      setCondForm({ condition_name: "", discount_percentage: 0, discount_fixed: 0, discount_mode: "percent", help_text: "", is_required: true, model_ids: [], youtube_url: "" });
+      setCondForm({ condition_name: "", discount_percentage: 0, discount_fixed: 0, discount_mode: "percent", help_text: "", is_required: true, model_ids: [], youtube_url: "", closes_checklist: false });
       toast.success("Salvo!");
     },
     onError: (e: any) => toast.error(e.message),
@@ -530,11 +554,11 @@ export function DefectsTab() {
     deductions.filter((d) => d.damage_category_id === catId);
 
   const getNewOptionDraft = (catId: string) =>
-    newOptionByCat[catId] || { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed" as DiscountMode, is_rejected: false };
+    newOptionByCat[catId] || { option_name: "", deduction_value: 0, deduction_percent: 0, deduction_mode: "fixed" as DiscountMode, is_rejected: false, closes_checklist: false };
 
   const updateNewOptionDraft = (
     catId: string,
-    patch: Partial<{ option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean }>,
+    patch: Partial<{ option_name: string; deduction_value: number; deduction_percent: number; deduction_mode: DiscountMode; is_rejected: boolean; closes_checklist: boolean }>,
   ) => {
     setNewOptionByCat((prev) => ({
       ...prev,
@@ -987,16 +1011,28 @@ export function DefectsTab() {
                                 disabled={editOptForm.is_rejected}
                               />
                             )}
-                            <div className="flex items-center gap-1.5 px-2">
-                              <Switch
-                                checked={editOptForm.is_rejected}
-                                onCheckedChange={(v) =>
-                                  setEditOptForm({ ...editOptForm, is_rejected: v })
+                            <div className="flex flex-col gap-1 px-2">
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Ação</span>
+                              <RadioGroup
+                                value={deriveDamageAction(editOptForm.is_rejected, editOptForm.closes_checklist)}
+                                onValueChange={(v) =>
+                                  setEditOptForm({ ...editOptForm, ...applyDamageAction(v as DamageAction) })
                                 }
-                              />
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                Inviabiliza
-                              </span>
+                                className="flex flex-col gap-1"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <RadioGroupItem value="none" id="edit-action-none" className="h-3.5 w-3.5" />
+                                  <Label htmlFor="edit-action-none" className="text-[10px] cursor-pointer">Nenhuma ação</Label>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <RadioGroupItem value="reject" id="edit-action-reject" className="h-3.5 w-3.5" />
+                                  <Label htmlFor="edit-action-reject" className="text-[10px] cursor-pointer">Inviabilizar</Label>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <RadioGroupItem value="close" id="edit-action-close" className="h-3.5 w-3.5" />
+                                  <Label htmlFor="edit-action-close" className="text-[10px] cursor-pointer">Encerrar checklist</Label>
+                                </div>
+                              </RadioGroup>
                             </div>
                             <Button
                               variant="ghost"
@@ -1006,6 +1042,7 @@ export function DefectsTab() {
                                   id: opt.id,
                                   damage_category_id: cat.id,
                                   ...editOptForm,
+                                  closes_checklist: editOptForm.closes_checklist,
                                 })
                               }
                             >
@@ -1048,6 +1085,8 @@ export function DefectsTab() {
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               Inviabiliza
                             </Badge>
+                          ) : opt.closes_checklist ? (
+                            <Badge variant="secondary" className="text-xs">Encerra checklist</Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">
                               R${" "}
@@ -1089,6 +1128,7 @@ export function DefectsTab() {
                                 deduction_percent: Number((opt as any).deduction_percent) || 0,
                                 deduction_mode: ((opt as any).deduction_mode as DiscountMode) || "fixed",
                                 is_rejected: opt.is_rejected,
+                                closes_checklist: opt.closes_checklist ?? false,
                               });
                             }}
                           >
@@ -1190,16 +1230,28 @@ export function DefectsTab() {
                     />
                   )}
                 </div>
-                <div className="flex flex-col items-start sm:items-center justify-end gap-1 sm:pb-1">
-                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                    Inviabiliza compra
-                  </Label>
-                  <Switch
-                    checked={draft.is_rejected}
-                    onCheckedChange={(v) =>
-                      updateNewOptionDraft(cat.id, { is_rejected: v })
+                <div className="flex flex-col gap-1 sm:pb-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Ação</Label>
+                  <RadioGroup
+                    value={deriveDamageAction(draft.is_rejected, draft.closes_checklist)}
+                    onValueChange={(v) =>
+                      updateNewOptionDraft(cat.id, applyDamageAction(v as DamageAction))
                     }
-                  />
+                    className="flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="none" id={`new-action-none-${cat.id}`} className="h-3.5 w-3.5" />
+                      <Label htmlFor={`new-action-none-${cat.id}`} className="text-[10px] cursor-pointer">Nenhuma ação</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="reject" id={`new-action-reject-${cat.id}`} className="h-3.5 w-3.5" />
+                      <Label htmlFor={`new-action-reject-${cat.id}`} className="text-[10px] cursor-pointer">Inviabilizar</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="close" id={`new-action-close-${cat.id}`} className="h-3.5 w-3.5" />
+                      <Label htmlFor={`new-action-close-${cat.id}`} className="text-[10px] cursor-pointer">Encerrar checklist</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
               {!draft.is_rejected && (
@@ -1223,6 +1275,7 @@ export function DefectsTab() {
                     deduction_percent: draft.is_rejected ? 0 : draft.deduction_percent,
                     deduction_mode: draft.deduction_mode,
                     is_rejected: draft.is_rejected,
+                    closes_checklist: draft.closes_checklist,
                   })
                 }
                 disabled={!draft.option_name.trim() || saveOptionMutation.isPending}
@@ -1378,6 +1431,23 @@ export function DefectsTab() {
               />
               <span>Obrigatório (cliente precisa escolher uma condição para avançar)</span>
             </label>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Ação ao selecionar</Label>
+              <RadioGroup
+                value={condForm.closes_checklist ? "close" : "none"}
+                onValueChange={(v) => setCondForm({ ...condForm, closes_checklist: v === "close" })}
+                className="flex gap-4"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="none" id="cond-new-action-none" />
+                  <Label htmlFor="cond-new-action-none" className="cursor-pointer text-sm">Nenhuma ação</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="close" id="cond-new-action-close" />
+                  <Label htmlFor="cond-new-action-close" className="cursor-pointer text-sm">Encerrar checklist</Label>
+                </div>
+              </RadioGroup>
+            </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -1496,6 +1566,25 @@ export function DefectsTab() {
                       />
                       <span>Obrigatório</span>
                     </label>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Ação ao selecionar</Label>
+                      <RadioGroup
+                        value={editCondForm.closes_checklist ? "close" : "none"}
+                        onValueChange={(v) =>
+                          setEditCondForm({ ...editCondForm, closes_checklist: v === "close" })
+                        }
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="none" id="cond-edit-action-none" />
+                          <Label htmlFor="cond-edit-action-none" className="cursor-pointer text-sm">Nenhuma ação</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="close" id="cond-edit-action-close" />
+                          <Label htmlFor="cond-edit-action-close" className="cursor-pointer text-sm">Encerrar checklist</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -1544,6 +1633,9 @@ export function DefectsTab() {
                         {cond.discount_percentage}%
                       </Badge>
                     )}
+                    {(cond as any).closes_checklist && (
+                      <Badge variant="secondary" className="text-[10px]">Encerra checklist</Badge>
+                    )}
                     {Array.isArray((cond as any).model_ids) && (cond as any).model_ids.length > 0 && (
                       <Badge variant="outline" className="text-[10px]">
                         {(cond as any).model_ids.length} modelo(s)
@@ -1563,6 +1655,7 @@ export function DefectsTab() {
                           is_required: (cond as any).is_required !== false,
                           model_ids: Array.isArray((cond as any).model_ids) ? (cond as any).model_ids : [],
                           youtube_url: (cond as any).youtube_url ?? "",
+                          closes_checklist: (cond as any).closes_checklist ?? false,
                         });
                       }}
                     >

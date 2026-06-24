@@ -26,6 +26,13 @@ dist-ssr
 .claude/settings.local.json
 CLAUDE.md
 
+#claude and speckit
+.claude/*
+.specify/*
+docs/*
+specs/*
+supabase/*
+
 # Credenciais locais — nunca commitar
 .env
 .env.local
@@ -35,3 +42,4 @@ CLAUDE.md
 *.sql
 migracao-supabase/
 scripts/
+Skill API WM10 - Claude.md

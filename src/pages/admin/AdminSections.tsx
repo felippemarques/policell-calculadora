@@ -470,6 +470,14 @@ const AdminSections = () => {
   };
   const setContentArray = (arr: any[]) => setForm({ ...form, content: JSON.stringify(arr) });
 
+  const ctaLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setCtaLayoutField = (key: string, value: number) => {
+    const updated = { ...ctaLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-20">
@@ -750,6 +758,59 @@ const AdminSections = () => {
                       onChange={(e) => setForm({ ...form, cta_border_radius: parseInt(e.target.value) || 0 })}
                       className="mt-0.5 w-24"
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <LabelWithHint
+                      label="Margem do botão (px)"
+                      hint="Espaçamento externo do botão. Superior controla o espaço entre o conteúdo e o botão."
+                    />
+                    <div className="grid grid-cols-4 gap-2 mt-1">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Superior</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={ctaLayoutData.cta_margin_top ?? 32}
+                          onChange={(e) => setCtaLayoutField("cta_margin_top", parseInt(e.target.value) || 0)}
+                          className="mt-0.5 w-full"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Inferior</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={ctaLayoutData.cta_margin_bottom ?? 0}
+                          onChange={(e) => setCtaLayoutField("cta_margin_bottom", parseInt(e.target.value) || 0)}
+                          className="mt-0.5 w-full"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Esquerda</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={ctaLayoutData.cta_margin_left ?? 0}
+                          onChange={(e) => setCtaLayoutField("cta_margin_left", parseInt(e.target.value) || 0)}
+                          className="mt-0.5 w-full"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Direita</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={ctaLayoutData.cta_margin_right ?? 0}
+                          onChange={(e) => setCtaLayoutField("cta_margin_right", parseInt(e.target.value) || 0)}
+                          className="mt-0.5 w-full"
+                        />
+                      </div>
+                    </div>
+                    <FieldHint text="Padrão: Superior 32px, demais 0px. Valores em pixels." />
                   </div>
                 </div>
                 {form.cta_text && (
@@ -2012,46 +2073,6 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
             </div>
           </div>
 
-          {/* Ajustes específicos do celular */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
-            <div>
-              <LabelWithHint
-                label="Proporção no celular"
-                hint="Define o formato do banner em telas pequenas. 16:10 é mais largo (menos altura), 4:5 ocupa mais tela vertical."
-              />
-              <Select
-                value={(layoutData.mobile_aspect as string) || "16/10"}
-                onValueChange={(v) => setLayoutField("mobile_aspect", v)}
-              >
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="16/10">16:10 (recomendado)</SelectItem>
-                  <SelectItem value="3/4">3:4</SelectItem>
-                  <SelectItem value="1/1">1:1 (quadrado)</SelectItem>
-                  <SelectItem value="4/5">4:5 (alto)</SelectItem>
-                </SelectContent>
-              </Select>
-              <FieldHint text="Use 16:10 quando a imagem for horizontal." />
-            </div>
-            <div>
-              <LabelWithHint
-                label="Ajuste da imagem no celular"
-                hint="'Cobrir' preenche toda a área cortando as laterais. 'Conter' mostra a imagem inteira sem cortar (pode aparecer borda da cor de fundo)."
-              />
-              <Select
-                value={(layoutData.mobile_fit as string) || "cover"}
-                onValueChange={(v) => setLayoutField("mobile_fit", v)}
-              >
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cover">Cobrir (corta laterais)</SelectItem>
-                  <SelectItem value="contain">Conter (sem cortar)</SelectItem>
-                </SelectContent>
-              </Select>
-              <FieldHint text="Use 'Conter' se a imagem horizontal estiver sendo cortada no celular." />
-            </div>
-          </div>
-
           {[0, 1].map((idx) => {
             const slides = Array.isArray(layoutData.slides) ? layoutData.slides : [];
             const slide = slides[idx] || {};
@@ -2128,6 +2149,87 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
             );
           })}
         </div>
+      </SectionCard>
+
+      <SectionCard
+        icon={<Smartphone className="h-4 w-4" />}
+        title="Configurações Mobile"
+        description="Ajuste como o banner aparece em telas pequenas (até 768px)."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <LabelWithHint
+              label="Proporção no celular"
+              hint="Define o formato do banner em telas pequenas. 16:10 é mais largo (menos altura), 4:5 ocupa mais tela vertical."
+            />
+            <Select
+              value={(layoutData.mobile_aspect as string) || "16/10"}
+              onValueChange={(v) => setLayoutField("mobile_aspect", v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="16/10">16:10 (recomendado)</SelectItem>
+                <SelectItem value="3/4">3:4</SelectItem>
+                <SelectItem value="1/1">1:1 (quadrado)</SelectItem>
+                <SelectItem value="4/5">4:5 (alto)</SelectItem>
+              </SelectContent>
+            </Select>
+            <FieldHint text="Use 16:10 quando a imagem for horizontal." />
+          </div>
+          <div>
+            <LabelWithHint
+              label="Ajuste da imagem no celular"
+              hint="'Cobrir' preenche toda a área cortando as laterais. 'Conter' mostra a imagem inteira sem cortar (pode aparecer borda da cor de fundo)."
+            />
+            <Select
+              value={(layoutData.mobile_fit as string) || "cover"}
+              onValueChange={(v) => setLayoutField("mobile_fit", v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cover">Cobrir (corta laterais)</SelectItem>
+                <SelectItem value="contain">Conter (sem cortar)</SelectItem>
+              </SelectContent>
+            </Select>
+            <FieldHint text="Use 'Conter' se a imagem horizontal estiver sendo cortada no celular." />
+          </div>
+          <div>
+            <LabelWithHint
+              label="Posição X mobile"
+              hint="Ponto focal horizontal da imagem no mobile (0 = esquerda, 50 = centro, 100 = direita)."
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={typeof layoutData.mobile_bg_pos_x === "number" ? layoutData.mobile_bg_pos_x : 50}
+              onChange={(e) => setLayoutField("mobile_bg_pos_x", Number(e.target.value))}
+              className="mt-0.5"
+            />
+          </div>
+          <div>
+            <LabelWithHint
+              label="Posição Y mobile"
+              hint="Ponto focal vertical da imagem no mobile (0 = topo, 50 = centro, 100 = baixo)."
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={typeof layoutData.mobile_bg_pos_y === "number" ? layoutData.mobile_bg_pos_y : 50}
+              onChange={(e) => setLayoutField("mobile_bg_pos_y", Number(e.target.value))}
+              className="mt-0.5"
+            />
+          </div>
+        </div>
+        {form.image_url && (
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground mb-2">Pré-visualização mobile (≈375px):</p>
+            <div className="max-w-[375px] overflow-hidden rounded-xl border">
+              <HeroSection section={form} previewMode />
+            </div>
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard

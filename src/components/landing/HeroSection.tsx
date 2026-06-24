@@ -117,16 +117,23 @@ function SlideContent({
   slide,
   previewMode,
   mobileFit,
+  mobileBgPosX,
+  mobileBgPosY,
+  slideIndex,
 }: {
   slide: HeroSlide;
   previewMode: boolean;
   mobileFit: MobileFit;
+  mobileBgPosX: number;
+  mobileBgPosY: number;
+  slideIndex: number;
 }) {
   const vAlign = (slide.vAlign || "center") as keyof typeof vAlignClass;
   const hAlign = (slide.hAlign || "center") as keyof typeof hAlignClass;
   const textAlign = (slide.textAlign || "center") as keyof typeof textAlignClass;
   const bgPosX = typeof slide.bgPosX === "number" ? slide.bgPosX : 50;
   const bgPosY = typeof slide.bgPosY === "number" ? slide.bgPosY : 50;
+  const slideKey = `slide-bg-${slideIndex}`;
 
   const cta1 = slide.cta1 || {};
   const cta2 = slide.cta2 || {};
@@ -172,13 +179,15 @@ function SlideContent({
       {/* Background image — uses <img> to avoid edge-cropping on mobile,
           while still respecting the focal point via object-position. */}
       {slide.image_url ? (
-        <img
-          src={slide.image_url}
-          alt={slide.title || ""}
-          className={cn("absolute inset-0 w-full h-full", imgFitClass)}
-          style={{ objectPosition: `${bgPosX}% ${bgPosY}%` }}
-          loading="eager"
-        />
+        <>
+          <style>{`.${slideKey}{object-position:${mobileBgPosX}% ${mobileBgPosY}%}@media(min-width:640px){.${slideKey}{object-position:${bgPosX}% ${bgPosY}%}}`}</style>
+          <img
+            src={slide.image_url}
+            alt={slide.title || ""}
+            className={cn("absolute inset-0 w-full h-full", imgFitClass, slideKey)}
+            loading="eager"
+          />
+        </>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
       )}
@@ -298,6 +307,10 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
       ? layoutData.mobile_aspect
       : "16/10"
   ) as MobileAspect;
+  const bgPosXMain: number = typeof layoutData.bgPosX === "number" ? layoutData.bgPosX : 50;
+  const bgPosYMain: number = typeof layoutData.bgPosY === "number" ? layoutData.bgPosY : 50;
+  const mobileBgPosX: number = typeof layoutData.mobile_bg_pos_x === "number" ? layoutData.mobile_bg_pos_x : bgPosXMain;
+  const mobileBgPosY: number = typeof layoutData.mobile_bg_pos_y === "number" ? layoutData.mobile_bg_pos_y : bgPosYMain;
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: "start" },
@@ -333,7 +346,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   if (!isCarousel) {
     return (
       <section className={wrapperClass}>
-        <SlideContent slide={slides[0] || baseSlide} previewMode={previewMode} mobileFit={mobileFit} />
+        <SlideContent slide={slides[0] || baseSlide} previewMode={previewMode} mobileFit={mobileFit} mobileBgPosX={mobileBgPosX} mobileBgPosY={mobileBgPosY} slideIndex={0} />
       </section>
     );
   }
@@ -344,7 +357,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
         <div className="flex h-full">
           {slides.map((slide, i) => (
             <div key={i} className="relative flex-[0_0_100%] min-w-0 h-full">
-              <SlideContent slide={slide} previewMode={previewMode} mobileFit={mobileFit} />
+              <SlideContent slide={slide} previewMode={previewMode} mobileFit={mobileFit} mobileBgPosX={mobileBgPosX} mobileBgPosY={mobileBgPosY} slideIndex={i} />
             </div>
           ))}
         </div>

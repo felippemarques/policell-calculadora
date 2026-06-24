@@ -10,6 +10,7 @@ export interface ConditionRow {
   discount_fixed?: number;
   discount_mode?: DiscountMode;
   is_rejected: boolean;
+  closes_checklist: boolean;
   help_text?: string | null;
   is_required?: boolean;
   model_ids?: string[] | null;
@@ -24,6 +25,7 @@ export interface DamageOption {
   deduction_percent?: number;
   deduction_mode?: DiscountMode;
   is_rejected: boolean;
+  closes_checklist: boolean;
 }
 
 export interface DamageCategory {

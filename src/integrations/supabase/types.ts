@@ -183,6 +183,7 @@ export type Database = {
       }
       condition_discounts: {
         Row: {
+          closes_checklist: boolean
           condition_name: string
           discount_fixed: number
           discount_mode: string
@@ -197,6 +198,7 @@ export type Database = {
           youtube_url: string | null
         }
         Insert: {
+          closes_checklist?: boolean
           condition_name: string
           discount_fixed?: number
           discount_mode?: string
@@ -211,6 +213,7 @@ export type Database = {
           youtube_url?: string | null
         }
         Update: {
+          closes_checklist?: boolean
           condition_name?: string
           discount_fixed?: number
           discount_mode?: string
@@ -291,6 +294,7 @@ export type Database = {
       }
       damage_deductions: {
         Row: {
+          closes_checklist: boolean
           created_at: string
           damage_category_id: string
           deduction_mode: string
@@ -302,6 +306,7 @@ export type Database = {
           option_name: string
         }
         Insert: {
+          closes_checklist?: boolean
           created_at?: string
           damage_category_id: string
           deduction_mode?: string
@@ -313,6 +318,7 @@ export type Database = {
           option_name?: string
         }
         Update: {
+          closes_checklist?: boolean
           created_at?: string
           damage_category_id?: string
           deduction_mode?: string

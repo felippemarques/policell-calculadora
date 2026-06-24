@@ -46,6 +46,9 @@ interface HeroCta {
 
 interface HeroSlide {
   image_url?: string | null;
+  tablet_image_url?: string | null;
+  desktop_image_url?: string | null;
+  large_image_url?: string | null;
   title?: string;
   content?: string;
   link_url?: string;
@@ -181,12 +184,17 @@ function SlideContent({
       {slide.image_url ? (
         <>
           <style>{`.${slideKey}{object-position:${mobileBgPosX}% ${mobileBgPosY}%}@media(min-width:640px){.${slideKey}{object-position:${bgPosX}% ${bgPosY}%}}`}</style>
-          <img
-            src={slide.image_url}
-            alt={slide.title || ""}
-            className={cn("col-start-1 row-start-1 w-full self-start sm:absolute sm:inset-0 sm:h-full sm:self-auto", imgFitClass, slideKey)}
-            loading="eager"
-          />
+          <picture className="contents">
+            {slide.large_image_url && <source media="(min-width: 1280px)" srcSet={slide.large_image_url} />}
+            {slide.desktop_image_url && <source media="(min-width: 1024px)" srcSet={slide.desktop_image_url} />}
+            {slide.tablet_image_url && <source media="(min-width: 640px)" srcSet={slide.tablet_image_url} />}
+            <img
+              src={slide.image_url}
+              alt={slide.title || ""}
+              className={cn("col-start-1 row-start-1 w-full self-start sm:absolute sm:inset-0 sm:h-full sm:self-auto", imgFitClass, slideKey)}
+              loading="eager"
+            />
+          </picture>
         </>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
@@ -279,6 +287,9 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
 
   const baseSlide: HeroSlide = {
     image_url: section.image_url,
+    tablet_image_url: layoutData.tablet_image_url || null,
+    desktop_image_url: layoutData.desktop_image_url || null,
+    large_image_url: layoutData.large_image_url || null,
     title: section.title,
     content: section.content,
     link_url: section.link_url,

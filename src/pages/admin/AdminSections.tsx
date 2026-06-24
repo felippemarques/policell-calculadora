@@ -2040,6 +2040,42 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
           />
           <FieldHint text="Aceita URL completa (https://...) ou caminho interno (/calculadora)." />
         </div>
+        <div className="mt-4">
+          <LabelWithHint
+            label="Imagens por breakpoint (opcional)"
+            hint="Defina imagens específicas para cada tamanho de tela. Se não informadas, a imagem principal é usada em todos os breakpoints."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Tablet (640–1023px)</label>
+              <Input
+                value={(layoutData.tablet_image_url as string) || ""}
+                onChange={(e) => setLayoutField("tablet_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Desktop (1024–1279px)</label>
+              <Input
+                value={(layoutData.desktop_image_url as string) || ""}
+                onChange={(e) => setLayoutField("desktop_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Large (≥1280px)</label>
+              <Input
+                value={(layoutData.large_image_url as string) || ""}
+                onChange={(e) => setLayoutField("large_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <FieldHint text="Mobile sempre usa a imagem principal. Breakpoints maiores usam a imagem correspondente, ou caem para a principal se não configurada." />
+        </div>
       </SectionCard>
 
       {/* Slides extras + autoplay */}
@@ -2138,6 +2174,38 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
                       maxLength={120}
                       className="mt-1"
                     />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-2">Imagens por breakpoint (opcional)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Tablet (640–1023px)</label>
+                      <Input
+                        value={slide.tablet_image_url || ""}
+                        onChange={(e) => updateSlide({ tablet_image_url: e.target.value })}
+                        placeholder="https://..."
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Desktop (1024–1279px)</label>
+                      <Input
+                        value={slide.desktop_image_url || ""}
+                        onChange={(e) => updateSlide({ desktop_image_url: e.target.value })}
+                        placeholder="https://..."
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Large (≥1280px)</label>
+                      <Input
+                        value={slide.large_image_url || ""}
+                        onChange={(e) => updateSlide({ large_image_url: e.target.value })}
+                        placeholder="https://..."
+                        className="text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
                 {slide.image_url && (

@@ -151,7 +151,7 @@ function SlideContent({
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-background"
+      className="relative w-full min-h-[220px] sm:min-h-full sm:h-full overflow-hidden bg-background"
       style={
         slide.bg_color && mobileFit === "contain"
           ? { backgroundColor: slide.bg_color }
@@ -338,8 +338,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
   const wrapperClass = previewMode
     ? "relative w-full h-full"
     : cn(
-        "relative w-full",
-        MOBILE_ASPECT_CLASS[mobileAspect],
+        "relative w-full min-h-[220px] sm:min-h-0",
         "sm:aspect-[16/10] md:aspect-[16/7] lg:aspect-[21/8]",
       );
 
@@ -356,7 +355,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">
           {slides.map((slide, i) => (
-            <div key={i} className="relative flex-[0_0_100%] min-w-0 h-full">
+            <div key={i} className="relative flex-[0_0_100%] min-w-0 min-h-[220px] sm:h-full">
               <SlideContent slide={slide} previewMode={previewMode} mobileFit={mobileFit} mobileBgPosX={mobileBgPosX} mobileBgPosY={mobileBgPosY} slideIndex={i} />
             </div>
           ))}

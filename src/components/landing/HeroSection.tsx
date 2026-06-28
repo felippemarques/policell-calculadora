@@ -154,7 +154,7 @@ function SlideContent({
 
   return (
     <div
-      className="relative w-full min-h-[220px] sm:h-full overflow-hidden bg-background grid grid-cols-1"
+      className="relative w-full h-full overflow-hidden bg-background"
       style={
         slide.bg_color && mobileFit === "contain"
           ? { backgroundColor: slide.bg_color }
@@ -191,7 +191,7 @@ function SlideContent({
             <img
               src={slide.image_url}
               alt={slide.title || ""}
-              className={cn("col-start-1 row-start-1 w-full self-start sm:absolute sm:inset-0 sm:h-full sm:self-auto", imgFitClass, slideKey)}
+              className={cn("absolute inset-0 w-full h-full", imgFitClass, slideKey)}
               loading="eager"
             />
           </picture>
@@ -202,7 +202,7 @@ function SlideContent({
 
       <div
         className={cn(
-          "col-start-1 row-start-1 relative z-20 flex w-full h-full px-4 md:px-6 pointer-events-none",
+          "absolute inset-0 z-20 flex w-full h-full px-4 md:px-6 pointer-events-none",
           previewMode ? "py-6 md:py-8" : "py-10 md:py-20",
           vAlignClass[vAlign],
           hAlignClass[hAlign],
@@ -350,6 +350,7 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
     ? "relative w-full h-full"
     : cn(
         "relative w-full",
+        MOBILE_ASPECT_CLASS[mobileAspect],
         "sm:aspect-[16/10] md:aspect-[16/7] lg:aspect-[21/8]",
       );
 
@@ -363,10 +364,10 @@ const HeroSection = ({ section, previewMode = false }: HeroSectionProps) => {
 
   return (
     <section className={cn(wrapperClass, "group/hero")}>
-      <div className="overflow-hidden sm:h-full" ref={emblaRef}>
-        <div className="flex sm:h-full">
+      <div className="overflow-hidden h-full" ref={emblaRef}>
+        <div className="flex h-full">
           {slides.map((slide, i) => (
-            <div key={i} className="relative flex-[0_0_100%] min-w-0 sm:h-full">
+            <div key={i} className="relative flex-[0_0_100%] min-w-0 h-full">
               <SlideContent slide={slide} previewMode={previewMode} mobileFit={mobileFit} mobileBgPosX={mobileBgPosX} mobileBgPosY={mobileBgPosY} slideIndex={i} />
             </div>
           ))}

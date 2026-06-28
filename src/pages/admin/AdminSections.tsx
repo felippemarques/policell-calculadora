@@ -678,7 +678,7 @@ const AdminSections = () => {
               <BenefitsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
             )}
             {editingSection.section_type === "testimonials" && (
-              <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} />
+              <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
             )}
             {editingSection.section_type === "faq" && (
               <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />
@@ -1402,7 +1402,15 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
 }
 
 // ========== TESTIMONIALS EDITOR ==========
-function TestimonialsEditor({ items, setItems, form }: any) {
+function TestimonialsEditor({ items, setItems, form, setForm }: any) {
+  const testimonialLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setTestimonialsLayoutField = (key: string, value: string) => {
+    const updated = { ...testimonialLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
 
   const handlePhotoUpload = async (file: File, idx: number, update: (key: string, val: any) => void) => {
@@ -1424,6 +1432,63 @@ function TestimonialsEditor({ items, setItems, form }: any) {
 
   return (
     <>
+      <SectionCard
+        icon={<Smartphone className="h-4 w-4" />}
+        title="Modo de exibição por breakpoint"
+        description="Escolha entre carrossel (com setas) ou grade (todos lado a lado) em cada tamanho de tela."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <LabelWithHint
+              label="Mobile (< 640px)"
+              hint="Carrossel: 1 depoimento por vez com setas. Grade: todos em 2 colunas."
+            />
+            <Select
+              value={(testimonialLayoutData.mobile_layout as string) || 'carousel'}
+              onValueChange={(v) => setTestimonialsLayoutField('mobile_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint
+              label="Tablet (640–1023px)"
+              hint="Carrossel: 2 depoimentos por vez. Grade: todos em 2 colunas."
+            />
+            <Select
+              value={(testimonialLayoutData.tablet_layout as string) || 'carousel'}
+              onValueChange={(v) => setTestimonialsLayoutField('tablet_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint
+              label="Desktop (≥ 1024px)"
+              hint="Carrossel: 4 depoimentos por vez. Grade: todos em 4 colunas."
+            />
+            <Select
+              value={(testimonialLayoutData.desktop_layout as string) || 'carousel'}
+              onValueChange={(v) => setTestimonialsLayoutField('desktop_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard
         icon={<MessageSquare className="h-4 w-4" />}
         title="Depoimentos de Clientes"
@@ -2293,7 +2358,10 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         {form.image_url && (
           <div className="mt-4">
             <p className="text-xs text-muted-foreground mb-2">Pré-visualização mobile (≈375px):</p>
-            <div className="max-w-[375px] overflow-hidden rounded-xl border">
+            <div
+              className="max-w-[375px] overflow-hidden rounded-xl border"
+              style={{ aspectRatio: (layoutData.mobile_aspect as string) || '16/10' }}
+            >
               <HeroSection section={form} previewMode />
             </div>
           </div>

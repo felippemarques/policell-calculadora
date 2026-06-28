@@ -13,6 +13,38 @@ const defaultTestimonials = [
   { name: "Carlos Rocha", city: "Curitiba, PR", text: "Ótimo serviço. A avaliação foi transparente e o pagamento rápido.", photo: "", active: true },
 ];
 
+function TestimonialCard({ t }: { t: any }) {
+  return (
+    <div className="rounded-xl border bg-background/50 backdrop-blur-sm p-5 md:p-6 flex flex-col justify-between space-y-3 transition-all duration-300">
+      <div>
+        <div className="flex gap-0.5 mb-3">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star key={star} className="w-4 h-4 fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+        <p className="text-base leading-relaxed opacity-90 font-medium">
+          <span className="text-amber-400 text-xl font-serif">"</span>
+          {t.text}
+          <span className="text-amber-400 text-xl font-serif">"</span>
+        </p>
+      </div>
+      <div className="flex items-center gap-3 pt-2 border-t">
+        {t.photo ? (
+          <img src={t.photo} alt={t.name} className="w-10 h-10 rounded-full object-cover border" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
+            {t.name?.charAt(0)}
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-semibold">{t.name}</p>
+          {t.city && <p className="text-xs opacity-60">{t.city}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
   let allTestimonials = defaultTestimonials;
   try {
@@ -22,18 +54,37 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
     }
   } catch {}
 
-  // Only show active testimonials
   const testimonials = allTestimonials.filter((t: any) => t.active !== false);
+
+  const layoutData = (() => {
+    try { return section.layout ? JSON.parse(section.layout) : {}; } catch { return {}; }
+  })();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [isGridMode, setIsGridMode] = useState(false);
 
   useEffect(() => {
-    const check = () => setItemsPerPage(window.innerWidth < 768 ? 1 : 4);
+    const check = () => {
+      const w = window.innerWidth;
+      if (w < 640) {
+        const mode = layoutData.mobile_layout || 'carousel';
+        setIsGridMode(mode === 'grid');
+        setItemsPerPage(mode === 'grid' ? testimonials.length : 1);
+      } else if (w < 1024) {
+        const mode = layoutData.tablet_layout || 'carousel';
+        setIsGridMode(mode === 'grid');
+        setItemsPerPage(mode === 'grid' ? testimonials.length : 2);
+      } else {
+        const mode = layoutData.desktop_layout || 'carousel';
+        setIsGridMode(mode === 'grid');
+        setItemsPerPage(mode === 'grid' ? testimonials.length : 4);
+      }
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
-  }, []);
+  }, [layoutData.mobile_layout, layoutData.tablet_layout, layoutData.desktop_layout, testimonials.length]);
 
   const maxIndex = Math.max(0, testimonials.length - itemsPerPage);
 
@@ -45,12 +96,11 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
     setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
   }, [maxIndex]);
 
-  // Auto-play
   useEffect(() => {
-    if (testimonials.length <= itemsPerPage) return;
+    if (isGridMode || testimonials.length <= itemsPerPage) return;
     const timer = setInterval(next, 5000);
     return () => clearInterval(timer);
-  }, [next, testimonials.length, itemsPerPage]);
+  }, [next, testimonials.length, itemsPerPage, isGridMode]);
 
   const visibleItems = testimonials.slice(currentIndex, currentIndex + itemsPerPage);
   if (visibleItems.length < itemsPerPage) {
@@ -66,78 +116,55 @@ const TestimonialsSection = ({ section }: TestimonialsSectionProps) => {
           <h2 className="text-2xl md:text-3xl font-bold">{section.title || "O que nossos clientes dizem"}</h2>
         </div>
 
-        <div className="relative">
-          {testimonials.length > itemsPerPage && (
-            <>
-              <button
-                onClick={prev}
-                className="absolute left-0 md:-left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
-                style={{ color: section.text_color }}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={next}
-                className="absolute right-0 md:-right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
-                style={{ color: section.text_color }}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5 px-2 md:px-4">
-            {visibleItems.map((t: any, i: number) => (
-              <div
-                key={`${currentIndex}-${i}`}
-                className="rounded-xl border bg-background/50 backdrop-blur-sm p-5 md:p-6 flex flex-col justify-between space-y-3 transition-all duration-300"
-              >
-                <div>
-                  {/* 5 estrelas douradas */}
-                  <div className="flex gap-0.5 mb-3">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  {/* Aspas grandes antes do texto */}
-                  <p className="text-base leading-relaxed opacity-90 font-medium">
-                    <span className="text-amber-400 text-xl font-serif">"</span>
-                    {t.text}
-                    <span className="text-amber-400 text-xl font-serif">"</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2 border-t">
-                  {t.photo ? (
-                    <img src={t.photo} alt={t.name} className="w-10 h-10 rounded-full object-cover border" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
-                      {t.name?.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    {t.city && <p className="text-xs opacity-60">{t.city}</p>}
-                  </div>
-                </div>
-              </div>
+        {isGridMode ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 px-2 md:px-4">
+            {testimonials.map((t: any, i: number) => (
+              <TestimonialCard key={i} t={t} />
             ))}
           </div>
-
-          {testimonials.length > itemsPerPage && (
-            <div className="flex justify-center gap-1.5 mt-6">
-              {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+        ) : (
+          <div className="relative">
+            {testimonials.length > itemsPerPage && (
+              <>
                 <button
-                  key={i}
-                  onClick={() => setCurrentIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === currentIndex ? "bg-primary w-6" : "bg-primary/20"
-                  }`}
-                />
+                  onClick={prev}
+                  className="absolute left-0 md:-left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                  style={{ color: section.text_color }}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={next}
+                  className="absolute right-0 md:-right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                  style={{ color: section.text_color }}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 px-2 md:px-4">
+              {visibleItems.map((t: any, i: number) => (
+                <TestimonialCard key={`${currentIndex}-${i}`} t={t} />
               ))}
             </div>
-          )}
-        </div>
+
+            {testimonials.length > itemsPerPage && (
+              <div className="flex justify-center gap-1.5 mt-6">
+                {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      i === currentIndex ? "bg-primary w-6" : "bg-primary/20"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <SectionCtaButton section={section} />
       </div>
     </section>

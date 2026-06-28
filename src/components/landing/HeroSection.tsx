@@ -184,7 +184,10 @@ function SlideContent({
           while still respecting the focal point via object-position. */}
       {slide.image_url ? (
         <>
-          <style>{`.${slideKey}{object-position:${mobileBgPosX}% ${mobileBgPosY}%}@media(min-width:640px){.${slideKey}{object-position:${bgPosX}% ${bgPosY}%}}`}</style>
+          <style>{previewMode
+            ? `.${slideKey}{object-position:${mobileBgPosX}% ${mobileBgPosY}%}`
+            : `.${slideKey}{object-position:${mobileBgPosX}% ${mobileBgPosY}%}@media(min-width:640px){.${slideKey}{object-position:${bgPosX}% ${bgPosY}%}}`
+          }</style>
           <picture className="contents">
             {slide.large_image_url && <source media="(min-width: 1280px)" srcSet={slide.large_image_url} />}
             {slide.desktop_image_url && <source media="(min-width: 1024px)" srcSet={slide.desktop_image_url} />}

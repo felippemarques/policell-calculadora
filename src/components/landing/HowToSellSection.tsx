@@ -1,4 +1,5 @@
-import {
+import { useState, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight,
   Smartphone, ClipboardCheck, CreditCard, Gift, Shield, Zap, ThumbsUp, Banknote,
   Heart, Award, Clock, CheckCircle, Rocket, Target, Users, Globe, Lock, Sparkles,
   Star, Mail, Phone, MapPin, ShoppingCart, Truck, Camera, Wifi, Settings, Package,
@@ -73,6 +74,36 @@ const defaultCards = [
   },
 ];
 
+function ComparisonCard({ card }: { card: any }) {
+  return (
+    <div className="rounded-2xl bg-white p-6 md:p-10 shadow-md border border-gray-100">
+      <div className="text-center mb-6 md:mb-8">
+        <h3 className="text-xl md:text-2xl font-extrabold text-orange-500 tracking-wide">
+          {card.title}
+        </h3>
+        {card.subtitle && (
+          <p className="text-xs md:text-sm font-bold mt-2 text-gray-700 uppercase tracking-widest">
+            {card.subtitle}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-5">
+        {card.items?.map((item: any, i: number) => (
+          <div key={i} className="flex gap-4 items-center">
+            <span className="flex-shrink-0" style={{ color: item.icon_color || "#f97316" }}>
+              {iconMap[item.icon] || <CheckCircle className="h-5 w-5" />}
+            </span>
+            <p className="text-sm md:text-base leading-relaxed font-medium text-gray-800">
+              {item.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const HowToSellSection = ({ section }: HowToSellSectionProps) => {
   let cards = defaultCards;
   try {
@@ -82,6 +113,55 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
     }
   } catch {}
 
+  const layoutData = (() => {
+    try { return section.layout ? JSON.parse(section.layout) : {}; } catch { return {}; }
+  })();
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(2);
+  const [isGridMode, setIsGridMode] = useState(true);
+
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth;
+      if (w < 640) {
+        const mode = layoutData.mobile_layout || 'grid';
+        setIsGridMode(mode === 'grid');
+        setItemsPerPage(mode === 'grid' ? cards.length : 1);
+      } else {
+        const mode = layoutData.tablet_layout || 'grid';
+        const desktopMode = layoutData.desktop_layout || mode;
+        const resolved = w < 1024 ? mode : desktopMode;
+        setIsGridMode(resolved === 'grid');
+        setItemsPerPage(resolved === 'grid' ? cards.length : 2);
+      }
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [layoutData.mobile_layout, layoutData.tablet_layout, layoutData.desktop_layout, cards.length]);
+
+  const maxIndex = Math.max(0, cards.length - itemsPerPage);
+
+  const next = useCallback(() => {
+    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+  }, [maxIndex]);
+
+  const prev = useCallback(() => {
+    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+  }, [maxIndex]);
+
+  useEffect(() => {
+    if (isGridMode || cards.length <= itemsPerPage) return;
+    const timer = setInterval(next, 5000);
+    return () => clearInterval(timer);
+  }, [next, cards.length, itemsPerPage, isGridMode]);
+
+  const visibleItems = cards.slice(currentIndex, currentIndex + itemsPerPage);
+  if (visibleItems.length < itemsPerPage) {
+    visibleItems.push(...cards.slice(0, itemsPerPage - visibleItems.length));
+  }
+
   return (
     <section style={{ backgroundColor: section.bg_color || "#f8f9fa", color: section.text_color || "#1a1a1a" }}>
       <div className="max-w-5xl mx-auto px-4 py-12 md:py-20">
@@ -89,40 +169,57 @@ const HowToSellSection = ({ section }: HowToSellSectionProps) => {
           {section.title || "Saiba como vender"}
         </h2>
 
-        <div className="flex justify-center">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-3xl">
-            {cards.map((card: any, cardIdx: number) => (
-              <div
-                key={cardIdx}
-                className="rounded-2xl bg-white p-6 md:p-10 shadow-md border border-gray-100"
-              >
-                <div className="text-center mb-6 md:mb-8">
-                  <h3 className="text-xl md:text-2xl font-extrabold text-orange-500 tracking-wide">
-                    {card.title}
-                  </h3>
-                  {card.subtitle && (
-                    <p className="text-xs md:text-sm font-bold mt-2 text-gray-700 uppercase tracking-widest">
-                      {card.subtitle}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-5">
-                  {card.items?.map((item: any, i: number) => (
-                    <div key={i} className="flex gap-4 items-center">
-                      <span className="flex-shrink-0" style={{ color: item.icon_color || "#f97316" }}>
-                        {iconMap[item.icon] || <CheckCircle className="h-5 w-5" />}
-                      </span>
-                      <p className="text-sm md:text-base leading-relaxed font-medium text-gray-800">
-                        {item.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+        {isGridMode ? (
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-3xl">
+              {cards.map((card: any, i: number) => (
+                <ComparisonCard key={i} card={card} />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative">
+            {cards.length > itemsPerPage && (
+              <>
+                <button
+                  onClick={prev}
+                  className="absolute left-0 md:-left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                  style={{ color: section.text_color }}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={next}
+                  className="absolute right-0 md:-right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-background/80 border shadow-sm flex items-center justify-center hover:bg-background transition-colors"
+                  style={{ color: section.text_color }}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+
+            <div className={`grid ${itemsPerPage === 1 ? "grid-cols-1" : "grid-cols-2"} gap-6 md:gap-8 w-full max-w-3xl mx-auto px-2 md:px-4`}>
+              {visibleItems.map((card: any, i: number) => (
+                <ComparisonCard key={`${currentIndex}-${i}`} card={card} />
+              ))}
+            </div>
+
+            {cards.length > itemsPerPage && (
+              <div className="flex justify-center gap-1.5 mt-6">
+                {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      i === currentIndex ? "bg-primary w-6" : "bg-primary/20"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <SectionCtaButton section={section} />
       </div>
     </section>

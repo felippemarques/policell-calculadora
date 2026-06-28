@@ -671,7 +671,7 @@ const AdminSections = () => {
               <HeroEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />
             )}
             {editingSection.section_type === "steps" && (
-              <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} />
+              <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
             )}
             {editingSection.section_type === "how-to-sell" && <HowToSellEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "benefits" && (
@@ -960,9 +960,65 @@ function ReorderableList({
 }
 
 // ========== STEPS EDITOR ==========
-function StepsEditor({ items, setItems, form }: { items: any[]; setItems: (arr: any[]) => void; form: any }) {
+function StepsEditor({ items, setItems, form, setForm }: { items: any[]; setItems: (arr: any[]) => void; form: any; setForm: (f: any) => void }) {
+  const stepsLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setStepsLayoutField = (key: string, value: string) => {
+    const updated = { ...stepsLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   return (
     <>
+      <SectionCard
+        icon={<Smartphone className="h-4 w-4" />}
+        title="Modo de exibição por breakpoint"
+        description="Escolha entre grade (lado a lado) ou carrossel (com setas) em cada tamanho de tela."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <LabelWithHint label="Mobile (< 640px)" hint="Grade: 1 coluna. Carrossel: 1 card por vez com setas." />
+            <Select
+              value={(stepsLayoutData.mobile_layout as string) || 'grid'}
+              onValueChange={(v) => setStepsLayoutField('mobile_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Tablet (640–1023px)" hint="Grade: 2 colunas. Carrossel: 2 cards por vez." />
+            <Select
+              value={(stepsLayoutData.tablet_layout as string) || 'grid'}
+              onValueChange={(v) => setStepsLayoutField('tablet_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Desktop (≥ 1024px)" hint="Grade: 4 colunas. Carrossel: 4 cards por vez." />
+            <Select
+              value={(stepsLayoutData.desktop_layout as string) || 'grid'}
+              onValueChange={(v) => setStepsLayoutField('desktop_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard
         icon={<LayoutGrid className="h-4 w-4" />}
         title="Passos do Processo"
@@ -1054,6 +1110,14 @@ function StepsEditor({ items, setItems, form }: { items: any[]; setItems: (arr: 
 
 // ========== HOW TO SELL EDITOR ==========
 function HowToSellEditor({ form, setForm }: any) {
+  const howToSellLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setHowToSellLayoutField = (key: string, value: string) => {
+    const updated = { ...howToSellLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   const getCards = (): any[] => {
     try {
       const parsed = form.content ? JSON.parse(form.content) : {};
@@ -1108,6 +1172,54 @@ function HowToSellEditor({ form, setForm }: any) {
 
   return (
     <>
+      <SectionCard
+        icon={<Smartphone className="h-4 w-4" />}
+        title="Modo de exibição por breakpoint"
+        description="Escolha entre grade (lado a lado) ou carrossel (com setas) em cada tamanho de tela."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <LabelWithHint label="Mobile (< 640px)" hint="Grade: ambos os quadros empilhados. Carrossel: 1 quadro por vez com setas." />
+            <Select
+              value={(howToSellLayoutData.mobile_layout as string) || 'grid'}
+              onValueChange={(v) => setHowToSellLayoutField('mobile_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Tablet (640–1023px)" hint="Grade: 2 colunas. Carrossel: 1 quadro por vez." />
+            <Select
+              value={(howToSellLayoutData.tablet_layout as string) || 'grid'}
+              onValueChange={(v) => setHowToSellLayoutField('tablet_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Desktop (≥ 1024px)" hint="Grade: 2 colunas lado a lado. Carrossel: 2 quadros por vez." />
+            <Select
+              value={(howToSellLayoutData.desktop_layout as string) || 'grid'}
+              onValueChange={(v) => setHowToSellLayoutField('desktop_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </SectionCard>
+
       {cards.map((card: any, cardIdx: number) => (
         <SectionCard
           key={cardIdx}
@@ -1268,8 +1380,64 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
   const isYoutubeValid =
     form.video_url && (form.video_url.includes("youtube.com") || form.video_url.includes("youtu.be"));
 
+  const benefitsLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setBenefitsLayoutField = (key: string, value: string) => {
+    const updated = { ...benefitsLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   return (
     <>
+      <SectionCard
+        icon={<Smartphone className="h-4 w-4" />}
+        title="Modo de exibição por breakpoint"
+        description="Escolha entre grade (lado a lado) ou carrossel (com setas) em cada tamanho de tela."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <LabelWithHint label="Mobile (< 640px)" hint="Grade: 1 coluna. Carrossel: 1 card por vez com setas." />
+            <Select
+              value={(benefitsLayoutData.mobile_layout as string) || 'grid'}
+              onValueChange={(v) => setBenefitsLayoutField('mobile_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Tablet (640–1023px)" hint="Grade: 2 colunas. Carrossel: 2 cards por vez." />
+            <Select
+              value={(benefitsLayoutData.tablet_layout as string) || 'grid'}
+              onValueChange={(v) => setBenefitsLayoutField('tablet_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <LabelWithHint label="Desktop (≥ 1024px)" hint="Grade: 4 colunas. Carrossel: 4 cards por vez." />
+            <Select
+              value={(benefitsLayoutData.desktop_layout as string) || 'grid'}
+              onValueChange={(v) => setBenefitsLayoutField('desktop_layout', v)}
+            >
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid">Grade (lado a lado)</SelectItem>
+                <SelectItem value="carousel">Carrossel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard
         icon={<Video className="h-4 w-4" />}
         title="Vídeo do YouTube (opcional)"

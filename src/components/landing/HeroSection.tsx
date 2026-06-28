@@ -147,10 +147,11 @@ function SlideContent({
   const hasAnyCta = !!cta1.text || cta2Enabled;
   const isClickable = !!rawLink && !previewMode && !hasAnyCta;
 
-  // No mobile, se "contain", a imagem aparece inteira (sem corte) e usamos a
-  // cor de fundo para preencher as bandas. No desktop sempre usa cover.
-  const imgFitClass =
-    mobileFit === "contain" ? "object-contain sm:object-cover" : "object-cover";
+  // Em preview (admin), viewport é desktop — sm: nunca ativa no container 375px.
+  // Aplicar mobileFit diretamente sem prefixo de breakpoint.
+  const imgFitClass = previewMode
+    ? (mobileFit === "contain" ? "object-contain" : "object-cover")
+    : (mobileFit === "contain" ? "object-contain sm:object-cover" : "object-cover");
 
   return (
     <div

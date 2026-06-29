@@ -259,6 +259,7 @@ function getYoutubeEmbedUrl(url: string) {
 }
 
 function isValidUrl(url: string) {
+  if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("whatsapp:")) return true;
   try {
     new URL(url);
     return url.startsWith("http");
@@ -450,7 +451,7 @@ const AdminSections = () => {
         for (let j = 0; j < (cols[i].links?.length || 0); j++) {
           const link = cols[i].links[j];
           if (link.url && link.url !== "#" && !isValidUrl(link.url)) {
-            toast.error(`Coluna ${i + 1}, link ${j + 1}: URL inválida (use https://)`);
+            toast.error(`Coluna ${i + 1}, link ${j + 1}: URL inválida (use https://, tel:, mailto: ou whatsapp:)`);
             return;
           }
         }
@@ -684,7 +685,7 @@ const AdminSections = () => {
               <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />
             )}
             {editingSection.section_type === "mega-footer" && (
-              <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} />
+              <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
             )}
             {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
             {editingSection.section_type === "cta-banner" && (
@@ -1881,7 +1882,7 @@ function FaqEditor({ items, setItems, form }: any) {
 }
 
 // ========== MEGA FOOTER EDITOR ==========
-function MegaFooterEditor({ items, setItems, form }: any) {
+function MegaFooterEditor({ items, setItems, form, setForm }: any) {
   const addColumn = () => {
     if (items.length >= 4) {
       toast.error("Máximo de 4 colunas");
@@ -1920,6 +1921,71 @@ function MegaFooterEditor({ items, setItems, form }: any) {
   return (
     <>
       <SectionCard
+        icon={<Image className="h-4 w-4" />}
+        title="Logotipo e Tagline"
+        description="Logo e texto exibidos no primeiro bloco do rodapé."
+      >
+        <div className="space-y-3">
+          <div>
+            <LabelWithHint label="Logo do rodapé" hint="Substitui o logo global apenas no rodapé. Deixe vazio para usar o logo padrão do site." />
+            {form.image_url && (
+              <div className="flex items-center gap-2 mt-1.5 mb-2">
+                <img src={form.image_url} alt="Logo" className="h-8 max-w-[120px] object-contain border rounded p-1 bg-muted" />
+                <button
+                  onClick={() => setForm({ ...form, image_url: "" })}
+                  className="text-xs text-destructive hover:text-destructive/80"
+                >
+                  Remover
+                </button>
+              </div>
+            )}
+            <label className="cursor-pointer mt-1 inline-flex">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const ext = file.name.split(".").pop();
+                  const path = `footer-logo/${Date.now()}.${ext}`;
+                  const { error } = await supabase.storage.from("lp-images").upload(path, file);
+                  if (error) { toast.error("Erro: " + error.message); return; }
+                  const { data: urlData } = supabase.storage.from("lp-images").getPublicUrl(path);
+                  setForm({ ...form, image_url: urlData.publicUrl });
+                  toast.success("Logo enviado!");
+                }}
+              />
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                <Upload className="h-3.5 w-3.5" />
+                {form.image_url ? "Trocar logo" : "Enviar logo"}
+              </span>
+            </label>
+          </div>
+          <div>
+            <LabelWithHint label="Texto alternativo ao logo" hint="Exibido quando não há logo. Ex: Policell" />
+            <Input
+              value={form.title || ""}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="mt-0.5 text-sm"
+              placeholder="Ex: Policell"
+              maxLength={40}
+            />
+          </div>
+          <div>
+            <LabelWithHint label="Tagline" hint="Frase curta abaixo do logo. Ex: Seu aparelho vale mais do que você imagina." />
+            <Input
+              value={form.link_url || ""}
+              onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              className="mt-0.5 text-sm"
+              placeholder="Ex: Seu aparelho vale mais do que você imagina."
+              maxLength={120}
+            />
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
         icon={<Link2 className="h-4 w-4" />}
         title="Colunas de Links"
         description="Organize links em colunas. Máximo: 4 colunas, 6 links por coluna."
@@ -1955,26 +2021,61 @@ function MegaFooterEditor({ items, setItems, form }: any) {
               <div className="space-y-2 pl-2 border-l-2 border-muted">
                 <p className="text-[11px] text-muted-foreground">Links ({col.links?.length || 0}/6)</p>
                 {col.links?.map((link: any, j: number) => (
-                  <div key={j} className="flex gap-2 items-center">
-                    <Input
-                      value={link.label || ""}
-                      onChange={(e) => updateLink(i, j, "label", e.target.value)}
-                      placeholder="Texto do link"
-                      className="flex-1 text-sm"
-                    />
-                    <Input
-                      value={link.url || ""}
-                      onChange={(e) => updateLink(i, j, "url", e.target.value)}
-                      placeholder="https://..."
-                      className="flex-1 text-sm"
-                    />
-                    <button onClick={() => removeLink(i, j)} className="text-destructive hover:text-destructive/80 p-1">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                  <div key={j} className="space-y-1.5 p-2 rounded border bg-background">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={link.label || ""}
+                        onChange={(e) => updateLink(i, j, "label", e.target.value)}
+                        placeholder="Texto / alt da imagem"
+                        className="flex-1 text-sm"
+                      />
+                      <Input
+                        value={link.url || ""}
+                        onChange={(e) => updateLink(i, j, "url", e.target.value)}
+                        placeholder="https://, tel:, mailto:..."
+                        className="flex-1 text-sm"
+                      />
+                      <button onClick={() => removeLink(i, j)} className="text-destructive hover:text-destructive/80 p-1 flex-shrink-0">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {link.image_url && (
+                        <img src={link.image_url} alt={link.label} className="h-5 max-w-[60px] object-contain border rounded" />
+                      )}
+                      <label className="cursor-pointer inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const ext = file.name.split(".").pop();
+                            const path = `footer-links/${Date.now()}.${ext}`;
+                            const { error } = await supabase.storage.from("lp-images").upload(path, file);
+                            if (error) { toast.error("Erro: " + error.message); return; }
+                            const { data: urlData } = supabase.storage.from("lp-images").getPublicUrl(path);
+                            updateLink(i, j, "image_url", urlData.publicUrl);
+                            toast.success("Imagem enviada!");
+                          }}
+                        />
+                        <Image className="h-3 w-3" />
+                        {link.image_url ? "Trocar imagem" : "Adicionar imagem"}
+                      </label>
+                      {link.image_url && (
+                        <button
+                          onClick={() => updateLink(i, j, "image_url", "")}
+                          className="text-xs text-destructive hover:text-destructive/80"
+                        >
+                          Remover imagem
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {col.links?.some((l: any) => l.url && l.url !== "#" && !isValidUrl(l.url)) && (
-                  <p className="text-xs text-destructive">⚠ Algumas URLs são inválidas. Use https://</p>
+                  <p className="text-xs text-destructive">⚠ Algumas URLs são inválidas. Use https://, tel:, mailto: ou whatsapp:</p>
                 )}
                 <Button
                   variant="ghost"
@@ -2012,8 +2113,11 @@ function MegaFooterEditor({ items, setItems, form }: any) {
           <div className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <span className="text-xs font-bold block mb-2">Policell</span>
-                <p className="text-[9px] opacity-60">Seu aparelho vale mais do que você imagina.</p>
+                {form.image_url
+                  ? <img src={form.image_url} alt="Logo" className="h-4 max-w-[80px] object-contain mb-1.5" />
+                  : <span className="text-xs font-bold block mb-1">{form.title || "Policell"}</span>
+                }
+                <p className="text-[9px] opacity-60">{form.link_url || "Seu aparelho vale mais do que você imagina."}</p>
               </div>
               {(items.length > 0 ? items : [{ title: "Coluna", links: [{ label: "Link", url: "#" }] }]).map(
                 (col: any, i: number) => (
@@ -2022,7 +2126,10 @@ function MegaFooterEditor({ items, setItems, form }: any) {
                     <ul className="space-y-1">
                       {col.links?.map((link: any, j: number) => (
                         <li key={j} className="text-[9px] opacity-60">
-                          {link.label || "Link"}
+                          {link.image_url
+                            ? <img src={link.image_url} alt={link.label} className="h-4 max-w-[50px] object-contain" />
+                            : link.label || "Link"
+                          }
                         </li>
                       ))}
                     </ul>

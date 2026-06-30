@@ -127,7 +127,7 @@ function buildEvaluationReport(data: ContractData): string {
       lines.push(`  • ${label} aplicável ........................ +${bonusPct}%`);
     }
   }
-  lines.push(`  ─────────────────────────────────────────────`);
+  lines.push(`  ---------------------------------------------`);
   lines.push(
     `  • VALOR FINAL DA PROPOSTA .................. R$ ${fmtMoneyPlain(data.finalValue)}`,
   );
@@ -185,6 +185,24 @@ export function renderContractText(template: string, data: ContractData): string
   }
 
   return rendered;
+}
+
+/**
+ * Remove caracteres fora do repertório Latin-1 que helvetica não consegue
+ * renderizar: emoji (U+1F000+), símbolos miscelâneos e box-drawing (─ etc.).
+ * Mantém todos os diacríticos portugueses (ç ã é ê à ú...).
+ */
+function sanitizeForPdf(text: string): string {
+  return (
+    text
+      // Box-drawing light/heavy horizontals → hífen simples
+      .replace(/[─-╿]/g, "-")
+      // Emoji: Miscellaneous Symbols, Dingbats, Emoticons, Transport, etc.
+      .replace(/[☀-➿]/g, "")
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "") // surrogate pairs (emoji fora do BMP)
+      // Variation selectors e zero-width chars
+      .replace(/[︀-️​-‍﻿]/g, "")
+  );
 }
 
 /**
@@ -281,6 +299,9 @@ export function generateContractPdf(
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
+
+  // Sanitize before rendering: strip chars helvetica can't encode.
+  text = sanitizeForPdf(text);
 
   // Heurística simples para destacar títulos: linhas curtas em CAIXA-ALTA
   // ou que começam com numeração romana (I., II., ...) viram negrito.

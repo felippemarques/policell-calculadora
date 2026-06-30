@@ -3046,9 +3046,44 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
           setForm={setForm}
           onUpload={onUpload}
           uploading={uploading}
-          label="Imagem de fundo"
+          label="Imagem de fundo (mobile)"
           recommendedSize="1920×400px"
         />
+        <div className="mt-4">
+          <LabelWithHint
+            label="Imagens por breakpoint (opcional)"
+            hint="Defina imagens específicas para cada tamanho de tela. Se não informadas, a imagem principal é usada em todos os breakpoints."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Tablet (640–1023px)</label>
+              <Input
+                value={contentData.tablet_image_url || ""}
+                onChange={(e) => setContentField("tablet_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Desktop (1024–1279px)</label>
+              <Input
+                value={contentData.desktop_image_url || ""}
+                onChange={(e) => setContentField("desktop_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Large (≥1280px)</label>
+              <Input
+                value={contentData.large_image_url || ""}
+                onChange={(e) => setContentField("large_image_url", e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+          </div>
+        </div>
       </SectionCard>
 
       <SectionCard

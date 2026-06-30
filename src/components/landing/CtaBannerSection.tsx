@@ -18,7 +18,12 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
       style={{ backgroundColor: section.bg_color || "#1a5c3a", color: section.text_color || "#ffffff" }}
     >
       {section.image_url && (
-        <img src={section.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <picture className="contents">
+          {contentData.large_image_url && <source media="(min-width: 1280px)" srcSet={contentData.large_image_url} />}
+          {contentData.desktop_image_url && <source media="(min-width: 1024px)" srcSet={contentData.desktop_image_url} />}
+          {contentData.tablet_image_url && <source media="(min-width: 640px)" srcSet={contentData.tablet_image_url} />}
+          <img src={section.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        </picture>
       )}
       <div className="relative max-w-5xl mx-auto px-4 py-8 md:py-14 flex flex-col md:flex-row items-center gap-5 md:gap-10">
         <div className="flex-1 text-center md:text-left space-y-2">

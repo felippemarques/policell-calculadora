@@ -32,6 +32,8 @@ CLAUDE.md
 docs/*
 specs/*
 
+supabase/.temp/
+
 # Credenciais locais — nunca commitar
 .env
 .env.local

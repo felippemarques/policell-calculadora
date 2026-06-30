@@ -78,7 +78,14 @@ export function useSyncWm10Cache() {
       const { data, error } = await supabase.functions.invoke("wm10-proxy", {
         body: { action: "sync-all" },
       });
-      if (error) throw error;
+      if (error) {
+        let message = error.message;
+        try {
+          const body = await (error as any).context?.json();
+          if (body?.error) message = body.error;
+        } catch {}
+        throw new Error(message);
+      }
       if (data?.error) throw new Error(data.error);
       return data as { ok: boolean; total: number };
     },

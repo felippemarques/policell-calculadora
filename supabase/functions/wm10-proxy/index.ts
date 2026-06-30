@@ -174,16 +174,31 @@ Deno.serve(async (req) => {
 
       if (!Array.isArray(parsed) || parsed.length === 0) break;
 
-      const rows = (parsed as any[]).map((p: any) => ({
-        cod_produto: p.cod_produto ?? p.Cod_produto ?? p.COD_PRODUTO,
-        cod_barra:   p.cod_barra   ?? p.Cod_barra   ?? p.COD_BARRA ?? null,
-        nome:        (p.nome ?? p.Nome ?? p.NOME ?? "").toString(),
-        preco_compra: p.preco_compra ?? p.Preco_compra ?? p.PRECO_COMPRA ?? null,
-        preco_venda:  p.preco_venda  ?? p.Preco_venda  ?? p.PRECO_VENDA  ?? null,
-        unidade:     p.unidade ?? p.Unidade ?? p.UNIDADE ?? null,
-        estoque:     p.estoque ?? p.Estoque ?? p.ESTOQUE ?? null,
-        synced_at:   now,
-      }));
+      const toInt = (v: unknown): number | null => {
+        if (v == null || v === "") return null;
+        const n = Math.floor(Number(v));
+        return isNaN(n) ? null : n;
+      };
+      const toNum = (v: unknown): number | null => {
+        if (v == null || v === "") return null;
+        const n = Number(v);
+        return isNaN(n) ? null : n;
+      };
+
+      const rows = (parsed as any[])
+        .map((p: any) => ({
+          cod_produto:  toInt(p.cod_produto  ?? p.Cod_produto  ?? p.COD_PRODUTO),
+          cod_barra:    toInt(p.cod_barra    ?? p.Cod_barra    ?? p.COD_BARRA),
+          nome:         (p.nome ?? p.Nome ?? p.NOME ?? "").toString().trim(),
+          preco_compra: toNum(p.preco_compra ?? p.Preco_compra ?? p.PRECO_COMPRA),
+          preco_venda:  toNum(p.preco_venda  ?? p.Preco_venda  ?? p.PRECO_VENDA),
+          unidade:      p.unidade ?? p.Unidade ?? p.UNIDADE ?? null,
+          estoque:      toInt(p.estoque ?? p.Estoque ?? p.ESTOQUE),
+          synced_at:    now,
+        }))
+        .filter((r: any) => r.cod_produto != null);
+
+      if (rows.length === 0) { syncPage++; continue; }
 
       const { error: upsertErr } = await db
         .from("wm10_products_cache")

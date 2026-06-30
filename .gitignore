@@ -31,7 +31,6 @@ CLAUDE.md
 .specify/*
 docs/*
 specs/*
-supabase/*
 
 # Credenciais locais — nunca commitar
 .env

@@ -875,6 +875,39 @@ export type Database = {
           },
         ]
       }
+      wm10_products_cache: {
+        Row: {
+          cod_produto: number
+          cod_barra: number | null
+          nome: string
+          preco_compra: number | null
+          preco_venda: number | null
+          unidade: string | null
+          estoque: number | null
+          synced_at: string
+        }
+        Insert: {
+          cod_produto: number
+          cod_barra?: number | null
+          nome?: string
+          preco_compra?: number | null
+          preco_venda?: number | null
+          unidade?: string | null
+          estoque?: number | null
+          synced_at?: string
+        }
+        Update: {
+          cod_produto?: number
+          cod_barra?: number | null
+          nome?: string
+          preco_compra?: number | null
+          preco_venda?: number | null
+          unidade?: string | null
+          estoque?: number | null
+          synced_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

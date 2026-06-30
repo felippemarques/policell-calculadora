@@ -39,19 +39,20 @@ Deno.serve(async (req) => {
   if (isAdmin !== true) return json({ error: "Forbidden" }, 403);
 
   // ── BODY ─────────────────────────────────────────────────────────
-  let body: { action: string; page?: unknown; limit?: unknown; cod_produto?: unknown };
+  let body: { action: string; page?: unknown; limit?: unknown; cod_produto?: unknown; search?: unknown };
   try {
     body = await req.json();
   } catch {
     return json({ error: "Body JSON inválido" }, 400);
   }
 
-  const { action, page, limit, cod_produto } = body;
+  const { action, page, limit, cod_produto, search } = body;
   const safePage = Math.max(1, Math.floor(Number(page) || 1));
   const safeLimit = Math.min(200, Math.max(1, Math.floor(Number(limit) || 50)));
   const safeCodProduto = cod_produto != null && !isNaN(Number(cod_produto))
     ? Math.abs(Math.floor(Number(cod_produto)))
     : undefined;
+  const safeSearch = typeof search === "string" ? search.trim() : "";
   if (!action) return json({ error: "Campo 'action' obrigatório" }, 400);
 
   // ── CREDENCIAIS DO BANCO ─────────────────────────────────────────
@@ -110,6 +111,7 @@ Deno.serve(async (req) => {
   if (action === "produtos") {
     let url = `${BASE}/produto/?${AUTH}&limite=${safeLimit}&pagina=${safePage}`;
     if (safeCodProduto != null) url += `&cod_produto=${safeCodProduto}`;
+    if (safeSearch) url += `&busca=${encodeURIComponent(safeSearch)}`;
 
     let wm10Resp: Response;
     try {
@@ -144,6 +146,60 @@ Deno.serve(async (req) => {
     }));
 
     return json({ data: normalized });
+  }
+
+  if (action === "sync-all") {
+    const SYNC_LIMIT = 200;
+    let syncPage = 1;
+    let totalSynced = 0;
+    const now = new Date().toISOString();
+
+    while (true) {
+      const url = `${BASE}/produto/?${AUTH}&limite=${SYNC_LIMIT}&pagina=${syncPage}`;
+      let wm10Resp: Response;
+      try {
+        wm10Resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      } catch (e) {
+        return json({ error: `Falha ao conectar na API WM10 (página ${syncPage}): ${e}` }, 502);
+      }
+
+      const buffer = await wm10Resp.arrayBuffer();
+      const text = new TextDecoder("iso-8859-1").decode(buffer);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return json({ error: "Resposta WM10 não é JSON válido" }, 502);
+      }
+
+      if (!Array.isArray(parsed) || parsed.length === 0) break;
+
+      const rows = (parsed as any[]).map((p: any) => ({
+        cod_produto: p.cod_produto ?? p.Cod_produto ?? p.COD_PRODUTO,
+        cod_barra:   p.cod_barra   ?? p.Cod_barra   ?? p.COD_BARRA ?? null,
+        nome:        (p.nome ?? p.Nome ?? p.NOME ?? "").toString(),
+        preco_compra: p.preco_compra ?? p.Preco_compra ?? p.PRECO_COMPRA ?? null,
+        preco_venda:  p.preco_venda  ?? p.Preco_venda  ?? p.PRECO_VENDA  ?? null,
+        unidade:     p.unidade ?? p.Unidade ?? p.UNIDADE ?? null,
+        estoque:     p.estoque ?? p.Estoque ?? p.ESTOQUE ?? null,
+        synced_at:   now,
+      }));
+
+      const { error: upsertErr } = await db
+        .from("wm10_products_cache")
+        .upsert(rows, { onConflict: "cod_produto" });
+      if (upsertErr) return json({ error: `Erro ao salvar cache: ${upsertErr.message}` }, 500);
+
+      totalSynced += rows.length;
+      if (rows.length < SYNC_LIMIT) break;
+      syncPage++;
+    }
+
+    await db
+      .from("lp_settings")
+      .upsert({ key: "wm10_last_sync", value: now }, { onConflict: "key" });
+
+    return json({ ok: true, total: totalSynced });
   }
 
   return json({ error: `Ação desconhecida: ${action}` }, 400);

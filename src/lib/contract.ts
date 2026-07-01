@@ -191,10 +191,16 @@ export function renderContractText(template: string, data: ContractData): string
  * Remove caracteres fora do repertório Latin-1 que helvetica não consegue
  * renderizar: emoji (U+1F000+), símbolos miscelâneos e box-drawing (─ etc.).
  * Mantém todos os diacríticos portugueses (ç ã é ê à ú...).
+ *
+ * Também normaliza para NFC (evita é NFD = e + combining ́) e converte
+ * chars tipográficos comuns (smart quotes, dashes, NBSP) para equivalentes
+ * ASCII antes do sweep final que remove tudo acima de U+00FF.
  */
 function sanitizeForPdf(text: string): string {
   return (
     text
+      // NFC: garante formas precompostas (é U+00E9, não e + U+0301)
+      .normalize("NFC")
       // Box-drawing light/heavy horizontals → hífen simples
       .replace(/[─-╿]/g, "-")
       // Emoji: Miscellaneous Symbols, Dingbats, Emoticons, Transport, etc.
@@ -202,6 +208,16 @@ function sanitizeForPdf(text: string): string {
       .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "") // surrogate pairs (emoji fora do BMP)
       // Variation selectors e zero-width chars
       .replace(/[︀-️​-‍﻿]/g, "")
+      // Chars tipográficos comuns (Word, Google Docs) → equivalentes ASCII/Latin-1
+      .replace(/[‘’]/g, "'")   // aspas simples curvas → '
+      .replace(/[“”]/g, '"')   // aspas duplas curvas → "
+      .replace(/–/g, "-")           // en-dash → -
+      .replace(/—/g, "-")           // em-dash → -
+      .replace(/…/g, "...")         // reticências → ...
+      .replace(/ /g, " ")           // NBSP → espaço normal
+      .replace(/[​-‍﻿]/g, "") // zero-width chars
+      // Sweep final: qualquer char acima de U+00FF causa letter-spacing no jsPDF
+      .replace(/[^\x00-\xFF]/g, "")
   );
 }
 

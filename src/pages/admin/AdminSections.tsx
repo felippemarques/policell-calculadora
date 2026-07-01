@@ -61,6 +61,7 @@ import {
   Monitor,
   Wrench,
   Lightbulb,
+  Tablet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -173,20 +174,23 @@ function SectionCard({
   title,
   description,
   children,
+  action,
 }: {
   icon: React.ReactNode;
   title: string;
   description?: string;
   children: React.ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 p-2 rounded-lg bg-primary/10 text-primary">{icon}</div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-foreground">{title}</h4>
           {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
         </div>
+        {action && <div className="flex-shrink-0">{action}</div>}
       </div>
       {children}
     </div>
@@ -3004,7 +3008,15 @@ function ImageUploader({ form, setForm, onUpload, uploading, label, recommendedS
 }
 
 // ========== CTA BANNER EDITOR ==========
+const CTA_DEVICES = [
+  { key: "mobile",  label: "Mobile",  icon: <Smartphone className="h-3.5 w-3.5" />, maxWidth: 390 },
+  { key: "tablet",  label: "Tablet",  icon: <Tablet className="h-3.5 w-3.5" />,     maxWidth: 768 },
+  { key: "desktop", label: "Desktop", icon: <Monitor className="h-3.5 w-3.5" />,    maxWidth: null },
+] as const;
+type CtaDevice = typeof CTA_DEVICES[number]["key"];
+
 function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
+  const [previewDevice, setPreviewDevice] = useState<CtaDevice>("desktop");
   const contentData = (() => {
     try {
       return form.content ? JSON.parse(form.content) : {};
@@ -3251,40 +3263,110 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
       </SectionCard>
 
       {/* Preview */}
-      <SectionCard
-        icon={<Eye className="h-4 w-4" />}
-        title="Pré-visualização"
-        description="Como o banner aparecerá na landing page"
-      >
-        <div
-          className="rounded-lg border overflow-hidden relative"
-          style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}
-        >
-          {form.image_url && (
-            <img src={form.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          )}
-          <div className="relative p-6 md:p-8">
-            <div className="max-w-md">
-              {form.title && <p className="text-xs opacity-80">{form.title}</p>}
-              {contentData.subtitle && (
-                <p className="text-sm md:text-base font-extrabold mt-1">{contentData.subtitle}</p>
-              )}
-              {form.cta_text && (
-                <button
-                  className="mt-3 px-5 py-1.5 text-xs font-bold rounded"
-                  style={{
-                    backgroundColor: form.cta_bg_color || "#6ee7b7",
-                    color: form.cta_text_color || "#1a5c3a",
-                    borderRadius: `${form.cta_border_radius ?? 25}px`,
-                  }}
-                >
-                  {form.cta_text}
-                </button>
-              )}
-            </div>
+      {(() => {
+        const deviceCfg = CTA_DEVICES.find(d => d.key === previewDevice)!;
+        const isMobile = previewDevice === "mobile";
+        const alignJustify: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
+        const justify = alignJustify[ctaBannerLayoutData.cta_button_align || "left"] || "flex-start";
+        const btnStyle: React.CSSProperties = {
+          backgroundColor: form.cta_bg_color || "#6ee7b7",
+          color: form.cta_text_color || "#1a5c3a",
+          borderRadius: `${form.cta_border_radius ?? 25}px`,
+          padding: "8px 24px",
+          fontWeight: 700,
+          fontSize: 14,
+          border: "none",
+          cursor: "default",
+          whiteSpace: "nowrap",
+        };
+        const btnWrapStyle: React.CSSProperties = {
+          display: "flex",
+          justifyContent: justify,
+          paddingTop: "0.75rem",
+          marginTop: ctaBannerLayoutData.cta_margin_top ? `${ctaBannerLayoutData.cta_margin_top}px` : undefined,
+          marginBottom: ctaBannerLayoutData.cta_margin_bottom ? `${ctaBannerLayoutData.cta_margin_bottom}px` : undefined,
+          marginLeft: ctaBannerLayoutData.cta_margin_left ? `${ctaBannerLayoutData.cta_margin_left}px` : undefined,
+          marginRight: ctaBannerLayoutData.cta_margin_right ? `${ctaBannerLayoutData.cta_margin_right}px` : undefined,
+        };
+
+        const deviceSwitcher = (
+          <div className="flex items-center gap-0.5 p-1 rounded-lg bg-muted">
+            {CTA_DEVICES.map(({ key, label, icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPreviewDevice(key)}
+                title={label}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
+                  previewDevice === key
+                    ? "bg-background shadow-sm text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {icon}
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
           </div>
-        </div>
-      </SectionCard>
+        );
+
+        return (
+          <SectionCard
+            icon={<Eye className="h-4 w-4" />}
+            title="Pré-visualização"
+            description="Como o banner aparecerá na landing page"
+            action={deviceSwitcher}
+          >
+            <div className="flex justify-center overflow-hidden">
+              <div
+                className="w-full rounded-lg border overflow-hidden transition-all duration-300"
+                style={deviceCfg.maxWidth ? { maxWidth: deviceCfg.maxWidth } : undefined}
+              >
+                <div
+                  className="relative overflow-hidden"
+                  style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}
+                >
+                  {form.image_url && (
+                    <img src={form.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                  )}
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      flexDirection: isMobile ? "column" : "row",
+                      alignItems: isMobile ? "flex-start" : "center",
+                      gap: isMobile ? 12 : 40,
+                      padding: isMobile ? "24px 16px" : "40px 24px",
+                      maxWidth: 896,
+                      margin: "0 auto",
+                    }}
+                  >
+                    <div style={{ flex: 1, textAlign: isMobile ? "center" : "left" }}>
+                      {form.title && <p style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>{form.title}</p>}
+                      {contentData.subtitle && (
+                        <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0" }}>
+                          {contentData.subtitle}
+                        </p>
+                      )}
+                      {form.cta_text && (
+                        <div style={btnWrapStyle}>
+                          <button style={btnStyle}>{form.cta_text}</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 py-1.5 bg-muted/50 border-t">
+                  {CTA_DEVICES.find(d => d.key === previewDevice)?.icon}
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {deviceCfg.label}{deviceCfg.maxWidth ? ` — ${deviceCfg.maxWidth}px` : " — largura total"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        );
+      })()}
     </>
   );
 }

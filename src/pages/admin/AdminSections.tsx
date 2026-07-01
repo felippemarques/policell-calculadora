@@ -294,7 +294,6 @@ const AdminSections = () => {
     },
     onSuccess: () => {
       invalidate();
-      setEditingId(null);
       toast.success("Salvo!");
     },
     onError: (e) => toast.error(e.message),
@@ -375,7 +374,7 @@ const AdminSections = () => {
     setImgDimensions(null);
   };
 
-  const handleSave = () => {
+  const performSave = (onAfterSave?: () => void) => {
     const sType = editingSection?.section_type;
 
     // Validate video URL for benefits
@@ -459,8 +458,11 @@ const AdminSections = () => {
     }
 
     const { id, created_at, updated_at, ...updates } = form;
-    updateMutation.mutate({ id: editingId!, updates });
+    updateMutation.mutate({ id: editingId!, updates }, onAfterSave ? { onSuccess: onAfterSave } : undefined);
   };
+
+  const handleSave = () => performSave();
+  const handleSaveAndExit = () => performSave(() => setEditingId(null));
 
   const getContentArray = (): any[] => {
     try {
@@ -694,7 +696,7 @@ const AdminSections = () => {
             {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} />}
 
             {/* CTA Button (for applicable sections) */}
-            {["steps", "video", "how-to-sell", "cta-banner", "testimonials", "benefits", "faq"].includes(
+            {["steps", "video", "how-to-sell", "testimonials", "benefits", "faq"].includes(
               editingSection.section_type,
             ) && (
               <SectionCard
@@ -851,11 +853,14 @@ const AdminSections = () => {
             </SectionCard>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
-                <Check className="mr-2 h-4 w-4" /> Salvar alterações
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button onClick={handleSaveAndExit} disabled={updateMutation.isPending}>
+                <Check className="mr-2 h-4 w-4" /> Salvar e sair
               </Button>
-              <Button variant="outline" onClick={() => setEditingId(null)}>
+              <Button variant="outline" onClick={handleSave} disabled={updateMutation.isPending}>
+                <Check className="mr-2 h-4 w-4" /> Salvar e continuar
+              </Button>
+              <Button variant="ghost" onClick={() => setEditingId(null)} disabled={updateMutation.isPending}>
                 <X className="mr-2 h-4 w-4" /> Cancelar
               </Button>
             </div>
@@ -3012,6 +3017,14 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
     setForm({ ...form, content: JSON.stringify(updated) });
   };
 
+  const ctaBannerLayoutData = (() => {
+    try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
+  })();
+  const setCtaBannerLayoutField = (key: string, value: number) => {
+    const updated = { ...ctaBannerLayoutData, [key]: value };
+    setForm({ ...form, layout: JSON.stringify(updated) });
+  };
+
   return (
     <>
       <SectionCard
@@ -3154,6 +3167,59 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
                 onChange={(e) => setForm({ ...form, cta_text_color: e.target.value })}
               />
             </div>
+          </div>
+          <div className="md:col-span-2">
+            <LabelWithHint
+              label="Margem do botão (px)"
+              hint="Espaçamento externo do botão. Use Esquerda/Direita para alinhar o botão horizontalmente."
+            />
+            <div className="grid grid-cols-4 gap-2 mt-1">
+              <div>
+                <Label className="text-xs text-muted-foreground">Superior</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={200}
+                  value={ctaBannerLayoutData.cta_margin_top ?? 0}
+                  onChange={(e) => setCtaBannerLayoutField("cta_margin_top", parseInt(e.target.value) || 0)}
+                  className="mt-0.5 w-full"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Inferior</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={200}
+                  value={ctaBannerLayoutData.cta_margin_bottom ?? 0}
+                  onChange={(e) => setCtaBannerLayoutField("cta_margin_bottom", parseInt(e.target.value) || 0)}
+                  className="mt-0.5 w-full"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Esquerda</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={1500}
+                  value={ctaBannerLayoutData.cta_margin_left ?? 0}
+                  onChange={(e) => setCtaBannerLayoutField("cta_margin_left", parseInt(e.target.value) || 0)}
+                  className="mt-0.5 w-full"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Direita</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={1500}
+                  value={ctaBannerLayoutData.cta_margin_right ?? 0}
+                  onChange={(e) => setCtaBannerLayoutField("cta_margin_right", parseInt(e.target.value) || 0)}
+                  className="mt-0.5 w-full"
+                />
+              </div>
+            </div>
+            <FieldHint text="Padrão: 0px em todos os lados. Valores em pixels." />
           </div>
         </div>
       </SectionCard>

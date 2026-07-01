@@ -8,6 +8,9 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
   const contentData = (() => {
     try { return section.content ? JSON.parse(section.content) : {}; } catch { return {}; }
   })();
+  const layoutData = (() => {
+    try { return section.layout ? JSON.parse(section.layout) : {}; } catch { return {}; }
+  })();
 
   const subtitle = contentData.subtitle || "";
   const ctaUrl = contentData.cta_url || "#";
@@ -36,7 +39,15 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
             </h2>
           )}
           {section.cta_text && (
-            <div className="pt-3">
+            <div
+              className="pt-3"
+              style={{
+                marginTop: layoutData.cta_margin_top ? `${layoutData.cta_margin_top}px` : undefined,
+                marginBottom: layoutData.cta_margin_bottom ? `${layoutData.cta_margin_bottom}px` : undefined,
+                marginLeft: layoutData.cta_margin_left ? `${layoutData.cta_margin_left}px` : undefined,
+                marginRight: layoutData.cta_margin_right ? `${layoutData.cta_margin_right}px` : undefined,
+              }}
+            >
               <Button
                 size="lg"
                 className="text-base font-bold px-8 py-3"

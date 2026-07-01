@@ -15,6 +15,13 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
   const subtitle = contentData.subtitle || "";
   const ctaUrl = contentData.cta_url || "#";
 
+  const ctaAlignClass: Record<string, string> = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  };
+  const ctaJustify = ctaAlignClass[layoutData.cta_button_align || "left"] || "justify-start";
+
   return (
     <section
       className="relative overflow-hidden"
@@ -40,7 +47,7 @@ const CtaBannerSection = ({ section }: CtaBannerSectionProps) => {
           )}
           {section.cta_text && (
             <div
-              className="pt-3"
+              className={`pt-3 flex ${ctaJustify}`}
               style={{
                 marginTop: layoutData.cta_margin_top ? `${layoutData.cta_margin_top}px` : undefined,
                 marginBottom: layoutData.cta_margin_bottom ? `${layoutData.cta_margin_bottom}px` : undefined,

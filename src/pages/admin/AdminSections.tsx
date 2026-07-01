@@ -3020,7 +3020,7 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
   const ctaBannerLayoutData = (() => {
     try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
   })();
-  const setCtaBannerLayoutField = (key: string, value: number) => {
+  const setCtaBannerLayoutField = (key: string, value: number | string) => {
     const updated = { ...ctaBannerLayoutData, [key]: value };
     setForm({ ...form, layout: JSON.stringify(updated) });
   };
@@ -3170,8 +3170,34 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
           </div>
           <div className="md:col-span-2">
             <LabelWithHint
+              label="Alinhamento do botão"
+              hint="Posição horizontal do botão dentro do bloco de conteúdo."
+            />
+            <div className="flex gap-1 mt-1.5">
+              {[
+                { value: "left", label: "◀ Esquerda" },
+                { value: "center", label: "⬌ Centro" },
+                { value: "right", label: "▶ Direita" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCtaBannerLayoutField("cta_button_align", opt.value)}
+                  className={`flex-1 text-xs py-2 px-1 rounded-md border transition-colors ${
+                    (ctaBannerLayoutData.cta_button_align || "left") === opt.value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card hover:bg-accent border-border"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <LabelWithHint
               label="Margem do botão (px)"
-              hint="Espaçamento externo do botão. Use Esquerda/Direita para alinhar o botão horizontalmente."
+              hint="Ajuste fino de espaçamento externo do botão em pixels."
             />
             <div className="grid grid-cols-4 gap-2 mt-1">
               <div>

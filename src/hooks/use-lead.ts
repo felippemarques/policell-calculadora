@@ -135,6 +135,15 @@ export function useLead() {
     if (error) throw error;
   }, []);
 
+  /** Save CPF on the lead via SECURITY DEFINER RPC. */
+  const updateCpf = useCallback(async (id: string, cpf: string) => {
+    const { error } = await (supabase.rpc as any)("update_lead_cpf", {
+      _lead_id: id,
+      _cpf: cpf,
+    });
+    if (error) throw error;
+  }, []);
+
   return {
     leadId,
     setLeadId,
@@ -146,6 +155,7 @@ export function useLead() {
     markRejected,
     setFlowType,
     setImei,
+    updateCpf,
     creating,
   };
 }

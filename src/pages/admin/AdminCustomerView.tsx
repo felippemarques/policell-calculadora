@@ -33,6 +33,7 @@ type LeadRow = {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  customer_cpf: string | null;
   device_id: string | null;
   status: string;
   flow_type: string;
@@ -205,6 +206,8 @@ const AdminCustomerView = () => {
       );
     };
 
+    const customerCpf = current.leads.find((l) => l.customer_cpf)?.customer_cpf ?? null;
+
     return (
       <div className="p-6 space-y-6 max-w-4xl">
         <Button variant="ghost" size="sm" onClick={() => setSelected(null)} className="-ml-2">
@@ -227,6 +230,11 @@ const AdminCustomerView = () => {
                 {current.email && (
                   <span className="flex items-center gap-1.5">
                     <Mail className="h-3.5 w-3.5" /> {current.email}
+                  </span>
+                )}
+                {customerCpf && (
+                  <span className="flex items-center gap-1.5 font-mono">
+                    <ShieldCheck className="h-3.5 w-3.5" /> CPF: {customerCpf}
                   </span>
                 )}
               </div>

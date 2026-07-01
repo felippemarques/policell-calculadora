@@ -20,6 +20,7 @@ import {
 import { StepResult } from "./StepResult";
 import { StepSpecialOffer } from "./StepSpecialOffer";
 import { StepAddress, type AddressData } from "./StepAddress";
+import { StepConfirmIdentity } from "./StepConfirmIdentity";
 import { StepContractPreview } from "./StepContractPreview";
 import { RestartProposalButton } from "./RestartProposalButton";
 import { Smartphone } from "lucide-react";
@@ -40,6 +41,7 @@ export interface WizardData {
   name: string;
   email: string;
   phone: string;
+  cpf: string;
   deviceId: string;
   /** Selected color id (informational only — does not affect price). null until chosen. */
   colorId: string | null;
@@ -61,7 +63,7 @@ const emptyAddress = (): AddressData => ({
 
 // ── Persistence ──
 const STORAGE_KEY = "pollicell.tradein.progress.v3";
-const RESULT_STEP = 9;
+const RESULT_STEP = 10;
 
 interface PersistedState {
   step: number;
@@ -86,6 +88,7 @@ function loadPersisted(): PersistedState | null {
         name: parsed.data?.name ?? "",
         email: parsed.data?.email ?? "",
         phone: parsed.data?.phone ?? "",
+        cpf: parsed.data?.cpf ?? "",
         deviceId: parsed.data?.deviceId ?? "",
         colorId: parsed.data?.colorId ?? null,
         imei: parsed.data?.imei ?? "",
@@ -119,6 +122,7 @@ export function TradeInWizard() {
       name: "",
       email: "",
       phone: "",
+      cpf: "",
       deviceId: "",
       colorId: null,
       imei: "",
@@ -132,7 +136,7 @@ export function TradeInWizard() {
   const { data: calcHero } = useCalcHeroSettings();
   const { data: businessSettings } = useBusinessSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
-  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei } = useLead();
+  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei, updateCpf } = useLead();
 
   const [imeiServerError, setImeiServerError] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
@@ -251,7 +255,7 @@ export function TradeInWizard() {
   const isLoading = loadingDevices || loadingFlowSettings;
 
   // Step labels — IMPORTANTE: índices alinhados com setStep abaixo.
-  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 (DEPRECATED) · 7 Endereço · 8 Contrato · 9 Resultado
+  // 0 Negociação · 1 Seus Dados · 2 Aparelho · 3 Avaliação · 4 Cupom · 5 IMEI · 6 (DEPRECATED) · 7 Endereço · 8 Confirmar Dados · 9 Contrato · 10 Resultado
   const steps = [
     "Negociação",
     "Seus Dados",
@@ -261,6 +265,7 @@ export function TradeInWizard() {
     "IMEI",
     "—",
     "Endereço",
+    "Confirmar Dados",
     "Contrato",
     "Resultado",
   ];
@@ -512,6 +517,19 @@ export function TradeInWizard() {
     setStep(8);
   };
 
+  // CPF confirmado -> salva no lead + avança para Contrato
+  const handleConfirmIdentity = async (cpf: string) => {
+    setData((prev) => ({ ...prev, cpf }));
+    if (leadId) {
+      try {
+        await updateCpf(leadId, cpf);
+      } catch (err) {
+        console.warn("Falha ao salvar CPF:", err);
+      }
+    }
+    setStep(9);
+  };
+
   // Contrato aceito -> registra aceite + submete avaliação (gera cupom)
   const handleAcceptContract = async (
     rendered?: { text: string; storeName: string; flowLabel: string; acceptedAt: Date },
@@ -590,6 +608,7 @@ export function TradeInWizard() {
       name: "",
       email: "",
       phone: "",
+      cpf: "",
       deviceId: "",
       colorId: null,
       imei: "",
@@ -668,9 +687,9 @@ export function TradeInWizard() {
 
   // Quando só um fluxo está habilitado, esconde passo 0 -> total visível diminui em 1.
   const flowChoiceHidden = flowSettings?.onlyEnabled !== null && flowSettings?.onlyEnabled !== undefined;
-  // Total possível: 8 visíveis (0..8 menos o passo 6 desativado).
+  // Total possível: 9 visíveis (0..9 menos o passo 6 desativado).
   // Sem escolha de fluxo: -1. Sem oferta especial (passo 4): -1.
-  const baseTotal = flowChoiceHidden ? 7 : 8;
+  const baseTotal = flowChoiceHidden ? 8 : 9;
   const visibleStepsCount = baseTotal - (showSpecialOffer ? 0 : 1);
   const displayStepIndex = (() => {
     let s = step;
@@ -772,7 +791,7 @@ export function TradeInWizard() {
                 </span>
                 <span className="text-[11px] font-medium text-muted-foreground">{steps[step]}</span>
               </div>
-              {step >= 1 && step <= 8 && data.name && data.email && (
+              {step >= 1 && step <= 9 && data.name && data.email && (
                 <RestartProposalButton
                   prominent
                   onConfirm={handleRestartProposal}
@@ -846,7 +865,7 @@ export function TradeInWizard() {
               }
             />
           )}
-          {/* Step 6 (Termos) foi unificado ao Contrato (step 8). */}
+          {/* Step 6 (Termos) foi unificado ao Contrato (step 9). */}
           {step === 7 && (
             <StepAddress
               initial={data.address}
@@ -856,12 +875,24 @@ export function TradeInWizard() {
             />
           )}
           {step === 8 && (
+            <StepConfirmIdentity
+              name={data.name}
+              email={data.email}
+              phone={data.phone}
+              initialCpf={data.cpf}
+              isSubmitting={false}
+              onBack={() => setStep(7)}
+              onConfirm={handleConfirmIdentity}
+            />
+          )}
+          {step === 9 && (
             <StepContractPreview
               data={{
                 storeName: "Pollicell",
                 customerName: data.name,
                 customerEmail: data.email,
                 customerPhone: data.phone,
+                customerCpf: data.cpf,
                 customerAddress: addrLine,
                 deviceLabel,
                 imei: data.imei,
@@ -879,7 +910,7 @@ export function TradeInWizard() {
                 evaluationItems,
               }}
               isSubmitting={isSubmitting}
-              onBack={() => setStep(7)}
+              onBack={() => setStep(8)}
               onAccept={handleAcceptContract}
             />
           )}

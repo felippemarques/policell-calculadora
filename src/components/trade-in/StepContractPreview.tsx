@@ -19,6 +19,7 @@ I. DAS PARTES
 
 LOJA / PROPONENTE: {{store_name}}
 CLIENTE / OFERTANTE: {{customer_name}}
+CPF: {{customer_cpf}}
 E-mail: {{customer_email}}
 Telefone: {{customer_phone}}
 Endereço completo: {{customer_address}}

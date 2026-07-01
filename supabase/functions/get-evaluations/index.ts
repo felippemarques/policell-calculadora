@@ -94,6 +94,20 @@ Deno.serve(async (req) => {
 
   const deviceById = new Map((devices ?? []).map((d: any) => [d.id, d]));
 
+  // ── ENRICH WITH CPF FROM LEADS ────────────────────────────────
+  const emails = [...new Set(evals.map((e: any) => e.customer_email).filter(Boolean))];
+  const { data: leadRows } = await db
+    .from("leads")
+    .select("customer_email, customer_cpf")
+    .in("customer_email", emails);
+
+  const cpfByEmail = new Map<string, string | null>();
+  for (const l of leadRows ?? []) {
+    if (l.customer_cpf && !cpfByEmail.has(l.customer_email)) {
+      cpfByEmail.set(l.customer_email, l.customer_cpf);
+    }
+  }
+
   const data = evals.map((e: any) => {
     const device = deviceById.get(e.device_id);
     return {
@@ -103,6 +117,7 @@ Deno.serve(async (req) => {
       customer_name: e.customer_name,
       customer_email: e.customer_email,
       customer_phone: e.customer_phone,
+      customer_cpf: cpfByEmail.get(e.customer_email) ?? null,
       device: device
         ? {
             id: device.id,

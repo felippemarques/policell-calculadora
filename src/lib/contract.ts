@@ -36,6 +36,8 @@ export interface ContractData {
   /** Itens explícitos da avaliação (laudo). Quando informado, é renderizado no contrato. */
   evaluationItems?: EvaluationLineItem[];
   acceptedAt?: Date;
+  /** CPF do cliente (com ou sem máscara). Exibido na seção I do contrato. */
+  customerCpf?: string;
   /** Bloco extra anexado ao final do contrato (ex.: "REVISÃO COMERCIAL DA
    *  PROPOSTA" gerado pelo painel admin quando há ajuste). */
   commercialReview?: string | null;
@@ -57,6 +59,7 @@ const DEFAULTS = {
   flow_label: "Troca",
   flow_label_upper: "TROCA",
   flow_label_lower: "troca",
+  customer_cpf: "—",
   accepted_at: "—",
   evaluation_report: "—",
 };
@@ -148,6 +151,7 @@ export function renderContractText(template: string, data: ContractData): string
     customer_name: data.customerName || DEFAULTS.customer_name,
     customer_email: data.customerEmail || DEFAULTS.customer_email,
     customer_phone: data.customerPhone || DEFAULTS.customer_phone,
+    customer_cpf: data.customerCpf || DEFAULTS.customer_cpf,
     customer_address: data.customerAddress || DEFAULTS.customer_address,
     device_label: data.deviceLabel || DEFAULTS.device_label,
     imei: data.imei || DEFAULTS.imei,

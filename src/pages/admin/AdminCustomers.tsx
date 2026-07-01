@@ -76,6 +76,7 @@ type LeadRow = {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  customer_cpf: string | null;
   device_id: string | null;
   status: string;
   rejection_reason: string | null;
@@ -751,6 +752,14 @@ const AdminCustomers = () => {
                       {selectedLead.customer_phone}
                     </span>
                   </div>
+                  {selectedLead.customer_cpf && (
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <span className="text-muted-foreground">CPF</span>
+                      <span className="min-w-0 truncate text-right font-medium font-mono text-xs">
+                        {selectedLead.customer_cpf}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex min-w-0 items-center justify-between gap-3">
                     <span className="text-muted-foreground">Aparelho</span>
                     <span className="min-w-0 truncate text-right font-medium">

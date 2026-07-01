@@ -201,6 +201,26 @@ const AdminEvaluations = () => {
     },
   });
 
+  const { data: cpfByEmail = {} } = useQuery({
+    queryKey: ["admin-evaluations-cpf"],
+    enabled: evaluations.length > 0,
+    queryFn: async () => {
+      const emails = [...new Set(evaluations.map((e) => e.customer_email).filter(Boolean))];
+      if (emails.length === 0) return {};
+      const { data } = await supabase
+        .from("leads")
+        .select("customer_email, customer_cpf")
+        .in("customer_email", emails);
+      const map: Record<string, string | null> = {};
+      (data ?? []).forEach((r: any) => {
+        if (r.customer_cpf && !map[r.customer_email]) {
+          map[r.customer_email] = r.customer_cpf;
+        }
+      });
+      return map;
+    },
+  });
+
   const archiveMutation = useMutation({
     mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
       const { error } = await (supabase.rpc as any)("archive_evaluation", {
@@ -222,7 +242,8 @@ const AdminEvaluations = () => {
       if (archivedFilter === "active" && ev.archived_at) return false;
       if (archivedFilter === "archived" && !ev.archived_at) return false;
       if (term) {
-        const hay = `${ev.customer_name} ${ev.customer_email} ${ev.customer_phone} ${ev.imei ?? ""} ${ev.coupon_code ?? ""}`.toLowerCase();
+        const cpf = cpfByEmail[ev.customer_email] ?? "";
+        const hay = `${ev.customer_name} ${ev.customer_email} ${ev.customer_phone} ${ev.imei ?? ""} ${ev.coupon_code ?? ""} ${cpf}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
       return true;
@@ -349,6 +370,11 @@ const AdminEvaluations = () => {
                         <td className="px-4 py-3">
                           <p className="font-medium">{ev.customer_name}</p>
                           <p className="text-xs text-muted-foreground">{ev.customer_email}</p>
+                          {cpfByEmail[ev.customer_email] && (
+                            <p className="text-xs text-muted-foreground font-mono">
+                              CPF: {cpfByEmail[ev.customer_email]}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {ev.devices ? `${ev.devices.brand} ${ev.devices.model} ${ev.devices.storage}` : "—"}

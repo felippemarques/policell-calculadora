@@ -515,6 +515,7 @@ export type Database = {
           contract_accepted_at: string | null
           contract_version: string | null
           created_at: string
+          customer_cpf: string | null
           customer_email: string
           customer_name: string
           customer_phone: string
@@ -542,6 +543,7 @@ export type Database = {
           contract_accepted_at?: string | null
           contract_version?: string | null
           created_at?: string
+          customer_cpf?: string | null
           customer_email: string
           customer_name: string
           customer_phone: string
@@ -569,6 +571,7 @@ export type Database = {
           contract_accepted_at?: string | null
           contract_version?: string | null
           created_at?: string
+          customer_cpf?: string | null
           customer_email?: string
           customer_name?: string
           customer_phone?: string

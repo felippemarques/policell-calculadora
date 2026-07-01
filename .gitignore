@@ -40,7 +40,6 @@ supabase/.temp/
 .env.*.local
 
 # Scripts temporários de migração
-*.sql
 migracao-supabase/
 scripts/
 Skill API WM10 - Claude.md

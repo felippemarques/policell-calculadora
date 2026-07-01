@@ -197,6 +197,59 @@ function SectionCard({
   );
 }
 
+// ===== SHARED DEVICE PREVIEW UTILITIES =====
+type DeviceKey = "mobile" | "tablet" | "desktop";
+const DEVICE_OPTIONS: { key: DeviceKey; label: string; icon: React.ReactNode; maxWidth: number | null }[] = [
+  { key: "mobile",  label: "Mobile",  icon: <Smartphone className="h-3.5 w-3.5" />, maxWidth: 390 },
+  { key: "tablet",  label: "Tablet",  icon: <Tablet className="h-3.5 w-3.5" />,     maxWidth: 768 },
+  { key: "desktop", label: "Desktop", icon: <Monitor className="h-3.5 w-3.5" />,    maxWidth: null },
+];
+
+function DeviceSwitcher({ device, onChange }: { device: DeviceKey; onChange: (d: DeviceKey) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 p-1 rounded-lg bg-muted">
+      {DEVICE_OPTIONS.map(({ key, label, icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          title={label}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
+            device === key
+              ? "bg-background shadow-sm text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {icon}
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DeviceFrame({ device, children }: { device: DeviceKey; children: React.ReactNode }) {
+  const cfg = DEVICE_OPTIONS.find(d => d.key === device)!;
+  return (
+    <div>
+      <div className="flex justify-center overflow-hidden">
+        <div
+          className="w-full rounded-t-lg border overflow-hidden transition-all duration-300"
+          style={cfg.maxWidth ? { maxWidth: cfg.maxWidth } : undefined}
+        >
+          {children}
+        </div>
+      </div>
+      <div className="flex items-center justify-center gap-1.5 py-1 bg-muted/50 border border-t-0 rounded-b-lg">
+        {cfg.icon}
+        <span className="text-[10px] text-muted-foreground font-medium">
+          {cfg.label}{cfg.maxWidth ? ` — ${cfg.maxWidth}px` : " — largura total"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function FieldHint({ text }: { text: string }) {
   return <p className="text-[11px] text-muted-foreground mt-1">{text}</p>;
 }
@@ -279,6 +332,7 @@ const AdminSections = () => {
   const [form, setForm] = useState<any>({});
   const [uploading, setUploading] = useState(false);
   const [imgDimensions, setImgDimensions] = useState<{ w: number; h: number } | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<DeviceKey>("desktop");
 
   const { data: sections, isLoading } = useQuery({
     queryKey: ["admin-lp-sections"],
@@ -497,7 +551,7 @@ const AdminSections = () => {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="p-6 space-y-6 max-w-6xl mx-auto">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Seções da Landing Page</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -675,29 +729,29 @@ const AdminSections = () => {
 
             {/* Section-specific editors */}
             {editingSection.section_type === "hero" && (
-              <HeroEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />
+              <HeroEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
             {editingSection.section_type === "steps" && (
-              <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
+              <StepsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
-            {editingSection.section_type === "how-to-sell" && <HowToSellEditor form={form} setForm={setForm} />}
+            {editingSection.section_type === "how-to-sell" && <HowToSellEditor form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />}
             {editingSection.section_type === "benefits" && (
-              <BenefitsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
+              <BenefitsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
             {editingSection.section_type === "testimonials" && (
-              <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
+              <TestimonialsEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
             {editingSection.section_type === "faq" && (
-              <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} />
+              <FaqEditor items={getContentArray()} setItems={setContentArray} form={form} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
             {editingSection.section_type === "mega-footer" && (
-              <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} />
+              <MegaFooterEditor items={getContentArray()} setItems={setContentArray} form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
-            {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} />}
+            {editingSection.section_type === "footer" && <FooterEditor form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />}
             {editingSection.section_type === "cta-banner" && (
-              <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} />
+              <CtaBannerEditor form={form} setForm={setForm} onUpload={handleImageUpload} uploading={uploading} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />
             )}
-            {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} />}
+            {editingSection.section_type === "video" && <VideoEditor form={form} setForm={setForm} previewDevice={previewDevice} setPreviewDevice={setPreviewDevice} />}
 
             {/* CTA Button (for applicable sections) */}
             {["steps", "video", "how-to-sell", "testimonials", "benefits", "faq"].includes(
@@ -970,7 +1024,7 @@ function ReorderableList({
 }
 
 // ========== STEPS EDITOR ==========
-function StepsEditor({ items, setItems, form, setForm }: { items: any[]; setItems: (arr: any[]) => void; form: any; setForm: (f: any) => void }) {
+function StepsEditor({ items, setItems, form, setForm, previewDevice = "desktop", setPreviewDevice }: { items: any[]; setItems: (arr: any[]) => void; form: any; setForm: (f: any) => void; previewDevice?: DeviceKey; setPreviewDevice?: (d: DeviceKey) => void }) {
   const stepsLayoutData = (() => {
     try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
   })();
@@ -1087,9 +1141,11 @@ function StepsEditor({ items, setItems, form, setForm }: { items: any[]; setItem
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Como esta seção aparecerá na landing page"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
         >
           <div className="p-6">
@@ -1113,13 +1169,14 @@ function StepsEditor({ items, setItems, form, setForm }: { items: any[]; setItem
             </div>
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== HOW TO SELL EDITOR ==========
-function HowToSellEditor({ form, setForm }: any) {
+function HowToSellEditor({ form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const howToSellLayoutData = (() => {
     try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
   })();
@@ -1337,9 +1394,11 @@ function HowToSellEditor({ form, setForm }: any) {
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Como os dois quadros aparecerão na landing page"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#f5f5f5", color: form.text_color || "#000000" }}
         >
           <div className="p-6 md:p-8">
@@ -1379,13 +1438,14 @@ function HowToSellEditor({ form, setForm }: any) {
             </div>
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== BENEFITS EDITOR ==========
-function BenefitsEditor({ items, setItems, form, setForm }: any) {
+function BenefitsEditor({ items, setItems, form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const embedUrl = getYoutubeEmbedUrl(form.video_url || "");
   const isYoutubeValid =
     form.video_url && (form.video_url.includes("youtube.com") || form.video_url.includes("youtu.be"));
@@ -1544,9 +1604,11 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Como os cards aparecerão na landing page"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
         >
           <div className="p-6">
@@ -1574,13 +1636,14 @@ function BenefitsEditor({ items, setItems, form, setForm }: any) {
             </div>
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== TESTIMONIALS EDITOR ==========
-function TestimonialsEditor({ items, setItems, form, setForm }: any) {
+function TestimonialsEditor({ items, setItems, form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const testimonialLayoutData = (() => {
     try { return form.layout ? JSON.parse(form.layout) : {}; } catch { return {}; }
   })();
@@ -1756,9 +1819,11 @@ function TestimonialsEditor({ items, setItems, form, setForm }: any) {
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Prévia dos cards ativos (na landing será carrossel)"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
         >
           <div className="p-6">
@@ -1807,13 +1872,14 @@ function TestimonialsEditor({ items, setItems, form, setForm }: any) {
             })()}
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== FAQ EDITOR ==========
-function FaqEditor({ items, setItems, form }: any) {
+function FaqEditor({ items, setItems, form, previewDevice = "desktop", setPreviewDevice }: any) {
   return (
     <>
       <SectionCard
@@ -1862,9 +1928,11 @@ function FaqEditor({ items, setItems, form }: any) {
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Como o FAQ aparecerá na landing page (accordion funcional)"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
         >
           <div className="p-6 max-w-lg mx-auto">
@@ -1885,13 +1953,14 @@ function FaqEditor({ items, setItems, form }: any) {
             </Accordion>
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== MEGA FOOTER EDITOR ==========
-function MegaFooterEditor({ items, setItems, form, setForm }: any) {
+function MegaFooterEditor({ items, setItems, form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const addColumn = () => {
     if (items.length >= 4) {
       toast.error("Máximo de 4 colunas");
@@ -2114,9 +2183,11 @@ function MegaFooterEditor({ items, setItems, form, setForm }: any) {
         icon={<Eye className="h-4 w-4" />}
         title="Pré-visualização"
         description="Como o rodapé aparecerá na landing page"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#1a1a2e", color: form.text_color || "#ffffff" }}
         >
           <div className="p-6">
@@ -2148,13 +2219,14 @@ function MegaFooterEditor({ items, setItems, form, setForm }: any) {
             </div>
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
 }
 
 // ========== FOOTER EDITOR ==========
-function FooterEditor({ form, setForm }: any) {
+function FooterEditor({ form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const year = new Date().getFullYear();
   return (
     <>
@@ -2180,15 +2252,19 @@ function FooterEditor({ form, setForm }: any) {
       </SectionCard>
 
       {/* Footer Preview */}
-      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como o rodapé aparecerá">
+      <SectionCard icon={<Eye className="h-4 w-4" />} title="Pré-visualização" description="Como o rodapé aparecerá"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
+      >
+        <DeviceFrame device={previewDevice}>
         <div
-          className="rounded-lg border overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{ backgroundColor: form.bg_color || "#111111", color: form.text_color || "#999999" }}
         >
           <div className="px-4 py-3 text-center text-[11px] opacity-70">
             {form.content || `© ${year} Policell. Todos os direitos reservados.`}
           </div>
         </div>
+        </DeviceFrame>
       </SectionCard>
     </>
   );
@@ -2287,7 +2363,7 @@ function HeroBackgroundDragger({
 }
 
 // ========== HERO EDITOR (preserved from before) ==========
-function HeroEditor({ form, setForm, onUpload, uploading }: any) {
+function HeroEditor({ form, setForm, onUpload, uploading, previewDevice = "desktop", setPreviewDevice }: any) {
   const layoutData = (() => {
     try {
       return form.layout ? JSON.parse(form.layout) : {};
@@ -2656,6 +2732,7 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         icon={<LayoutGrid className="h-4 w-4" />}
         title="Posição do Conteúdo"
         description="Ajuste onde o título, subtítulo e botão aparecem sobre o banner."
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
@@ -2703,15 +2780,17 @@ function HeroEditor({ form, setForm, onUpload, uploading }: any) {
         </div>
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-2">Pré-visualização da posição:</p>
-          <div className="relative w-full aspect-[21/9] overflow-hidden rounded-xl border">
-            <HeroSection
-              section={{
-                ...form,
-                layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }),
-              }}
-              previewMode
-            />
-          </div>
+          <DeviceFrame device={previewDevice}>
+            <div className="relative w-full aspect-[21/9] overflow-hidden rounded-lg">
+              <HeroSection
+                section={{
+                  ...form,
+                  layout: JSON.stringify({ ...layoutData, bgPosX, bgPosY, vAlign, hAlign, textAlign }),
+                }}
+                previewMode
+              />
+            </div>
+          </DeviceFrame>
         </div>
       </SectionCard>
 
@@ -3008,15 +3087,7 @@ function ImageUploader({ form, setForm, onUpload, uploading, label, recommendedS
 }
 
 // ========== CTA BANNER EDITOR ==========
-const CTA_DEVICES = [
-  { key: "mobile",  label: "Mobile",  icon: <Smartphone className="h-3.5 w-3.5" />, maxWidth: 390 },
-  { key: "tablet",  label: "Tablet",  icon: <Tablet className="h-3.5 w-3.5" />,     maxWidth: 768 },
-  { key: "desktop", label: "Desktop", icon: <Monitor className="h-3.5 w-3.5" />,    maxWidth: null },
-] as const;
-type CtaDevice = typeof CTA_DEVICES[number]["key"];
-
-function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
-  const [previewDevice, setPreviewDevice] = useState<CtaDevice>("desktop");
+function CtaBannerEditor({ form, setForm, onUpload, uploading, previewDevice = "desktop", setPreviewDevice }: any) {
   const contentData = (() => {
     try {
       return form.content ? JSON.parse(form.content) : {};
@@ -3263,116 +3334,82 @@ function CtaBannerEditor({ form, setForm, onUpload, uploading }: any) {
       </SectionCard>
 
       {/* Preview */}
-      {(() => {
-        const deviceCfg = CTA_DEVICES.find(d => d.key === previewDevice)!;
-        const isMobile = previewDevice === "mobile";
-        const alignJustify: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
-        const justify = alignJustify[ctaBannerLayoutData.cta_button_align || "left"] || "flex-start";
-        const btnStyle: React.CSSProperties = {
-          backgroundColor: form.cta_bg_color || "#6ee7b7",
-          color: form.cta_text_color || "#1a5c3a",
-          borderRadius: `${form.cta_border_radius ?? 25}px`,
-          padding: "8px 24px",
-          fontWeight: 700,
-          fontSize: 14,
-          border: "none",
-          cursor: "default",
-          whiteSpace: "nowrap",
-        };
-        const btnWrapStyle: React.CSSProperties = {
-          display: "flex",
-          justifyContent: justify,
-          paddingTop: "0.75rem",
-          marginTop: ctaBannerLayoutData.cta_margin_top ? `${ctaBannerLayoutData.cta_margin_top}px` : undefined,
-          marginBottom: ctaBannerLayoutData.cta_margin_bottom ? `${ctaBannerLayoutData.cta_margin_bottom}px` : undefined,
-          marginLeft: ctaBannerLayoutData.cta_margin_left ? `${ctaBannerLayoutData.cta_margin_left}px` : undefined,
-          marginRight: ctaBannerLayoutData.cta_margin_right ? `${ctaBannerLayoutData.cta_margin_right}px` : undefined,
-        };
-
-        const deviceSwitcher = (
-          <div className="flex items-center gap-0.5 p-1 rounded-lg bg-muted">
-            {CTA_DEVICES.map(({ key, label, icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setPreviewDevice(key)}
-                title={label}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
-                  previewDevice === key
-                    ? "bg-background shadow-sm text-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {icon}
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </div>
-        );
-
-        return (
-          <SectionCard
-            icon={<Eye className="h-4 w-4" />}
-            title="Pré-visualização"
-            description="Como o banner aparecerá na landing page"
-            action={deviceSwitcher}
+      <SectionCard
+        icon={<Eye className="h-4 w-4" />}
+        title="Pré-visualização"
+        description="Como o banner aparecerá na landing page"
+        action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
+      >
+        <DeviceFrame device={previewDevice}>
+          <div
+            className="relative overflow-hidden"
+            style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}
           >
-            <div className="flex justify-center overflow-hidden">
-              <div
-                className="w-full rounded-lg border overflow-hidden transition-all duration-300"
-                style={deviceCfg.maxWidth ? { maxWidth: deviceCfg.maxWidth } : undefined}
-              >
+            {form.image_url && (
+              <img src={form.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            )}
+            {(() => {
+              const isMobile = previewDevice === "mobile";
+              const alignJustify: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
+              const justify = alignJustify[ctaBannerLayoutData.cta_button_align || "left"] || "flex-start";
+              const btnStyle: React.CSSProperties = {
+                backgroundColor: form.cta_bg_color || "#6ee7b7",
+                color: form.cta_text_color || "#1a5c3a",
+                borderRadius: `${form.cta_border_radius ?? 25}px`,
+                padding: "8px 24px",
+                fontWeight: 700,
+                fontSize: 14,
+                border: "none",
+                cursor: "default",
+                whiteSpace: "nowrap",
+              };
+              const btnWrapStyle: React.CSSProperties = {
+                display: "flex",
+                justifyContent: justify,
+                paddingTop: "0.75rem",
+                marginTop: ctaBannerLayoutData.cta_margin_top ? `${ctaBannerLayoutData.cta_margin_top}px` : undefined,
+                marginBottom: ctaBannerLayoutData.cta_margin_bottom ? `${ctaBannerLayoutData.cta_margin_bottom}px` : undefined,
+                marginLeft: ctaBannerLayoutData.cta_margin_left ? `${ctaBannerLayoutData.cta_margin_left}px` : undefined,
+                marginRight: ctaBannerLayoutData.cta_margin_right ? `${ctaBannerLayoutData.cta_margin_right}px` : undefined,
+              };
+              return (
                 <div
-                  className="relative overflow-hidden"
-                  style={{ backgroundColor: form.bg_color || "#1a5c3a", color: form.text_color || "#ffffff" }}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: isMobile ? "column" : "row",
+                    alignItems: isMobile ? "flex-start" : "center",
+                    gap: isMobile ? 12 : 40,
+                    padding: isMobile ? "24px 16px" : "40px 24px",
+                    maxWidth: 896,
+                    margin: "0 auto",
+                  }}
                 >
-                  {form.image_url && (
-                    <img src={form.image_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                  )}
-                  <div
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      flexDirection: isMobile ? "column" : "row",
-                      alignItems: isMobile ? "flex-start" : "center",
-                      gap: isMobile ? 12 : 40,
-                      padding: isMobile ? "24px 16px" : "40px 24px",
-                      maxWidth: 896,
-                      margin: "0 auto",
-                    }}
-                  >
-                    <div style={{ flex: 1, textAlign: isMobile ? "center" : "left" }}>
-                      {form.title && <p style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>{form.title}</p>}
-                      {contentData.subtitle && (
-                        <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0" }}>
-                          {contentData.subtitle}
-                        </p>
-                      )}
-                      {form.cta_text && (
-                        <div style={btnWrapStyle}>
-                          <button style={btnStyle}>{form.cta_text}</button>
-                        </div>
-                      )}
-                    </div>
+                  <div style={{ flex: 1, textAlign: isMobile ? "center" : "left" }}>
+                    {form.title && <p style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>{form.title}</p>}
+                    {contentData.subtitle && (
+                      <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0" }}>
+                        {contentData.subtitle}
+                      </p>
+                    )}
+                    {form.cta_text && (
+                      <div style={btnWrapStyle}>
+                        <button style={btnStyle}>{form.cta_text}</button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 py-1.5 bg-muted/50 border-t">
-                  {CTA_DEVICES.find(d => d.key === previewDevice)?.icon}
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {deviceCfg.label}{deviceCfg.maxWidth ? ` — ${deviceCfg.maxWidth}px` : " — largura total"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-        );
-      })()}
+              );
+            })()}
+          </div>
+        </DeviceFrame>
+      </SectionCard>
     </>
   );
 }
 
 // ========== VIDEO EDITOR ==========
-function VideoEditor({ form, setForm }: any) {
+function VideoEditor({ form, setForm, previewDevice = "desktop", setPreviewDevice }: any) {
   const getEmbedUrl = (url: string) => {
     if (!url) return "";
     if (url.includes("embed")) return url;
@@ -3427,17 +3464,20 @@ function VideoEditor({ form, setForm }: any) {
           icon={<Eye className="h-4 w-4" />}
           title="Pré-visualização"
           description="Como o vídeo aparecerá na landing page"
+          action={setPreviewDevice && <DeviceSwitcher device={previewDevice} onChange={setPreviewDevice} />}
         >
-          <div
-            className="rounded-lg border overflow-hidden p-4"
-            style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
-          >
-            {form.title && <p className="text-sm font-bold text-center mb-2">{form.title}</p>}
-            {form.content && <p className="text-xs text-center opacity-80 mb-3">{form.content}</p>}
-            <div className="aspect-video rounded-lg overflow-hidden">
-              <iframe src={getEmbedUrl(form.video_url)} title="Preview" className="w-full h-full" allowFullScreen />
+          <DeviceFrame device={previewDevice}>
+            <div
+              className="rounded-lg overflow-hidden p-4"
+              style={{ backgroundColor: form.bg_color || "#ffffff", color: form.text_color || "#000000" }}
+            >
+              {form.title && <p className="text-sm font-bold text-center mb-2">{form.title}</p>}
+              {form.content && <p className="text-xs text-center opacity-80 mb-3">{form.content}</p>}
+              <div className="aspect-video rounded-lg overflow-hidden">
+                <iframe src={getEmbedUrl(form.video_url)} title="Preview" className="w-full h-full" allowFullScreen />
+              </div>
             </div>
-          </div>
+          </DeviceFrame>
         </SectionCard>
       )}
     </>

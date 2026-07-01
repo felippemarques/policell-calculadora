@@ -2,7 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
+
+interface IdentityData {
+  name: string;
+  email: string;
+  phone: string;
+  cpf: string;
+}
 
 interface Props {
   name: string;
@@ -11,7 +18,7 @@ interface Props {
   initialCpf: string;
   isSubmitting: boolean;
   onBack: () => void;
-  onConfirm: (cpf: string) => Promise<void>;
+  onConfirm: (data: IdentityData) => Promise<void>;
 }
 
 function maskCpf(value: string): string {
@@ -43,32 +50,61 @@ export function StepConfirmIdentity({
   onBack,
   onConfirm,
 }: Props) {
-  const [cpf, setCpf] = useState(initialCpf ? maskCpf(initialCpf) : "");
-  const [touched, setTouched] = useState(false);
+  const [form, setForm] = useState<IdentityData>({
+    name,
+    email,
+    phone,
+    cpf: initialCpf ? maskCpf(initialCpf) : "",
+  });
+  const [touched, setTouched] = useState<Partial<Record<keyof IdentityData, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const cpfDigits = cpf.replace(/\D/g, "");
-  const cpfError =
-    touched && cpfDigits.length > 0 && cpfDigits.length < 11
-      ? "CPF incompleto."
-      : touched && cpfDigits.length === 11 && !isValidCpf(cpf)
-        ? "CPF inválido. Verifique os números."
-        : null;
+  const cpfDigits = form.cpf.replace(/\D/g, "");
 
-  const isReady = cpfDigits.length === 11 && isValidCpf(cpf);
+  const errors = {
+    name: touched.name && !form.name.trim() ? "Informe seu nome." : null,
+    email:
+      touched.email && !form.email.trim()
+        ? "Informe seu e-mail."
+        : touched.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+          ? "E-mail inválido."
+          : null,
+    phone: touched.phone && !form.phone.trim() ? "Informe seu telefone." : null,
+    cpf:
+      touched.cpf && cpfDigits.length === 0
+        ? "Informe seu CPF para continuar."
+        : touched.cpf && cpfDigits.length > 0 && cpfDigits.length < 11
+          ? "CPF incompleto."
+          : touched.cpf && cpfDigits.length === 11 && !isValidCpf(form.cpf)
+            ? "CPF inválido. Verifique os números."
+            : null,
+  };
+
+  const isReady =
+    form.name.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) &&
+    form.phone.trim().length > 0 &&
+    cpfDigits.length === 11 &&
+    isValidCpf(form.cpf);
+
+  const touch = (field: keyof IdentityData) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleSubmit = async () => {
-    setTouched(true);
+    setTouched({ name: true, email: true, phone: true, cpf: true });
     if (!isReady) return;
     setSubmitting(true);
     try {
-      await onConfirm(cpf);
+      await onConfirm(form);
     } finally {
       setSubmitting(false);
     }
   };
 
   const busy = isSubmitting || submitting;
+
+  const fieldClass = (err: string | null) =>
+    err ? "border-destructive focus-visible:ring-destructive" : "";
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -80,53 +116,81 @@ export function StepConfirmIdentity({
           Confirmar seus dados
         </h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Confirme as informações abaixo e informe seu CPF para validação legal
-          do contrato.
+          Verifique e corrija seus dados se necessário, depois informe seu CPF
+          para validação legal do contrato.
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/30 divide-y divide-border">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Nome</p>
-            <p className="text-sm font-medium truncate">{name || "—"}</p>
-          </div>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="ci-name" className="text-sm font-medium">
+            Nome completo <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="ci-name"
+            placeholder="Seu nome completo"
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            onBlur={() => touch("name")}
+            className={fieldClass(errors.name)}
+            disabled={busy}
+          />
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
         </div>
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">E-mail</p>
-            <p className="text-sm font-medium truncate">{email || "—"}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Telefone</p>
-            <p className="text-sm font-medium truncate">{phone || "—"}</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="cpf-input" className="text-sm font-medium">
-          CPF <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="cpf-input"
-          inputMode="numeric"
-          placeholder="000.000.000-00"
-          value={cpf}
-          onChange={(e) => setCpf(maskCpf(e.target.value))}
-          onBlur={() => setTouched(true)}
-          className={cpfError ? "border-destructive focus-visible:ring-destructive" : ""}
-          disabled={busy}
-          autoComplete="off"
-        />
-        {cpfError && (
-          <p className="text-xs text-destructive">{cpfError}</p>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="ci-email" className="text-sm font-medium">
+            E-mail <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="ci-email"
+            type="email"
+            inputMode="email"
+            placeholder="seuemail@exemplo.com"
+            value={form.email}
+            onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+            onBlur={() => touch("email")}
+            className={fieldClass(errors.email)}
+            disabled={busy}
+          />
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ci-phone" className="text-sm font-medium">
+            Telefone <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="ci-phone"
+            type="tel"
+            inputMode="tel"
+            placeholder="(00) 00000-0000"
+            value={form.phone}
+            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+            onBlur={() => touch("phone")}
+            className={fieldClass(errors.phone)}
+            disabled={busy}
+          />
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ci-cpf" className="text-sm font-medium">
+            CPF <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="ci-cpf"
+            inputMode="numeric"
+            placeholder="000.000.000-00"
+            value={form.cpf}
+            onChange={(e) => setForm((p) => ({ ...p, cpf: maskCpf(e.target.value) }))}
+            onBlur={() => touch("cpf")}
+            className={fieldClass(errors.cpf)}
+            disabled={busy}
+            autoComplete="off"
+          />
+          {errors.cpf && <p className="text-xs text-destructive">{errors.cpf}</p>}
+        </div>
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">

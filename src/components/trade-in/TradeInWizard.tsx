@@ -517,12 +517,18 @@ export function TradeInWizard() {
     setStep(8);
   };
 
-  // CPF confirmado -> salva no lead + avança para Contrato
-  const handleConfirmIdentity = async (cpf: string) => {
-    setData((prev) => ({ ...prev, cpf }));
+  // Dados confirmados/corrigidos -> salva CPF no lead + avança para Contrato
+  const handleConfirmIdentity = async (identity: { name: string; email: string; phone: string; cpf: string }) => {
+    setData((prev) => ({
+      ...prev,
+      name: identity.name,
+      email: identity.email,
+      phone: identity.phone,
+      cpf: identity.cpf,
+    }));
     if (leadId) {
       try {
-        await updateCpf(leadId, cpf);
+        await updateCpf(leadId, identity.cpf);
       } catch (err) {
         console.warn("Falha ao salvar CPF:", err);
       }

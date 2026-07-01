@@ -67,10 +67,10 @@ export function StepAddress({ initial, isSubmitting, onBack, onConfirm }: Props)
         }
         setForm((prev) => ({
           ...prev,
-          street: prev.street || data.logradouro || "",
-          neighborhood: prev.neighborhood || data.bairro || "",
-          city: prev.city || data.localidade || "",
-          state: prev.state || (data.uf || "").toUpperCase(),
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: (data.uf || "").toUpperCase() || prev.state,
         }));
       } catch {
         toast.error("Não conseguimos buscar o CEP agora. Preencha manualmente.");
@@ -232,7 +232,7 @@ export function StepAddress({ initial, isSubmitting, onBack, onConfirm }: Props)
             </>
           ) : (
             <>
-              Continuar para o contrato <ArrowRight className="ml-2 h-4 w-4" />
+              Confirmar dados <ArrowRight className="ml-2 h-4 w-4" />
             </>
           )}
         </Button>

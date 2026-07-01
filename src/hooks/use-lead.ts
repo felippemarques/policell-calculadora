@@ -80,6 +80,30 @@ export function useLead() {
     [],
   );
 
+  /**
+   * Find an existing in_progress lead by email or create a new one.
+   * Prevents duplicate leads when the user navigates back between sessions.
+   */
+  const findOrCreateLead = useCallback(
+    async (input: LeadInput): Promise<string | null> => {
+      try {
+        const { data, error } = await (supabase.rpc as any)("find_or_create_lead", {
+          _name: input.customer_name,
+          _email: input.customer_email,
+          _phone: input.customer_phone,
+        });
+        if (error) throw error;
+        const id = data as unknown as string;
+        setLeadId(id);
+        return id;
+      } catch (err) {
+        console.error("Failed to find_or_create lead:", err);
+        return null;
+      }
+    },
+    [],
+  );
+
   const updateLead = useCallback(
     async (id: string, patch: Record<string, any>) => {
       try {
@@ -149,6 +173,7 @@ export function useLead() {
     setLeadId,
     createLead,
     upsertLeadByEmail,
+    findOrCreateLead,
     findLeadByEmail,
     updateLead,
     updateAssessment,

@@ -136,7 +136,7 @@ export function TradeInWizard() {
   const { data: calcHero } = useCalcHeroSettings();
   const { data: businessSettings } = useBusinessSettings();
   const { submit, isSubmitting, result, setResult } = useSubmitEvaluation();
-  const { leadId, setLeadId, createLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei, updateCpf } = useLead();
+  const { leadId, setLeadId, findOrCreateLead, upsertLeadByEmail, updateLead, updateAssessment, markRejected, setImei, updateCpf } = useLead();
 
   const [imeiServerError, setImeiServerError] = useState<string | null>(null);
   const [checklistProgress, setChecklistProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
@@ -377,7 +377,16 @@ export function TradeInWizard() {
   };
 
   const handleCreateLead = async () => {
-    const id = await createLead({
+    // Back-navigation guard: if a lead was already created in this session, reuse it.
+    if (leadId) {
+      if (data.flowType) {
+        await updateAssessment(leadId, { ...(data.answers as any), selectedColorId: data.colorId ?? null, flow_type: data.flowType });
+      }
+      return leadId;
+    }
+
+    // New session: find existing in_progress lead by email or create fresh one.
+    const id = await findOrCreateLead({
       customer_name: data.name,
       customer_email: data.email,
       customer_phone: data.phone,
